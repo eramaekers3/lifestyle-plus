@@ -8,7 +8,7 @@
 // Dates are ISO 8601 with the phone's own offset, so the first 10 characters are the local date.
 import { idFor } from '../src/lib/ids.js';
 
-const MAX_LINES = 5000;
+const MAX_LINES = 60000; // a week of ungrouped step readings from two devices can run to thousands
 const num = (v) => {
   const n = parseFloat(String(v || '').replace(/[^\d.\-]/g, ''));
   return Number.isFinite(n) ? n : null;
@@ -24,12 +24,13 @@ export function readDate(raw) {
   if (!s) return null;
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
     const ms = Date.parse(s.length > 10 ? s.replace(' ', 'T') : `${s}T00:00:00`);
-    return { date: s.slice(0, 10), ms: Number.isFinite(ms) ? ms : Date.parse(`${s.slice(0, 10)}T00:00:00`) };
+    const hour = /^\d{4}-\d{2}-\d{2}[T ](\d{2})/.exec(s);
+    return { date: s.slice(0, 10), hour: hour ? +hour[1] : 0, ms: Number.isFinite(ms) ? ms : Date.parse(`${s.slice(0, 10)}T00:00:00`) };
   }
   // Parsed as wall-clock time in the server's zone; reading it back the same way keeps the phone's date.
   const d = new Date(s.replace(/\s+at\s+/i, ' '));
   if (Number.isNaN(d.getTime())) return null;
-  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, ms: d.getTime() };
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hour: d.getHours(), ms: d.getTime() };
 }
 
 /** A skipped line with every digit masked, so logs show its shape but no health values. */
@@ -44,6 +45,7 @@ export function parseHealthLines(text) {
     .slice(0, MAX_LINES);
 
   const steps = {};
+  const stepHours = {}; // 'date|hour' -> { source: steps }
   const weights = {};
   const sleep = {}; // wake date -> [[start, end], ...]
   const workouts = [];
@@ -55,7 +57,7 @@ export function parseHealthLines(text) {
   };
 
   for (const line of lines) {
-    const [metric, start, end, value, unit] = line.split('|').map((p) => (p || '').trim());
+    const [metric, start, end, value, unit, source] = line.split('|').map((p) => (p || '').trim());
     // Accept typed words or Apple's own type names ("Steps", "Body Mass", "Sleep Analysis", "Workout").
     const t = metric.toLowerCase();
     const m = /step/.test(t) ? 'steps'
@@ -73,7 +75,16 @@ export function parseHealthLines(text) {
     if (m === 'steps') {
       const v = num(value);
       if (v === null) { skip(line); continue; }
-      steps[d] = (steps[d] || 0) + v;
+      // Individual readings with a source get de-duplicated per hour (see below), like the Health app.
+      // Day totals (Group By Day) can't be de-duplicated, so they're added as-is.
+      const span = Number.isFinite(sd.ms) && Number.isFinite(ed.ms) ? ed.ms - sd.ms : 0;
+      if (source && span < 6 * 3600000) {
+        const key = `${d}|${sd.hour}`;
+        const bySource = (stepHours[key] = stepHours[key] || {});
+        bySource[source] = (bySource[source] || 0) + v;
+      } else {
+        steps[d] = (steps[d] || 0) + v;
+      }
       counts.steps++;
     } else if (m === 'weight') {
       let v = num(value);
@@ -100,6 +111,12 @@ export function parseHealthLines(text) {
     } else {
       skip(line);
     }
+  }
+
+  // iPhone and Apple Watch both count the same walk. For each hour, keep the device that counted more.
+  for (const [key, bySource] of Object.entries(stepHours)) {
+    const d = key.split('|')[0];
+    steps[d] = (steps[d] || 0) + Math.max(...Object.values(bySource));
   }
 
   // Merge overlapping sleep pieces (iPhone and Apple Watch can both record the same night).
