@@ -11,54 +11,69 @@ const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const codeLabel = (h, code) =>
   ({ d: h.mode === 'avoid' ? 'clean' : 'done', p: 'partly done', s: 'skipped', m: h.mode === 'avoid' ? 'slipped' : 'not done' })[code];
 
-const HOLD_MS = 550;
-
 /**
- * Today's big check-off. Press and hold until it fills to mark it, so a stray tap can't.
- * Holding again undoes it. Enter or Space toggles it from a keyboard.
+ * Today's check-off: a slide switch. Drag the knob right to check it off (the bar turns green),
+ * left to undo. A tap flips it too, like an iPhone switch; Enter or Space from a keyboard.
  */
-function HoldCheck({ h, code, onDone }) {
-  const [holding, setHolding] = useState(false);
-  const timer = useRef(null);
+function SlideCheck({ h, code, onToggle }) {
+  const trackRef = useRef(null);
+  const drag = useRef(null); // { startX, startPos, moved }
+  const [pos, setPos] = useState(null); // 0..1 while dragging, otherwise null
   const avoid = h.mode === 'avoid';
   const on = code === 'd';
-  const label = avoid ? (on ? 'Clean today' : 'Slipped today') : on ? 'Done today' : 'Hold to check off';
-  const hint = avoid ? (on ? 'Hold to mark a slip' : 'Hold to undo') : on ? 'Hold to undo' : '';
+  const p = pos ?? (on ? 1 : 0);
 
-  const stop = () => {
-    clearTimeout(timer.current);
-    setHolding(false);
+  const span = () => {
+    const t = trackRef.current;
+    const knob = t.querySelector('.knob');
+    return t.clientWidth - knob.offsetWidth - 8; // 4px inset on each side
   };
-  const start = (e) => {
+  const down = (e) => {
     if (e.button !== undefined && e.button !== 0) return;
-    setHolding(true);
-    timer.current = setTimeout(() => {
-      setHolding(false);
-      if (navigator.vibrate) navigator.vibrate(15);
-      onDone();
-    }, HOLD_MS);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { startX: e.clientX, startPos: on ? 1 : 0, moved: false };
   };
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const move = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    if (Math.abs(dx) > 6) d.moved = true;
+    if (d.moved) setPos(Math.max(0, Math.min(1, d.startPos + dx / span())));
+  };
+  const up = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    const end = d.moved ? (pos ?? d.startPos) >= 0.5 : !on; // a tap flips it
+    setPos(null);
+    if (end !== on) {
+      if (navigator.vibrate) navigator.vibrate(12);
+      onToggle();
+    }
+  };
 
+  const label = avoid ? (on ? 'Clean today' : 'Slipped today') : on ? 'Done today' : 'Slide to check';
   return (
     <button
-      className={`hold-check${on ? ' on' : ''}${avoid ? ' avoid' : ''}${holding ? ' holding' : ''}`}
-      style={{ '--hold': `${HOLD_MS}ms` }}
-      onPointerDown={start}
-      onPointerUp={stop}
-      onPointerLeave={stop}
-      onPointerCancel={stop}
-      onContextMenu={(e) => e.preventDefault()}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onDone())}
-      aria-pressed={on}
-      aria-label={`${h.name} today: ${label}. ${hint || 'Press and hold to check off.'}`}
+      ref={trackRef}
+      role="switch"
+      aria-checked={on}
+      aria-label={`${h.name} today${avoid ? ', clean' : ', done'}`}
+      className={`slide-check${on ? ' on' : ''}${avoid ? ' avoid' : ''}${pos !== null ? ' sliding' : ''}`}
+      style={{ '--p': p }}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={() => {
+        drag.current = null;
+        setPos(null);
+      }}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onToggle())}
+      onClick={(e) => e.preventDefault()}
     >
       <span className="fill" aria-hidden="true" />
-      <span className="tick" aria-hidden="true">{on ? <Icon name="check" size={18} /> : avoid ? '×' : null}</span>
-      <span className="txt">
-        <b>{label}</b>
-        {hint && <small>{hint}</small>}
-      </span>
+      <span className="lbl" aria-hidden="true">{label}</span>
+      <span className="knob" aria-hidden="true">{on || p > 0.5 ? <Icon name="check" size={18} /> : avoid ? '×' : <Icon name="right" size={18} />}</span>
     </button>
   );
 }
@@ -308,7 +323,7 @@ export default function HabitsView() {
                 );
               })}
             </div>
-            <HoldCheck h={h} code={lookup(h, today).code} onDone={() => toggleHabit(h, today, lookup(h, today).code === 'd')} />
+            <SlideCheck h={h} code={lookup(h, today).code} onToggle={() => toggleHabit(h, today, lookup(h, today).code === 'd')} />
           </>
         );
         }}
