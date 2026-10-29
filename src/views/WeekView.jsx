@@ -4,7 +4,8 @@ import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, iso, todayISO, weekStart } from '../lib/dates.js';
 import { BLOCK_TYPES } from '../lib/model.js';
 import { useCalendarDays, useCalendarStatus } from '../lib/calendar.js';
-import { useSchool, overdue } from '../lib/canvas.js';
+import { useSchool, overdue, markPastDone } from '../lib/canvas.js';
+import { toast } from '../lib/toast.js';
 import SchoolList from '../components/SchoolList.jsx';
 
 export default function WeekView({ date, openDay }) {
@@ -129,8 +130,20 @@ function SchoolWeek({ ws, we, today }) {
       </div>
       {tests.length > 0 && <SchoolList items={tests} />}
       {hw.length > 0 && <SchoolList items={hw} />}
+      <PastDoneButton items={[...tests, ...hw]} today={today} />
       {!tests.length && !hw.length && <p className="muted small">Nothing from Canvas this week.</p>}
     </section>
+  );
+}
+
+/** Canvas doesn't say what you've submitted, so finished past work can be cleared in one tap. */
+export function PastDoneButton({ items, today }) {
+  const n = items.filter((i) => !i.done && i.date < today).length;
+  if (!n) return null;
+  return (
+    <button className="mini past-done" onClick={() => toast(`Marked ${markPastDone(items, today)} as done`)}>
+      Mark {n} past item{n === 1 ? '' : 's'} done
+    </button>
   );
 }
 

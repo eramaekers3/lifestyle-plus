@@ -4,7 +4,7 @@
 // device so they still show offline. Checking an item off is saved as a 'schooldone' record, so it
 // syncs too. Canvas itself is never changed.
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useSettings, saveSettings, put, remove, useKind } from '../store.js';
+import { useSettings, saveSettings, put, putMany, useKind } from '../store.js';
 import { idFor } from './ids.js';
 import { addDays, todayISO } from './dates.js';
 
@@ -44,8 +44,10 @@ const snapshot = () => cache;
 export const looksLikeCanvasFeed = (v) =>
   /^(webcals?|https):\/\/[^/]+\/feeds\/calendars\/[\w.-]+\.ics(\?.*)?$/i.test(String(v || '').trim());
 
+// The Canvas feed has due dates but not whether you've submitted, so anything due before you
+// connected Canvas counts as done. Only work due from that day on starts unchecked.
 export function connectCanvas(url) {
-  const canvas = { url: url.trim(), color: CANVAS_COLOR };
+  const canvas = { url: url.trim(), color: CANVAS_COLOR, since: todayISO() };
   saveSettings({ canvas });
   set({ url: canvas.url, events: null, fetchedAt: null, error: null, name: null });
   refreshCanvas(canvas, true);
@@ -91,6 +93,11 @@ export function useCanvasSync() {
   useEffect(() => {
     document.documentElement.style.setProperty('--canvas', color);
   }, [color]);
+  // Connections made before `since` existed start counting from today.
+  useEffect(() => {
+    if (url && !canvas.since) saveSettings({ canvas: { ...canvas, since: todayISO() } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
   useEffect(() => {
     if (!url) return;
     const run = () => refreshCanvas(canvas, false);
@@ -130,10 +137,24 @@ import { toItem } from './school.js';
 
 export const schoolDoneId = (uid) => idFor(`sd:${uid}`);
 
+const doneRecord = (item, done) => ({ id: schoolDoneId(item.id), uid: item.id, date: item.date, done, at: new Date().toISOString() });
+
+/** Checks an item off (or back on). Stored either way, so you can also un-check old work. */
 export function setSchoolDone(item, done) {
-  const id = schoolDoneId(item.id);
-  if (done) put('schooldone', { id, uid: item.id, date: item.date, doneAt: new Date().toISOString() });
-  else remove(id);
+  put('schooldone', doneRecord(item, done));
+}
+
+/** Marks every unchecked item due before today as done. */
+export function markPastDone(items, today = todayISO()) {
+  const past = items.filter((i) => !i.done && i.date < today);
+  putMany(past.map((i) => ['schooldone', doneRecord(i, true)]));
+  return past.length;
+}
+
+/** Done if you said so; otherwise done when it was due before Canvas was connected. */
+export function isSchoolDone(item, rec, since) {
+  if (rec) return rec.done !== false;
+  return !!since && item.date < since;
 }
 
 /**
@@ -146,14 +167,14 @@ export function useSchool() {
   const doneRecs = useKind('schooldone');
   return useMemo(() => {
     if (!canvas || !canvas.url || c.url !== canvas.url || !c.events) return [];
-    const done = new Set(doneRecs.map((r) => r.uid));
+    const recs = new Map(doneRecs.map((r) => [r.uid, r]));
     const seen = new Set();
     const out = [];
     for (const ev of c.events) {
       const item = toItem(ev);
       if (!item || seen.has(item.id)) continue;
       seen.add(item.id);
-      out.push({ ...item, done: done.has(item.id) });
+      out.push({ ...item, done: isSchoolDone(item, recs.get(item.id), canvas.since) });
     }
     return out.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? 1440) - (b.time ?? 1440));
   }, [canvas, c, doneRecs]);

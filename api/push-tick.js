@@ -55,8 +55,15 @@ async function forUser(db, userId, subs, now) {
     try {
       const feed = await readCalendar({ url: settings.canvas.url, source: 'canvas', from: date, to: addDays(date, 3) });
       const { data: doneRows } = await db.from('records').select('data').eq('user_id', userId).eq('kind', 'schooldone').eq('deleted', false);
-      const done = new Set((doneRows || []).map((r) => r.data.uid));
-      school = feed.events.map((e) => toItem(e, tz)).filter(Boolean).map((i) => ({ ...i, done: done.has(i.id) }));
+      const recs = new Map((doneRows || []).map((r) => [r.data.uid, r.data]));
+      const since = settings.canvas.since;
+      school = feed.events
+        .map((e) => toItem(e, tz))
+        .filter(Boolean)
+        .map((i) => {
+          const rec = recs.get(i.id);
+          return { ...i, done: rec ? rec.done !== false : !!since && i.date < since };
+        });
     } catch (e) {
       console.log('canvas feed failed', e.message);
     }

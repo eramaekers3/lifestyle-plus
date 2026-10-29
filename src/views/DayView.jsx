@@ -11,6 +11,7 @@ import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import SchoolList from '../components/SchoolList.jsx';
+import { PastDoneButton } from './WeekView.jsx';
 
 export default function DayView({ date }) {
   const settings = useSettings();
@@ -138,6 +139,7 @@ function SchoolDay({ date }) {
         <span className="meta">{due.length ? `${left} of ${due.length} left` : 'Nothing due'}</span>
       </div>
       {(late.length > 0 || due.length > 0) && <SchoolList items={[...late, ...due]} showDay={false} />}
+      <PastDoneButton items={late} today={today} />
       {soon.length > 0 && (
         <>
           <p className="school-sub">Tests coming up</p>
