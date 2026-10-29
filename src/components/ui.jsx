@@ -47,7 +47,39 @@ export function Icon({ name, size = 20 }) {
 }
 
 /* ---------- Bottom sheet ---------- */
+
+/**
+ * The part of the screen you can actually see. On iPhone the keyboard slides over the page instead
+ * of shrinking it, so sheets size themselves to this to stay above the keyboard.
+ */
+function useVisibleArea() {
+  const read = () => {
+    const vv = window.visualViewport;
+    if (!vv) return null;
+    return { top: vv.offsetTop, height: vv.height, keyboard: window.innerHeight - vv.height > 120 };
+  };
+  const [area, setArea] = useState(read);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setArea(read()));
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      cancelAnimationFrame(frame);
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+  return area;
+}
+
 export function Sheet({ title, onClose, children }) {
+  const area = useVisibleArea();
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -59,7 +91,11 @@ export function Sheet({ title, onClose, children }) {
     };
   }, [onClose]);
   return createPortal(
-    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className={`scrim${area && area.keyboard ? ' kb' : ''}`}
+      style={area ? { top: area.top, height: area.height, bottom: 'auto', '--vh': `${area.height}px` } : undefined}
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet-head">
           <h2>{title}</h2>

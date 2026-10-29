@@ -608,17 +608,18 @@ form.inline .num-in { flex: 0 1 92px; }
 
 /* ---------- Sheets ---------- */
 .scrim {
-  position: fixed; inset: 0; z-index: 50;
+  position: fixed; inset: 0; z-index: 50; transition: height 0.18s var(--ease-out);
   display: flex; align-items: flex-end; justify-content: center;
   background: rgba(14, 17, 22, 0.55);
   animation: fade 0.22s var(--ease-out) both;
 }
 .sheet {
   position: relative;
-  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  width: 100%; max-width: 560px; overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line); border-bottom: 0; border-radius: 24px 24px 0 0;
   padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(26px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  max-height: calc(var(--vh, 100vh) * 0.92);
   animation: sheetUp 0.4s var(--ease-out) both;
   will-change: transform;
 }
@@ -626,6 +627,8 @@ form.inline .num-in { flex: 0 1 92px; }
   .scrim { align-items: center; }
   .sheet { border-radius: 24px; border-bottom: 1px solid var(--line); box-shadow: 8px 10px 0 rgba(12, 15, 20, 0.45); }
 }
+/* With the keyboard up, the sheet sits right on top of it: no home-bar padding needed. */
+.scrim.kb .sheet { padding-bottom: 16px; }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .sheet-head h2 { margin: 0; font: var(--display-weight) 28px/1 var(--display); letter-spacing: var(--display-tracking); }
 .sheet-sub { margin-top: 0; }
