@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { heartSVG } from '../lib/logo.js';
 import { createPortal } from 'react-dom';
 import { pad } from '../lib/dates.js';
 import { useToast } from '../lib/toast.js';
@@ -10,6 +11,12 @@ export function useNow(ms = 30000) {
     return () => clearInterval(t);
   }, [ms]);
   return now;
+}
+
+/* ---------- Logo ---------- */
+export function HeartMark({ color, size = 30, className = 'heart-mark' }) {
+  const html = useMemo(() => heartSVG(color, { id: `hm${String(color).replace(/\W/g, '')}` }), [color]);
+  return <span className={className} style={{ width: size, height: size }} aria-hidden="true" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 /* ---------- Icons ---------- */

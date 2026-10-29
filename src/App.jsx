@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
-import { Icon, Toaster } from './components/ui.jsx';
+import { Icon, Toaster, HeartMark } from './components/ui.jsx';
+import { DEFAULT_HEART } from './lib/logo.js';
 import { useCalendarSync } from './lib/calendar.js';
 import { useCanvasSync } from './lib/canvas.js';
-import { useTheme } from './lib/theme.js';
+import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
@@ -55,6 +56,7 @@ export default function App() {
   useCanvasSync();
   usePushKeepAlive(!!sync.email);
   useTheme();
+  useHeartIcon();
 
   // Open the morning page by itself on the first open of a morning, until the day is started.
   useEffect(() => {
@@ -98,7 +100,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">lifestyle<b>+</b></div>
+        <div className="brand" aria-label="lifestyle+">
+          <span aria-hidden="true">lifestyle</span>
+          <HeartMark color={settingsData.heartColor || DEFAULT_HEART} />
+        </div>
         <button className="sync-btn" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
           <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />
           <span className="sync-text">{syncLabel}</span>

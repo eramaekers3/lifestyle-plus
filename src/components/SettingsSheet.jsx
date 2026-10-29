@@ -3,7 +3,8 @@ import { ACCENTS, FONTS, loadAllFonts } from '../lib/theme.js';
 import { getHealthKeyInfo, createHealthKey, deleteHealthKey } from '../lib/health.js';
 import { parseStreaksExport, streaksToRecords } from '../lib/streaksImport.js';
 import { list, putMany } from '../store.js';
-import { Sheet } from './ui.jsx';
+import { Sheet, HeartMark } from './ui.jsx';
+import { HEART_COLORS, DEFAULT_HEART } from '../lib/logo.js';
 import {
   useSettings, saveSettings, useSyncStatus, sync, signIn, signUp, signOut, clearSample, eraseAll,
 } from '../store.js';
@@ -402,6 +403,30 @@ function CanvasSection() {
   );
 }
 
+function HeartColor() {
+  const s = useSettings();
+  const current = (s.heartColor || DEFAULT_HEART).toLowerCase();
+  const isPreset = HEART_COLORS.some((h) => h.hex === current);
+  return (
+    <>
+      <p className="muted small" style={{ marginTop: 14 }}>Logo and app icon heart</p>
+      <div className="swatches" role="group" aria-label="Heart color">
+        {HEART_COLORS.map((h) => (
+          <button key={h.id} className="heart-swatch" aria-pressed={current === h.hex} aria-label={h.name} title={h.name} onClick={() => saveSettings({ heartColor: h.hex })}>
+            <HeartMark color={h.hex} size={30} className="" />
+          </button>
+        ))}
+        <label className={`swatch swatch-custom${isPreset ? '' : ' on'}`} title="Pick any color">
+          <input type="color" value={current} onChange={(e) => saveSettings({ heartColor: e.target.value })} aria-label="Pick any heart color" />
+        </label>
+      </div>
+      <p className="muted small" style={{ marginTop: 8 }}>
+        The logo changes right away. iPhone keeps the Home Screen icon it saved when you added the app, so to update that too, remove lifestyle+ from your Home Screen and add it again from Safari.
+      </p>
+    </>
+  );
+}
+
 function LookSection() {
   const s = useSettings();
   useEffect(loadAllFonts, []);
@@ -433,6 +458,8 @@ function LookSection() {
           />
         </label>
       </div>
+
+      <HeartColor />
 
       <p className="muted small" style={{ marginTop: 14 }}>Heading font</p>
       <div className="font-list" role="group" aria-label="Heading font">

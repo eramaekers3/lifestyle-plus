@@ -1,6 +1,7 @@
 // Accent color and heading font, chosen in Settings and synced with your other settings.
 import { useEffect } from 'react';
 import { useSettings } from '../store.js';
+import { DEFAULT_HEART, heartIconPNG } from './logo.js';
 
 export const ACCENTS = [
   { id: 'sunflower', name: 'Sunflower', hex: '#ffcf5c' },
@@ -78,4 +79,32 @@ export function useTheme() {
     root.setProperty('--display-weight', String(f.weight));
     root.setProperty('--display-tracking', f.tracking);
   }, [headingFont]);
+}
+
+/**
+ * Keeps the tab icon and the Home Screen icon in your heart color. iPhone copies the icon when you
+ * add the app to the Home Screen, so a new color shows there after you remove and add it again.
+ */
+export function useHeartIcon() {
+  const { heartColor } = useSettings();
+  const color = heartColor || DEFAULT_HEART;
+  useEffect(() => {
+    if (color.toLowerCase() === DEFAULT_HEART) {
+      document.querySelectorAll('link[data-default-href]').forEach((l) => (l.href = l.dataset.defaultHref));
+      return;
+    }
+    let live = true;
+    heartIconPNG(color, 180)
+      .then((png) => {
+        if (!live) return;
+        for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]')) {
+          if (!l.dataset.defaultHref) l.dataset.defaultHref = l.href;
+          l.href = png;
+        }
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [color]);
 }
