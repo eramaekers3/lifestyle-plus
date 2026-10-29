@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ACCENTS, FONTS, loadAllFonts } from '../lib/theme.js';
 import { Sheet } from './ui.jsx';
 import {
   useSettings, saveSettings, useSyncStatus, sync, signIn, signUp, signOut, clearSample, eraseAll,
@@ -38,6 +39,8 @@ export default function SettingsSheet({ onClose }) {
           <AuthForm />
         )}
       </section>
+
+      <LookSection />
 
       <CalendarSection />
 
@@ -216,6 +219,56 @@ function CalendarSection() {
         </ol>
       )}
       {help && <p className="muted small">Anyone with a public link can see that calendar, so keep the link private. Turning Public Calendar off breaks the link.</p>}
+    </section>
+  );
+}
+
+function LookSection() {
+  const s = useSettings();
+  useEffect(loadAllFonts, []);
+  const current = (s.accent || '').toLowerCase();
+  const isPreset = ACCENTS.some((a) => a.hex === current);
+  return (
+    <section className="set-sec">
+      <h3>Look</h3>
+      <p className="muted small">Accent color</p>
+      <div className="swatches" role="group" aria-label="Accent color">
+        {ACCENTS.map((a) => (
+          <button
+            key={a.id}
+            className="swatch"
+            style={{ '--c': a.hex }}
+            aria-pressed={current === a.hex}
+            aria-label={a.name}
+            title={a.name}
+            onClick={() => saveSettings({ accent: a.hex })}
+          />
+        ))}
+        <label className={`swatch swatch-custom${isPreset ? '' : ' on'}`} title="Pick any color">
+          <input
+            id="accent-custom"
+            type="color"
+            value={/^#[0-9a-f]{6}$/i.test(current) ? current : '#ffcf5c'}
+            onChange={(e) => saveSettings({ accent: e.target.value })}
+            aria-label="Pick any accent color"
+          />
+        </label>
+      </div>
+
+      <p className="muted small" style={{ marginTop: 14 }}>Heading font</p>
+      <div className="font-list" role="group" aria-label="Heading font">
+        {FONTS.map((f) => (
+          <button
+            key={f.id}
+            className="font-opt"
+            aria-pressed={(s.headingFont || 'bricolage') === f.id}
+            onClick={() => saveSettings({ headingFont: f.id })}
+          >
+            <span className="sample" style={{ fontFamily: `${f.family}, system-ui, sans-serif`, fontWeight: f.weight, letterSpacing: f.tracking }}>Thursday</span>
+            <span className="fname">{f.name}</span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

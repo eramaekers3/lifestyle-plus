@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
 import { Icon, Toaster } from './components/ui.jsx';
 import { useCalendarSync } from './lib/calendar.js';
+import { useTheme } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
 import PlanView from './views/PlanView.jsx';
@@ -27,6 +28,7 @@ export default function App() {
   const { sample } = useSettings();
   const sync = useSyncStatus();
   useCalendarSync();
+  useTheme();
 
   useEffect(() => {
     const onHash = () => {
