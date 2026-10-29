@@ -12,7 +12,7 @@ import { minToLabel } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCalendarColor } from '../lib/calendar.js';
 import { enablePush, disablePush, sendTestPush, usePushState } from '../lib/push.js';
-import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor } from '../lib/canvas.js';
+import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor, saveCanvasToken, removeCanvasToken, refreshSubmissions } from '../lib/canvas.js';
 
 export default function SettingsSheet({ onClose }) {
   const s = useSettings();
@@ -153,6 +153,16 @@ function AuthForm() {
   );
 }
 
+/** Where calendar connections live: your account when signed in, otherwise just this device. */
+function SavedTo() {
+  const st = useSyncStatus();
+  return st.email ? (
+    <p className="muted small saved-to">Saved to your account ({st.email}), so it shows on every device you sign in on.</p>
+  ) : (
+    <p className="err saved-to">You’re not signed in, so this is only saved on this device. Sign in at the top of Settings to keep it on every device.</p>
+  );
+}
+
 function CalendarSection() {
   const calendars = useCalendarStatus();
   const [url, setUrl] = useState('');
@@ -181,6 +191,7 @@ function CalendarSection() {
     <section className="set-sec">
       <h3>Apple Calendar</h3>
       <p className="muted small">Your events show on the day timeline as fixed blocks. Read-only, refreshed every 10 minutes. Tap a calendar’s dot to change its color.</p>
+      {calendars.length > 0 && <SavedTo />}
 
       {calendars.length > 0 && (
         <ul className="rows cal-list">
@@ -323,6 +334,79 @@ function NotifySection({ signedIn }) {
   );
 }
 
+function CanvasToken({ c }) {
+  const [token, setToken] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [help, setHelp] = useState(false);
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (token.trim().length < 20) return setErr('That looks too short. Copy the whole token Canvas shows you.');
+    setBusy(true);
+    setErr('');
+    const problem = await saveCanvasToken(token);
+    setBusy(false);
+    if (problem) setErr(problem);
+    else {
+      setToken('');
+      toast('Canvas connected. Submitted work checks itself off.');
+    }
+  };
+
+  return (
+    <div className="canvas-token">
+      <p className="sub-h">Check off submitted work automatically</p>
+      {c.hasToken ? (
+        <>
+          <p className="muted small">
+            {c.statusLoading
+              ? 'Checking Canvas…'
+              : c.statusError
+                ? ''
+                : `Connected${c.account ? ` as ${c.account}` : ''}${c.statusAt ? ` · checked ${new Date(c.statusAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}. Anything you turn in gets checked off, on every device.`}
+          </p>
+          {c.statusError && <p className="err">{c.statusError}</p>}
+          <div className="btn-row" style={{ marginTop: 6 }}>
+            <button className="mini" onClick={() => refreshSubmissions(true)} disabled={c.statusLoading}>Check now</button>
+            <button className="mini" onClick={() => { removeCanvasToken(); toast('Token removed'); }}>Remove token</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="muted small">The feed only has due dates. Add a Canvas access token and lifestyle+ can see what you’ve turned in.</p>
+          <form className="inline" onSubmit={save}>
+            <input
+              id="canvas-token"
+              className="input"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="Paste your Canvas access token"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            <button className="btn" disabled={busy}>{busy ? 'Checking…' : 'Save'}</button>
+          </form>
+          {err && <p className="err">{err}</p>}
+          <button type="button" className="link-btn" onClick={() => setHelp((h) => !h)} aria-expanded={help}>
+            {help ? 'Hide' : 'How do I get a token?'}
+          </button>
+          {help && (
+            <ol className="steps small">
+              <li>Open <b>canvas.unl.edu</b> in Safari and tap <b>Account → Settings</b>.</li>
+              <li>Under <b>Approved Integrations</b>, tap <b>+ New Access Token</b>. (If there’s no button, UNL doesn’t allow student tokens.)</li>
+              <li>Purpose: <b>lifestyle+</b>. Leave the expiry blank, or pick the end of the semester.</li>
+              <li>Tap <b>Generate Token</b>, copy it (Canvas only shows it once) and paste it above.</li>
+            </ol>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function CanvasSection() {
   const c = useCanvasStatus();
   const [url, setUrl] = useState('');
@@ -346,6 +430,7 @@ function CanvasSection() {
     <section className="set-sec">
       <h3>Canvas</h3>
       <p className="muted small">Homework and tests from Canvas show on your week and day. Read-only, refreshed every 30 minutes. Checking something off here doesn’t change Canvas.</p>
+      {c && <SavedTo />}
 
       {c ? (
         <ul className="rows cal-list">
@@ -386,6 +471,8 @@ function CanvasSection() {
         </form>
       )}
       {err && <p className="err">{err}</p>}
+
+      {c && <CanvasToken c={c} />}
 
       <button type="button" className="link-btn" onClick={() => setHelp((h) => !h)} aria-expanded={help}>
         {help ? 'Hide' : 'How do I get the link?'}

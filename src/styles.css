@@ -307,6 +307,9 @@ form.inline .num-in { flex: 0 1 92px; }
 .school-sub { margin: 12px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .open-canvas { flex: none; color: var(--muted); }
 .past-done { margin-top: 10px; }
+.saved-to { margin: 6px 0 10px; }
+.canvas-token { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.canvas-token .sub-h { margin: 0 0 4px; font-weight: 800; font-size: 14px; }
 
 /* ---------- Rows and tasks ---------- */
 .rows { list-style: none; margin: 0; padding: 0; }

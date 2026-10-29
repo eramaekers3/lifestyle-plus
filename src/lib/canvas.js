@@ -4,7 +4,7 @@
 // device so they still show offline. Checking an item off is saved as a 'schooldone' record, so it
 // syncs too. Canvas itself is never changed.
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useSettings, saveSettings, put, putMany, useKind } from '../store.js';
+import { useSettings, saveSettings, put, putMany, remove, useKind, useRecord, list, get, SETTINGS_ID } from '../store.js';
 import { idFor } from './ids.js';
 import { addDays, todayISO } from './dates.js';
 
@@ -20,14 +20,15 @@ function load() {
   }
 }
 
-// { url, name, events, fetchedAt, error, loading }
+// { url, name, events, fetchedAt, error, loading,
+//   submitted: { [assignmentId]: true|false }, account, statusAt, statusError, statusLoading }
 let cache = load();
 const listeners = new Set();
 function set(changes) {
   cache = { ...cache, ...changes };
   try {
-    const { url, name, events, fetchedAt } = cache;
-    localStorage.setItem(KEY, JSON.stringify({ url, name, events, fetchedAt }));
+    const { url, name, events, fetchedAt, submitted, account, statusAt } = cache;
+    localStorage.setItem(KEY, JSON.stringify({ url, name, events, fetchedAt, submitted, account, statusAt }));
   } catch {
     /* storage unavailable */
   }
@@ -54,6 +55,7 @@ export function connectCanvas(url) {
 }
 
 export function disconnectCanvas() {
+  removeCanvasToken();
   saveSettings({ canvas: null });
   set({ url: null, events: null, fetchedAt: null, error: null, name: null, loading: false });
 }
@@ -100,7 +102,10 @@ export function useCanvasSync() {
   }, [url]);
   useEffect(() => {
     if (!url) return;
-    const run = () => refreshCanvas(canvas, false);
+    const run = () => {
+      refreshCanvas(canvas, false);
+      refreshSubmissions(false);
+    };
     run();
     window.addEventListener('focus', run);
     document.addEventListener('visibilitychange', run);
@@ -121,6 +126,11 @@ export function useCanvasStatus() {
   const mine = c.url === canvas.url;
   return {
     ...canvas,
+    hasToken: !!(get(TOKEN_ID) || {}).token,
+    account: c.account,
+    statusAt: c.statusAt,
+    statusError: c.statusError,
+    statusLoading: c.statusLoading,
     color: canvas.color || CANVAS_COLOR,
     name: mine ? c.name : null,
     count: mine && c.events ? c.events.length : 0,
@@ -152,9 +162,93 @@ export function markPastDone(items, today = todayISO()) {
 }
 
 /** Done if you said so; otherwise done when it was due before Canvas was connected. */
-export function isSchoolDone(item, rec, since) {
+/**
+ * Done if you said so. Otherwise, with a Canvas token, done when Canvas says it's submitted;
+ * without one, done when it was due before Canvas was connected.
+ */
+export function isSchoolDone(item, rec, since, submitted) {
   if (rec) return rec.done !== false;
+  const aid = assignmentIdOf(item.id);
+  if (submitted && aid && aid in submitted) return submitted[aid];
   return !!since && item.date < since;
+}
+
+const assignmentIdOf = (uid) => (/^event-assignment-(\d+)$/.exec(uid || '') || [])[1] || null;
+
+/* ---------- Submission status (optional access token) ----------
+   The token is saved to your account like your calendar links, so every device you sign in on
+   uses it. It's stored in your own records (only your account can read them) and is only ever
+   sent to your school's Canvas, through /api/canvas. */
+
+const TOKEN_ID = idFor('canvas-token');
+export const getToken = () => (get(TOKEN_ID) || {}).token || '';
+export const useHasToken = () => !!(useRecord(TOKEN_ID) || {}).token;
+const hostOf = (feedUrl) => {
+  try {
+    return new URL(String(feedUrl).replace(/^webcals?:\/\//i, 'https://')).host;
+  } catch {
+    return '';
+  }
+};
+
+/** Saves the token on this device and checks it right away. Resolves with an error message or null. */
+export async function saveCanvasToken(token) {
+  put('secret', { id: TOKEN_ID, token: token.trim() });
+  await refreshSubmissions(true);
+  if (cache.statusError) {
+    const msg = cache.statusError;
+    removeCanvasToken();
+    return msg;
+  }
+  return null;
+}
+
+export function removeCanvasToken() {
+  if (get(TOKEN_ID)) remove(TOKEN_ID);
+  set({ submitted: null, account: null, statusAt: null, statusError: null, statusLoading: false });
+}
+
+/**
+ * Asks Canvas (through /api/canvas) what you've submitted, then checks those items off. The
+ * check-offs are ordinary synced records, so your other devices and reminders see them too.
+ */
+export async function refreshSubmissions(force = false) {
+  const token = getToken();
+  const s = get(SETTINGS_ID) || {};
+  const host = s.canvas && hostOf(s.canvas.url);
+  if (!token || !host) return;
+  if (!force && (cache.statusLoading || (cache.statusAt && Date.now() - cache.statusAt < REFRESH_MS))) return;
+  set({ statusLoading: true });
+  const t = todayISO();
+  try {
+    const res = await fetch('/api/canvas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, host, from: addDays(t, -45), to: addDays(t, 120) }),
+    });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      /* not JSON */
+    }
+    if (!res.ok) throw new Error(data.error || 'Couldn’t reach Canvas. It only works on the deployed app.');
+    const submitted = {};
+    for (const it of data.items || []) submitted[it.assignmentId] = submitted[it.assignmentId] || it.submitted;
+    set({ submitted, account: data.name || null, statusAt: Date.now(), statusError: null, statusLoading: false });
+
+    // Check off what's been turned in, leaving anything you've checked or unchecked yourself alone.
+    const have = new Set(list('schooldone').map((r) => r.uid));
+    const fresh = (data.items || [])
+      .filter((it) => it.submitted && !have.has(`event-assignment-${it.assignmentId}`))
+      .map((it) => {
+        const uid = `event-assignment-${it.assignmentId}`;
+        return ['schooldone', { id: schoolDoneId(uid), uid, date: (it.due || '').slice(0, 10), done: true, by: 'canvas', at: new Date().toISOString() }];
+      });
+    if (fresh.length) putMany(fresh);
+  } catch (e) {
+    set({ statusError: e.message, statusLoading: false });
+  }
 }
 
 /**
@@ -174,7 +268,7 @@ export function useSchool() {
       const item = toItem(ev);
       if (!item || seen.has(item.id)) continue;
       seen.add(item.id);
-      out.push({ ...item, done: isSchoolDone(item, recs.get(item.id), canvas.since) });
+      out.push({ ...item, done: isSchoolDone(item, recs.get(item.id), canvas.since, c.submitted) });
     }
     return out.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? 1440) - (b.time ?? 1440));
   }, [canvas, c, doneRecs]);
