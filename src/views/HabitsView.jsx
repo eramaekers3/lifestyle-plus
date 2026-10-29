@@ -11,6 +11,58 @@ const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const codeLabel = (h, code) =>
   ({ d: h.mode === 'avoid' ? 'clean' : 'done', p: 'partly done', s: 'skipped', m: h.mode === 'avoid' ? 'slipped' : 'not done' })[code];
 
+const HOLD_MS = 550;
+
+/**
+ * Today's big check-off. Press and hold until it fills to mark it, so a stray tap can't.
+ * Holding again undoes it. Enter or Space toggles it from a keyboard.
+ */
+function HoldCheck({ h, code, onDone }) {
+  const [holding, setHolding] = useState(false);
+  const timer = useRef(null);
+  const avoid = h.mode === 'avoid';
+  const on = code === 'd';
+  const label = avoid ? (on ? 'Clean today' : 'Slipped today') : on ? 'Done today' : 'Hold to check off';
+  const hint = avoid ? (on ? 'Hold to mark a slip' : 'Hold to undo') : on ? 'Hold to undo' : '';
+
+  const stop = () => {
+    clearTimeout(timer.current);
+    setHolding(false);
+  };
+  const start = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    setHolding(true);
+    timer.current = setTimeout(() => {
+      setHolding(false);
+      if (navigator.vibrate) navigator.vibrate(15);
+      onDone();
+    }, HOLD_MS);
+  };
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return (
+    <button
+      className={`hold-check${on ? ' on' : ''}${avoid ? ' avoid' : ''}${holding ? ' holding' : ''}`}
+      style={{ '--hold': `${HOLD_MS}ms` }}
+      onPointerDown={start}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onDone())}
+      aria-pressed={on}
+      aria-label={`${h.name} today: ${label}. ${hint || 'Press and hold to check off.'}`}
+    >
+      <span className="fill" aria-hidden="true" />
+      <span className="tick" aria-hidden="true">{on ? <Icon name="check" size={18} /> : avoid ? '×' : null}</span>
+      <span className="txt">
+        <b>{label}</b>
+        {hint && <small>{hint}</small>}
+      </span>
+    </button>
+  );
+}
+
 /**
  * Habits two to a row. Drag a card by its grip to reorder (arrow keys work on the grip too).
  * The new order is saved to each habit, so the Day view's habit chips follow it.
@@ -191,7 +243,8 @@ export default function HabitsView() {
   const [mode, setMode] = useState('build');
   const [open, setOpen] = useState(null);
   const today = todayISO();
-  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
+  // The six days before today; today gets its own big hold-to-check button.
+  const days = Array.from({ length: 6 }, (_, i) => addDays(today, i - 6));
 
   const stats = useMemo(() => Object.fromEntries(all.map((h) => [h.id, habitStats(h, idx)])), [all, idx]);
   const since = all.length ? all.reduce((m, h) => (idx.startOf(h) < m ? idx.startOf(h) : m), today) : today;
@@ -255,6 +308,7 @@ export default function HabitsView() {
                 );
               })}
             </div>
+            <HoldCheck h={h} code={lookup(h, today).code} onDone={() => toggleHabit(h, today, lookup(h, today).code === 'd')} />
           </>
         );
         }}
