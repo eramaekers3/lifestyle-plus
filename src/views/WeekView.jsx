@@ -3,6 +3,7 @@ import { put, useKind, useRecord, useSettings } from '../store.js';
 import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, iso, todayISO, weekStart } from '../lib/dates.js';
 import { BLOCK_TYPES } from '../lib/model.js';
+import { useCalendarDays } from '../lib/calendar.js';
 
 export default function WeekView({ date, openDay }) {
   const ws = weekStart(date);
@@ -13,6 +14,8 @@ export default function WeekView({ date, openDay }) {
   const tasks = useKind('task');
   const plan = useRecord(idFor(`week:${ws}`));
   const today = todayISO();
+  const calDays = useCalendarDays();
+  const hasCal = Object.keys(calDays).length > 0;
 
   const byDay = useMemo(() => {
     const m = {};
@@ -54,8 +57,8 @@ export default function WeekView({ date, openDay }) {
         </div>
         <ul className="week-days">
           {days.map((d) => {
-            const list = byDay[d];
-            const total = list.reduce((a, b) => a + b.end - b.start, 0);
+            const list = [...byDay[d], ...((calDays[d] && calDays[d].timed) || [])];
+            const total = byDay[d].reduce((a, b) => a + b.end - b.start, 0);
             return (
               <li key={d}>
                 <button className={`wk-row${d === today ? ' is-today' : ''}`} onClick={() => openDay(d)}>
@@ -88,6 +91,12 @@ export default function WeekView({ date, openDay }) {
               {t.label}
             </span>
           ))}
+          {hasCal && (
+            <span className="t-cal">
+              <i aria-hidden="true" />
+              Apple Calendar
+            </span>
+          )}
         </div>
       </section>
     </>

@@ -128,7 +128,8 @@ export function remove(id) {
 /* ---------- Settings ---------- */
 
 export const SETTINGS_ID = idFor('settings');
-export const DEFAULT_SETTINGS = { stackLimit: 3, dayStart: 7, dayEnd: 23, sample: false };
+const NO_CALENDARS = [];
+export const DEFAULT_SETTINGS = { stackLimit: 3, dayStart: 7, dayEnd: 23, sample: false, calendars: NO_CALENDARS };
 
 export function useSettings() {
   const s = useRecord(SETTINGS_ID);

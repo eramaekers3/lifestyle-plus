@@ -38,6 +38,18 @@ To skip that step for a personal app, turn off **Authentication → Providers �
 
 Sample data is never uploaded. It's removed from the device when you sign in.
 
+## Connect Apple Calendar (read-only)
+
+Your Apple Calendar events show on the day timeline as striped blocks, so you can plan around them.
+
+1. On your iPhone, open **Calendar** and tap **Calendars** at the bottom.
+2. Tap the **ⓘ** next to an iCloud calendar, turn on **Public Calendar**, tap **Share Link…** and **Copy**.
+3. In lifestyle+, open **Settings → Apple Calendar**, paste the link and tap **Add**.
+
+The link is fetched by a small server function (`api/calendar.js`) because Apple doesn't let web pages read it
+directly. It only accepts iCloud links. Anyone with a public calendar link can read that calendar, so keep it private.
+`npm run dev` serves the same function locally.
+
 ## Put it on your iPhone
 
 The Home Screen app needs a real web address (https). The easiest host is Vercel:

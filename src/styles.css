@@ -310,6 +310,23 @@ form.inline .num-in { flex: 0 1 92px; }
 .t-shallow { --c: var(--lilac); }
 .t-fixed { --c: var(--coral); }
 .t-personal { --c: var(--mint); }
+.t-cal { --c: #dfe4ea; }
+.blk.cal {
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 50%, transparent);
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--ink) 13%, var(--surface)) 0 7px,
+    color-mix(in srgb, var(--ink) 6%, var(--surface)) 7px 14px);
+  cursor: default;
+}
+.blk.cal.past { border-color: color-mix(in srgb, var(--ink) 25%, transparent); color: var(--muted); }
+.wk-bar i.t-cal { background: repeating-linear-gradient(135deg, #dfe4ea 0 3px, #9aa4b1 3px 6px); }
+.legend .t-cal i { background: repeating-linear-gradient(135deg, #dfe4ea 0 3px, #9aa4b1 3px 6px); }
+.allday { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.allday-chip {
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent); border-radius: 8px;
+  padding: 3px 9px; font-size: 13px; font-weight: 700;
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
+}
 .blk {
   position: absolute;
   display: flex; flex-direction: column; gap: 1px;
@@ -439,6 +456,12 @@ form.inline .num-in { flex: 0 1 92px; }
 .set-sec h3 { margin: 0 0 8px; font: 800 12px var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .set-sec p { margin: 0 0 8px; }
 .auth { display: flex; flex-direction: column; gap: 8px; }
+.cal-list { margin-bottom: 6px; }
+.cal-list .row-title b { font-weight: 800; }
+.cal-err { display: block; margin-top: 2px; }
+.link-btn { border: 0; background: none; padding: 8px 0 0; color: var(--sun); font-weight: 700; font-size: 14px; }
+.steps { margin: 8px 0; padding-left: 20px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.steps b { color: var(--ink); }
 
 /* ---------- Toast ---------- */
 .toast {

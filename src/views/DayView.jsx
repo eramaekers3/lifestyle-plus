@@ -7,12 +7,15 @@ import { FlipClock, Icon } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';
 import Timeline from '../components/Timeline.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
+import { useCalendarDays } from '../lib/calendar.js';
 
 export default function DayView({ date }) {
   const settings = useSettings();
   const allBlocks = useKind('block');
   const tasks = useKind('task');
   const [edit, setEdit] = useState(null);
+  const calDays = useCalendarDays();
+  const cal = calDays[date] || { timed: [], allDay: [] };
   const isToday = date === todayISO();
 
   const blocks = useMemo(() => allBlocks.filter((b) => b.date === date), [allBlocks, date]);
@@ -54,11 +57,19 @@ export default function DayView({ date }) {
           <h2 id="tl-h">Time blocks</h2>
           <span className="meta">
             {total ? `${fmtDur(total)} planned · ${fmtDur(deep)} deep` : 'Nothing planned yet'}
+            {cal.timed.length > 0 && ` · ${cal.timed.length} event${cal.timed.length === 1 ? '' : 's'}`}
           </span>
           <button className="mini sun add-blk" onClick={newBlock}>
             <Icon name="plus" size={14} /> Block
           </button>
         </div>
+        {cal.allDay.length > 0 && (
+          <div className="allday" aria-label="All-day events">
+            {cal.allDay.map((e) => (
+              <span key={e.id} className="allday-chip" title={e.calendar}>{e.title}</span>
+            ))}
+          </div>
+        )}
         {blocks.length === 0 && (
           <div className="tl-empty">
             <p>Give every hour a job. Tap the timeline to add a block.</p>
@@ -72,6 +83,7 @@ export default function DayView({ date }) {
         <Timeline
           date={date}
           blocks={blocks}
+          events={cal.timed}
           tasksById={tasksById}
           dayStart={settings.dayStart}
           dayEnd={settings.dayEnd}

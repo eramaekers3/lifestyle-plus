@@ -2,11 +2,12 @@ import { useEffect, useRef } from 'react';
 import { layoutBlocks } from '../lib/model.js';
 import { minToLabel, nowMin, todayISO, fmtDur } from '../lib/dates.js';
 import { useNow } from './ui.jsx';
+import { toast } from '../lib/toast.js';
 
 const PX = 1.1; // pixels per minute (66px per hour)
 
 /** A day of time blocks. Tap empty space to add a block there; tap a block to edit it. */
-export default function Timeline({ date, blocks, tasksById, dayStart, dayEnd, onAdd, onEdit }) {
+export default function Timeline({ date, blocks, events = [], tasksById, dayStart, dayEnd, onAdd, onEdit }) {
   const start = dayStart * 60;
   const end = dayEnd * 60;
   const ref = useRef(null);
@@ -18,7 +19,8 @@ export default function Timeline({ date, blocks, tasksById, dayStart, dayEnd, on
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const first = blocks.length ? Math.min(...blocks.map((b) => b.start)) : 9 * 60;
+    const all = [...blocks, ...events];
+    const first = all.length ? Math.min(...all.map((b) => b.start)) : 9 * 60;
     const target = isToday ? now - 75 : first - 30;
     el.scrollTop = Math.max(0, (target - start) * PX);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -33,7 +35,7 @@ export default function Timeline({ date, blocks, tasksById, dayStart, dayEnd, on
     onAdd(Math.max(start, Math.min(end - 15, m)));
   };
 
-  const visible = blocks.filter((b) => b.end > start && b.start < end);
+  const visible = [...blocks, ...events].filter((b) => b.end > start && b.start < end);
 
   return (
     <div className="tl-scroll" ref={ref}>
@@ -51,6 +53,31 @@ export default function Timeline({ date, blocks, tasksById, dayStart, dayEnd, on
             const task = b.taskId && tasksById[b.taskId];
             const short = e - s < 40;
             const past = isToday && b.end <= now;
+            if (b.cal) {
+              return (
+                <button
+                  key={b.id}
+                  className={`blk cal t-cal${short ? ' short' : ''}${past ? ' past' : ''}`}
+                  style={{
+                    top: (s - start) * PX + 1,
+                    height: h,
+                    left: `calc(${(col / n) * 100}% + 3px)`,
+                    width: `calc(${100 / n}% - 6px)`,
+                  }}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    toast(`From ${b.calendar}. Edit it in Apple Calendar.`);
+                  }}
+                  aria-label={`${b.title}, ${minToLabel(b.start)} to ${minToLabel(b.end)}, from ${b.calendar}`}
+                >
+                  <span className="b-title">{b.title}</span>
+                  <span className="b-time">
+                    {minToLabel(b.start)}–{minToLabel(b.end)}
+                    {!short && ` · ${b.calendar}`}
+                  </span>
+                </button>
+              );
+            }
             return (
               <button
                 key={b.id}
