@@ -50,6 +50,40 @@ The link is fetched by a small server function (`api/calendar.js`) because Apple
 directly. It only accepts iCloud links. Anyone with a public calendar link can read that calendar, so keep it private.
 `npm run dev` serves the same function locally.
 
+## Connect Apple Health (iPhone Shortcut)
+
+Websites can't read Apple Health, so an iPhone Shortcut reads your weight, steps, sleep and workouts and
+sends them to `api/health.js`, which saves them to your account. You need to be signed in to sync first.
+
+**One-time database step:** run the `health_tokens` part at the bottom of `supabase/schema.sql` in the
+Supabase SQL Editor.
+
+**Get your key:** in lifestyle+, open Settings → Apple Health → Create health key. Copy the key and the address.
+
+**Build the Shortcut** (Shortcuts app → + → name it "Send to lifestyle+"):
+
+1. Add **Find Health Samples**. Type: **Steps**. Filter: **Start Date is in the last 7 days**. If you see
+   **Group By**, choose **Day**.
+2. Add **Repeat with Each** (it uses the Health Samples automatically).
+3. Inside the repeat, add a **Text** action and build this line, with no spaces:
+   `steps|` **Start Date** `|` **End Date** `|` **Value** `|` **Unit**
+   For each bold part, insert the **Repeat Item** variable, tap it, and pick that property. For Start Date
+   and End Date, also set **Date Format → ISO 8601**.
+4. Repeat steps 1–3 three more times:
+   - Type **Weight**, line starts with `weight|` (no Group By)
+   - Type **Sleep** (may be called Sleep Analysis), line starts with `sleep|`
+   - Type **Workouts**, line starts with `workout|`, and for Value pick the property that names the
+     workout (shown as Workout Type or Type). Leave Unit empty.
+5. After the four repeats, add a **Text** action with the four **Repeat Results** variables, one per line.
+6. Add **Get Contents of URL**. URL: the address from Settings. Method: **POST**.
+   Headers: `Authorization` = `Bearer YOUR-KEY`. Request Body: **JSON**, add a Text field named `lines`
+   set to the Text from step 5.
+7. Optional: add **Show Result** so you can see "Saved … days" when it runs.
+
+Run it once and allow access to Health when asked. Then make it automatic: Shortcuts → **Automation** →
+**+** → **Alarm → Is Stopped** (or a time of day) → **Run Immediately** → choose the shortcut.
+iPhones block Health data while locked, so pick a moment when you're usually holding your phone.
+
 ## Put it on your iPhone
 
 The Home Screen app needs a real web address (https). The easiest host is Vercel:

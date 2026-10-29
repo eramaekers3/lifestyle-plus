@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { put, remove, useKind, useRecord } from '../store.js';
 import { idFor } from '../lib/ids.js';
-import { addDays, fmt, parse, todayISO } from '../lib/dates.js';
+import { addDays, fmt, fmtDur, parse, todayISO } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 
 const DRAFT_ID = idFor('draft-workout');
@@ -60,6 +60,8 @@ export default function BodyView() {
           <button className="btn">Log</button>
         </form>
       </section>
+
+      <HealthCard today={today} />
 
       <Workout draft={draft} exercises={exercises} />
 
@@ -197,5 +199,73 @@ function WeightChart({ points, today }) {
       <text x={L} y={H - 5}>{fmt(addDays(today, -29), { month: 'short', day: 'numeric' })}</text>
       <text x={W - R} y={H - 5} textAnchor="end">Today</text>
     </svg>
+  );
+}
+
+function HealthCard({ today }) {
+  const health = useKind('health');
+  const hw = useKind('healthworkout');
+  const sync = useRecord(idFor('healthsync'));
+  const byDate = useMemo(() => Object.fromEntries(health.map((h) => [h.date, h])), [health]);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+  const workouts = useMemo(() => [...hw].sort((a, b) => b.start.localeCompare(a.start)).slice(0, 5), [hw]);
+
+  if (!health.length && !hw.length) {
+    return (
+      <section className="card" aria-labelledby="ah-h">
+        <div className="card-head"><h2 id="ah-h">Apple Health</h2></div>
+        <p className="empty" style={{ marginTop: 0 }}>
+          Steps, sleep and workouts from Apple Health will show here. Set it up in Settings → Apple Health.
+        </p>
+      </section>
+    );
+  }
+
+  const maxSteps = Math.max(10000, ...days.map((d) => (byDate[d] && byDate[d].steps) || 0));
+  const withSteps = days.filter((d) => byDate[d] && byDate[d].steps);
+  const avgSteps = withSteps.length ? Math.round(withSteps.reduce((a, d) => a + byDate[d].steps, 0) / withSteps.length) : 0;
+  const withSleep = days.filter((d) => byDate[d] && byDate[d].sleepMin);
+  const avgSleep = withSleep.length ? Math.round(withSleep.reduce((a, d) => a + byDate[d].sleepMin, 0) / withSleep.length) : 0;
+
+  return (
+    <section className="card" aria-labelledby="ah-h">
+      <div className="card-head">
+        <h2 id="ah-h">Apple Health</h2>
+        {sync && sync.at && (
+          <span className="meta">
+            Updated {new Date(sync.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </span>
+        )}
+      </div>
+      <div className="health-week" role="table" aria-label="Steps and sleep, last 7 days">
+        {days.map((d) => {
+          const h = byDate[d] || {};
+          return (
+            <div key={d} className={`hd${d === today ? ' today' : ''}`} role="row">
+              <div className="hd-bar" aria-hidden="true">
+                <i style={{ height: `${Math.min(100, ((h.steps || 0) / maxSteps) * 100)}%` }} />
+              </div>
+              <b role="cell">{h.steps ? `${(h.steps / 1000).toFixed(1)}k` : '—'}</b>
+              <span role="cell">{h.sleepMin ? fmtDur(h.sleepMin) : '—'}</span>
+              <span className="hd-day">{fmt(d, { weekday: 'narrow' })}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="health-legend">
+        <span>Bars and top number: steps{avgSteps ? ` · avg ${avgSteps.toLocaleString()}` : ''}</span>
+        <span>Below: sleep{avgSleep ? ` · avg ${fmtDur(avgSleep)}` : ''}</span>
+      </div>
+      {workouts.length > 0 && (
+        <ul className="rows" style={{ marginTop: 10 }}>
+          {workouts.map((w) => (
+            <li key={w.id} className="row">
+              <span className="row-title"><b>{w.type}</b> <span className="muted">· {fmtDur(w.minutes)}</span></span>
+              <span className="meta">{w.date === today ? 'Today' : fmt(w.date, { month: 'short', day: 'numeric' })}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

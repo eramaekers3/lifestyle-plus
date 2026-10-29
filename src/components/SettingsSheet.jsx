@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ACCENTS, FONTS, loadAllFonts } from '../lib/theme.js';
+import { getHealthKeyInfo, createHealthKey, deleteHealthKey } from '../lib/health.js';
 import { Sheet } from './ui.jsx';
 import {
   useSettings, saveSettings, useSyncStatus, sync, signIn, signUp, signOut, clearSample, eraseAll,
@@ -43,6 +44,8 @@ export default function SettingsSheet({ onClose }) {
       <LookSection />
 
       <CalendarSection />
+
+      <HealthSection signedIn={!!st.email} />
 
       <section className="set-sec">
         <h3>Stack</h3>
@@ -269,6 +272,88 @@ function LookSection() {
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+function HealthSection({ signedIn }) {
+  const [info, setInfo] = useState(undefined);
+  const [key, setKey] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [confirmNew, setConfirmNew] = useState(false);
+  const endpoint = `${window.location.origin}/api/health`;
+
+  useEffect(() => {
+    if (!signedIn) return;
+    getHealthKeyInfo().then(setInfo).catch((e) => setErr(e.message));
+  }, [signedIn]);
+
+  const make = async () => {
+    if (info && !confirmNew) return setConfirmNew(true);
+    setBusy(true);
+    setErr('');
+    try {
+      setKey(await createHealthKey());
+      setInfo({ created_at: new Date().toISOString(), last_used_at: null });
+      setConfirmNew(false);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`${label} copied`);
+    } catch {
+      toast('Press and hold the text to copy it');
+    }
+  };
+
+  return (
+    <section className="set-sec">
+      <h3>Apple Health</h3>
+      {!signedIn ? (
+        <p className="muted small">Sign in above first. Health data is saved to your account, then shows up on every device.</p>
+      ) : (
+        <>
+          <p className="muted small">
+            An iPhone Shortcut sends your weight, steps, sleep and workouts here. It needs a private key so only your phone can send data.
+          </p>
+          {info && !key && (
+            <p className="small">
+              Key created {new Date(info.created_at).toLocaleDateString()}
+              {' · '}
+              {info.last_used_at ? `last data received ${new Date(info.last_used_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : 'no data received yet'}
+            </p>
+          )}
+          {key && (
+            <div className="keybox">
+              <p className="small"><b>Your health key.</b> Copy it into your Shortcut now. It won’t be shown again.</p>
+              <code className="key" id="health-key">{key}</code>
+              <div className="btn-row">
+                <button className="btn" onClick={() => copy(key, 'Key')}>Copy key</button>
+                <button className="btn ghost" onClick={() => copy(endpoint, 'Address')}>Copy address</button>
+              </div>
+              <p className="muted small">Address: <code>{endpoint}</code></p>
+            </div>
+          )}
+          <div className="btn-row">
+            <button className={`btn ${info ? 'ghost' : ''}`} onClick={make} disabled={busy}>
+              {busy ? 'Working…' : info ? (confirmNew ? 'Tap again: the old key stops working' : 'Make a new key') : 'Create health key'}
+            </button>
+            {info && (
+              <button className="btn ghost" onClick={async () => { await deleteHealthKey(); setInfo(null); setKey(''); toast('Health key removed'); }}>
+                Disconnect
+              </button>
+            )}
+          </div>
+          {err && <p className="err">{err}</p>}
+        </>
+      )}
     </section>
   );
 }

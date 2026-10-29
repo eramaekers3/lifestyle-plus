@@ -38,3 +38,20 @@ drop trigger if exists records_touch on public.records;
 create trigger records_touch
   before insert or update on public.records
   for each row execute function public.touch_synced_at();
+
+-- Apple Health keys (added for the iPhone Shortcut that sends Health data).
+-- Only a hash of each key is stored. Run this part too if you set up the database earlier.
+create table if not exists public.health_tokens (
+  token_hash   text primary key,
+  user_id      uuid not null default auth.uid() references auth.users on delete cascade,
+  created_at   timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
+alter table public.health_tokens enable row level security;
+
+drop policy if exists "Own health keys" on public.health_tokens;
+create policy "Own health keys" on public.health_tokens
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

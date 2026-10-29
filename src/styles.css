@@ -458,6 +458,18 @@ form.inline .num-in { flex: 0 1 92px; }
 .set-sec h3 { margin: 0 0 8px; font: 800 12px var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .set-sec p { margin: 0 0 8px; }
 .auth { display: flex; flex-direction: column; gap: 8px; }
+.keybox { margin: 10px 0; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--sun); background: color-mix(in srgb, var(--sun) 8%, var(--raised)); }
+.keybox p { margin: 0 0 8px; }
+.key { display: block; padding: 8px 10px; font-size: 13px; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.health-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; }
+.hd { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; font-variant-numeric: tabular-nums; }
+.hd-bar { width: 100%; max-width: 30px; height: 64px; display: flex; align-items: flex-end; background: var(--raised); border-radius: 7px; overflow: hidden; }
+.hd-bar i { display: block; width: 100%; background: var(--sun); border-radius: 7px 7px 0 0; }
+.hd b { font-size: 12px; }
+.hd span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.hd.today .hd-day { color: var(--sun); }
+.hd-day { font-size: 11px; font-weight: 800; color: var(--dim); }
+.health-legend { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
 .swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .swatch {
   width: 36px; height: 36px; border-radius: 50%; padding: 0;
