@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
 import { Icon, Toaster } from './components/ui.jsx';
 import { useCalendarSync } from './lib/calendar.js';
+import { useCanvasSync } from './lib/canvas.js';
 import { useTheme } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
+import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
+import { todayISO } from './lib/dates.js';
+import { usePushKeepAlive } from './lib/push.js';
 import PlanView from './views/PlanView.jsx';
 import StackView from './views/StackView.jsx';
 import HabitsView from './views/HabitsView.jsx';
@@ -16,6 +20,23 @@ const TABS = [
   { id: 'habits', label: 'Habits', View: HabitsView },
   { id: 'body', label: 'Body', View: BodyView },
 ];
+// "Not now" on the morning page holds until tomorrow on this device.
+const SKIP_KEY = 'lifestyleplus.morningSkipped';
+const skippedToday = () => {
+  try {
+    return localStorage.getItem(SKIP_KEY) === todayISO();
+  } catch {
+    return false;
+  }
+};
+const skipToday = () => {
+  try {
+    localStorage.setItem(SKIP_KEY, todayISO());
+  } catch {
+    /* storage unavailable */
+  }
+};
+
 const tabFromHash = () => {
   const h = window.location.hash.slice(1);
   return TABS.some((t) => t.id === h) ? h : 'plan';
@@ -25,13 +46,33 @@ export default function App() {
   const [tab, setTab] = useState(tabFromHash);
   const [capture, setCapture] = useState(false);
   const [settings, setSettings] = useState(false);
-  const { sample } = useSettings();
+  const settingsData = useSettings();
+  const { sample } = settingsData;
+  const started = useDayStarted(todayISO());
+  const [morning, setMorning] = useState(() => window.location.hash === '#morning');
   const sync = useSyncStatus();
   useCalendarSync();
+  useCanvasSync();
+  usePushKeepAlive(!!sync.email);
   useTheme();
+
+  // Open the morning page by itself on the first open of a morning, until the day is started.
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!skippedToday() && wantsMorning(settingsData, started)) setMorning(true);
+    };
+    check();
+    document.addEventListener('visibilitychange', check);
+    return () => document.removeEventListener('visibilitychange', check);
+  }, [settingsData, started]);
 
   useEffect(() => {
     const onHash = () => {
+      if (window.location.hash === '#morning') {
+        setMorning(true);
+        return;
+      }
       setTab(tabFromHash());
       window.scrollTo(0, 0);
     };
@@ -91,6 +132,15 @@ export default function App() {
 
       {capture && <CaptureSheet onClose={() => setCapture(false)} />}
       {settings && <SettingsSheet onClose={() => setSettings(false)} />}
+      {morning && (
+        <MorningSheet
+          onClose={() => {
+            setMorning(false);
+            if (!started) skipToday();
+            if (window.location.hash === '#morning') history.replaceState(null, '', '#plan');
+          }}
+        />
+      )}
       <Toaster />
     </div>
   );

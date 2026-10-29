@@ -139,3 +139,37 @@ supabase/schema.sql       database table and security rules
 - Pull Google Calendar events into the day as fixed blocks
 - Quarterly plan above the weekly plan
 - Push notifications when a block starts
+
+## Connect Canvas (read-only)
+
+Homework and tests from Canvas show on the Week view ("School this week"), the Day view ("Due today")
+and the morning page. You can check items off in lifestyle+; Canvas itself never changes.
+
+1. Open **canvas.unl.edu** in Safari (the Canvas app doesn't show this link) and tap **Calendar**.
+2. At the bottom of the right side, tap **Calendar Feed** and copy the link.
+3. In lifestyle+, open **Settings → Canvas**, paste it and tap **Connect**.
+
+Assignments become homework. Anything named exam, midterm, final, test or quiz is marked as a test.
+Other course events (office hours, lectures) are left out.
+
+## Morning page
+
+The first time you open the app each morning (4am–noon) the morning page opens: weigh in, see today's
+calendar and what's due, block the day and pull tasks into Now, then press **Start my day**.
+"Not now" hides it until tomorrow. Turn it off in Settings → Notifications.
+
+## Notifications
+
+lifestyle+ can send a heads-up before each time block, a morning nudge if the day isn't started, and an
+evening reminder for homework due tomorrow and upcoming tests. On iPhone this needs iOS 16.4+ and the app
+opened from the Home Screen.
+
+One-time setup:
+
+1. **Vercel → lifestyle-plus → Settings → Environment Variables**, add for Production:
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (a Web Push key pair; `npx web-push generate-vapid-keys`)
+   and `CRON_SECRET` (any long random string). Redeploy.
+2. **Supabase → SQL Editor**: paste `supabase/push.sql`, replace `{{APP_URL}}` with
+   `https://lifestyle-plus.vercel.app` and `{{CRON_SECRET}}` with the same secret, and run it. This
+   creates the tables and a job that calls `/api/push-tick` every minute.
+3. In the app: **Settings → Notifications → Turn on for this phone**, then **Send a test**.

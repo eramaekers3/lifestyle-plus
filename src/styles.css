@@ -246,6 +246,64 @@ form.inline .num-in { flex: 0 1 92px; }
 .f .input, .f .chips { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .f-label { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 
+/* ---------- Settings toggles ---------- */
+.toggles { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+.toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; font-size: 14px; }
+.toggle > span { flex: 1; min-width: 150px; }
+.toggle input[type='checkbox'] { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--sun); }
+.toggle select { width: auto; padding-block: 6px; font-size: 14px; }
+.toggle select:disabled { opacity: 0.4; }
+
+/* ---------- Morning page ---------- */
+.start-banner {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--sun) 16%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--sun) 55%, transparent);
+  color: var(--ink); text-decoration: none;
+}
+.start-banner > .icon:first-child { color: var(--sun); }
+.start-banner > span { flex: 1; display: flex; flex-direction: column; }
+.start-banner > span span { font-size: 13px; color: var(--muted); }
+.start-banner:active { transform: translateY(1px); }
+.morning { display: flex; flex-direction: column; gap: 4px; }
+.mo-date { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
+.mo-day { font: var(--display-weight) 30px/1 var(--display); letter-spacing: var(--display-tracking); }
+.mo-step { padding: 14px 0; border-top: 1px solid var(--line); }
+.mo-step h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font: 800 15px var(--body); }
+.mo-step h3 .n {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px;
+  background: var(--raised); color: var(--sun); font-size: 13px;
+}
+.mo-done { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 800; }
+.mo-done .icon { color: var(--mint); }
+.mo-events, .mo-blocks, .mo-now { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mo-events li, .mo-blocks li { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
+.mo-events i, .mo-blocks i { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.mo-events i { background: repeating-linear-gradient(135deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 55%, #000) 3px 6px); }
+.mo-events .t, .mo-blocks .t { flex: none; min-width: 58px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.mo-now li { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.mo-now .icon { color: var(--sun); }
+.mo-pull { display: inline-flex; align-items: center; gap: 6px; }
+.mo-go { display: flex; align-items: center; justify-content: center; gap: 8px; padding-block: 14px; font-size: 17px; }
+.mo-later { align-self: center; padding: 12px; color: var(--muted); }
+
+/* ---------- School (Canvas) ---------- */
+.school { --c: var(--canvas, #ff9a5c); }
+.school + .school { margin-top: 6px; border-top: 1px solid var(--line); }
+.school-row .row-title { display: flex; flex-direction: column; gap: 2px; }
+.school-title { font-weight: 700; }
+.school-meta { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.school-meta .course { color: color-mix(in srgb, var(--c) 80%, var(--ink)); font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.school-meta .late { color: var(--coral); font-weight: 700; }
+.school-row .check.on { background: var(--c); border-color: var(--c); }
+.school-row.done .school-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
+.test-tag {
+  display: inline-block; margin-right: 7px; padding: 1px 7px; border-radius: 6px; vertical-align: 1px;
+  background: var(--c); color: #2a160b; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.school-row.done .test-tag { opacity: 0.5; }
+.school-sub { margin: 12px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.open-canvas { flex: none; color: var(--muted); }
+
 /* ---------- Rows and tasks ---------- */
 .rows { list-style: none; margin: 0; padding: 0; }
 .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; }

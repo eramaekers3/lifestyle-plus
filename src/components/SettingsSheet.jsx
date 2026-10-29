@@ -10,6 +10,8 @@ import {
 import { minToLabel } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCalendarColor } from '../lib/calendar.js';
+import { enablePush, disablePush, sendTestPush, usePushState } from '../lib/push.js';
+import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor } from '../lib/canvas.js';
 
 export default function SettingsSheet({ onClose }) {
   const s = useSettings();
@@ -45,7 +47,11 @@ export default function SettingsSheet({ onClose }) {
 
       <LookSection />
 
+      <NotifySection signedIn={!!st.email} />
+
       <CalendarSection />
+
+      <CanvasSection />
 
       <HealthSection signedIn={!!st.email} />
 
@@ -234,6 +240,164 @@ function CalendarSection() {
         </ol>
       )}
       {help && <p className="muted small">Anyone with a public link can see that calendar, so keep the link private. Turning Public Calendar off breaks the link.</p>}
+    </section>
+  );
+}
+
+const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 480, school: true, schoolAt: 1200 };
+const timeOptions = (from, to) => Array.from({ length: (to - from) * 2 + 1 }, (_, i) => from * 60 + i * 30);
+
+function NotifySection({ signedIn }) {
+  const s = useSettings();
+  const n = { ...DEFAULT_NOTIFY, ...(s.notify || {}) };
+  const setN = (changes) => saveSettings({ notify: { ...n, ...changes } });
+  const [state, refresh] = usePushState();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const run = (fn, done) => async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      await fn();
+      if (done) toast(done);
+    } catch (e) {
+      setErr(e.message);
+    }
+    setBusy(false);
+    refresh();
+  };
+
+  return (
+    <section className="set-sec">
+      <h3>Notifications</h3>
+      {state === 'install' && (
+        <p className="muted small">On iPhone, notifications only work from the Home Screen app. In Safari, tap <b>Share → Add to Home Screen</b>, open lifestyle+ from there, then come back here.</p>
+      )}
+      {state === 'unsupported' && <p className="muted small">This browser can’t receive notifications.</p>}
+      {state === 'blocked' && <p className="muted small">Notifications are blocked for lifestyle+. Turn them on in iPhone <b>Settings → Notifications → lifestyle+</b>, then reopen the app.</p>}
+      {(state === 'off' || state === 'on') && !signedIn && <p className="muted small">Sign in above first, so reminders can reach this phone.</p>}
+      {(state === 'off' || state === 'on') && signedIn && (
+        <div className="btn-row" style={{ marginTop: 0 }}>
+          {state === 'off' ? (
+            <button className="btn" onClick={run(enablePush, 'Notifications on for this phone')} disabled={busy}>Turn on for this phone</button>
+          ) : (
+            <>
+              <button className="btn ghost" onClick={run(sendTestPush, 'Test sent')} disabled={busy}>Send a test</button>
+              <button className="btn ghost" onClick={run(disablePush, 'Notifications off for this phone')} disabled={busy}>Turn off</button>
+            </>
+          )}
+        </div>
+      )}
+      {err && <p className="err">{err}</p>}
+
+      <div className="toggles">
+        <label className="toggle">
+          <input type="checkbox" checked={n.blocks} onChange={(e) => setN({ blocks: e.target.checked })} />
+          <span>Before each time block</span>
+          <select className="input" value={n.lead} disabled={!n.blocks} onChange={(e) => setN({ lead: +e.target.value })} aria-label="How long before a block">
+            {[0, 5, 10, 15].map((m) => <option key={m} value={m}>{m ? `${m} min before` : 'When it starts'}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={n.morning} onChange={(e) => setN({ morning: e.target.checked })} />
+          <span>Morning nudge if the day isn’t started</span>
+          <select className="input" value={n.morningAt} disabled={!n.morning} onChange={(e) => setN({ morningAt: +e.target.value })} aria-label="Morning nudge time">
+            {timeOptions(5, 11).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={n.school} onChange={(e) => setN({ school: e.target.checked })} />
+          <span>Evening heads-up for homework due tomorrow and tests</span>
+          <select className="input" value={n.schoolAt} disabled={!n.school} onChange={(e) => setN({ schoolAt: +e.target.value })} aria-label="School reminder time">
+            {timeOptions(16, 22).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={s.morningPage !== false} onChange={(e) => saveSettings({ morningPage: e.target.checked })} />
+          <span>Open the morning page on the first open of each morning</span>
+        </label>
+      </div>
+    </section>
+  );
+}
+
+function CanvasSection() {
+  const c = useCanvasStatus();
+  const [url, setUrl] = useState('');
+  const [err, setErr] = useState('');
+  const [help, setHelp] = useState(!c);
+
+  const add = (e) => {
+    e.preventDefault();
+    const v = url.trim();
+    if (!looksLikeCanvasFeed(v)) {
+      setErr('Paste the Calendar Feed link from Canvas. It contains /feeds/calendars/ and ends in .ics.');
+      return;
+    }
+    setErr('');
+    connectCanvas(v);
+    setUrl('');
+    setHelp(false);
+  };
+
+  return (
+    <section className="set-sec">
+      <h3>Canvas</h3>
+      <p className="muted small">Homework and tests from Canvas show on your week and day. Read-only, refreshed every 30 minutes. Checking something off here doesn’t change Canvas.</p>
+
+      {c ? (
+        <ul className="rows cal-list">
+          <li className="row">
+            <label className="cal-swatch" style={{ '--c': c.color }} title="Change color">
+              <input type="color" value={c.color} onChange={(e) => setCanvasColor(c, e.target.value)} aria-label="Color for Canvas" />
+            </label>
+            <span className="row-title">
+              <b>{c.name ? c.name.replace(/\s*\(Canvas\)\s*$/, '') : 'Canvas'}</b>
+              <span className="muted small cal-state">
+                {c.loading
+                  ? ' · Updating…'
+                  : c.error
+                    ? ''
+                    : c.fetchedAt
+                      ? ` · ${c.count} items · updated ${new Date(c.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                      : ''}
+              </span>
+              {c.error && <span className="err cal-err">{c.error}</span>}
+            </span>
+            <button className="mini" onClick={() => refreshCanvas(c, true)} disabled={c.loading}>Refresh</button>
+            <button className="x" onClick={() => { disconnectCanvas(); toast('Canvas disconnected'); }} aria-label="Disconnect Canvas">×</button>
+          </li>
+        </ul>
+      ) : (
+        <form className="inline" onSubmit={add}>
+          <input
+            id="canvas-url"
+            className="input"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://canvas.unl.edu/feeds/calendars/user_….ics"
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+          <button className="btn">Connect</button>
+        </form>
+      )}
+      {err && <p className="err">{err}</p>}
+
+      <button type="button" className="link-btn" onClick={() => setHelp((h) => !h)} aria-expanded={help}>
+        {help ? 'Hide' : 'How do I get the link?'}
+      </button>
+      {help && (
+        <ol className="steps small">
+          <li>Open <b>canvas.unl.edu</b> in Safari and sign in. (The Canvas app doesn’t show this link.)</li>
+          <li>Tap <b>Calendar</b> in the left menu.</li>
+          <li>Scroll to the bottom of the right side and tap <b>Calendar Feed</b>.</li>
+          <li>Copy the link it shows and paste it above.</li>
+        </ol>
+      )}
+      {help && <p className="muted small">Anyone with this link can see your due dates, so keep it private. Items named exam, midterm, final, test or quiz are marked as tests.</p>}
     </section>
   );
 }

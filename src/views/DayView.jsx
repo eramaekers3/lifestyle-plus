@@ -7,7 +7,10 @@ import { FlipClock, Icon } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';
 import Timeline from '../components/Timeline.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
+import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
+import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
+import SchoolList from '../components/SchoolList.jsx';
 
 export default function DayView({ date }) {
   const settings = useSettings();
@@ -50,7 +53,11 @@ export default function DayView({ date }) {
         {isToday && <FlipClock />}
       </header>
 
+      {isToday && <StartBanner date={date} />}
+
       <NowStack />
+
+      <SchoolDay date={date} />
 
       <section className="card tl-card" aria-labelledby="tl-h">
         <div className="card-head">
@@ -96,6 +103,48 @@ export default function DayView({ date }) {
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
     </>
+  );
+}
+
+function StartBanner({ date }) {
+  const started = useDayStarted(date);
+  const { morningPage } = useSettings();
+  if (started || morningPage === false || new Date().getHours() >= 15) return null;
+  return (
+    <a className="start-banner" href="#morning">
+      <Icon name="sun" size={22} />
+      <span>
+        <b>Start my day</b>
+        <span>Weigh in, see what’s fixed, block it out.</span>
+      </span>
+      <Icon name="right" />
+    </a>
+  );
+}
+
+function SchoolDay({ date }) {
+  const items = useSchool();
+  const today = todayISO();
+  const due = itemsOn(items, date);
+  const late = date === today ? overdue(items, today) : [];
+  // Tests in the next three days, so they never sneak up on you.
+  const soon = items.filter((i) => i.kind === 'test' && i.date > date && i.date <= addDays(date, 3));
+  if (!due.length && !late.length && !soon.length) return null;
+  const left = due.filter((i) => !i.done).length;
+  return (
+    <section className="card school-card" aria-labelledby="due-h">
+      <div className="card-head">
+        <h2 id="due-h">{date === today ? 'Due today' : 'Due this day'}</h2>
+        <span className="meta">{due.length ? `${left} of ${due.length} left` : 'Nothing due'}</span>
+      </div>
+      {(late.length > 0 || due.length > 0) && <SchoolList items={[...late, ...due]} showDay={false} />}
+      {soon.length > 0 && (
+        <>
+          <p className="school-sub">Tests coming up</p>
+          <SchoolList items={soon} />
+        </>
+      )}
+    </section>
   );
 }
 

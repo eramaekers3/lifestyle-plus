@@ -4,6 +4,8 @@ import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, iso, todayISO, weekStart } from '../lib/dates.js';
 import { BLOCK_TYPES } from '../lib/model.js';
 import { useCalendarDays, useCalendarStatus } from '../lib/calendar.js';
+import { useSchool, overdue } from '../lib/canvas.js';
+import SchoolList from '../components/SchoolList.jsx';
 
 export default function WeekView({ date, openDay }) {
   const ws = weekStart(date);
@@ -47,6 +49,8 @@ export default function WeekView({ date, openDay }) {
       </header>
 
       <WeekPlan key={ws + (plan ? 'p' : '')} ws={ws} plan={plan} />
+
+      <SchoolWeek ws={ws} we={we} today={today} />
 
       <section className="card" aria-labelledby="glance-h">
         <div className="card-head">
@@ -101,6 +105,32 @@ export default function WeekView({ date, openDay }) {
         </div>
       </section>
     </>
+  );
+}
+
+function SchoolWeek({ ws, we, today }) {
+  const items = useSchool();
+  const { canvas } = useSettings();
+  if (!canvas || !canvas.url) return null;
+  const thisWeek = ws <= today && today <= we;
+  const week = items.filter((i) => i.date >= ws && i.date <= we);
+  const late = thisWeek ? overdue(items, today).filter((i) => i.date < ws) : [];
+  const tests = week.filter((i) => i.kind === 'test');
+  const hw = [...late, ...week.filter((i) => i.kind === 'homework')];
+  const left = hw.filter((i) => !i.done).length;
+  return (
+    <section className="card school-card" aria-labelledby="sch-h">
+      <div className="card-head">
+        <h2 id="sch-h">School this week</h2>
+        <span className="meta">
+          {tests.length ? `${tests.length} test${tests.length === 1 ? '' : 's'} · ` : ''}
+          {hw.length ? `${left} of ${hw.length} left` : 'No homework due'}
+        </span>
+      </div>
+      {tests.length > 0 && <SchoolList items={tests} />}
+      {hw.length > 0 && <SchoolList items={hw} />}
+      {!tests.length && !hw.length && <p className="muted small">Nothing from Canvas this week.</p>}
+    </section>
   );
 }
 

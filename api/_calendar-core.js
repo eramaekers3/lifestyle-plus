@@ -1,9 +1,18 @@
-// Reads an Apple (iCloud) public calendar link and returns its events as JSON.
+// Reads an Apple (iCloud) public calendar link, or a Canvas calendar feed, and returns its events as JSON.
 // Shared by the Vercel function (api/calendar.js) and the local dev server (vite.config.js).
 import ICAL from 'ical.js';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const isICloud = (host) => host === 'icloud.com' || host.endsWith('.icloud.com');
+// Canvas feeds look like https://canvas.unl.edu/feeds/calendars/user_….ics (or a school's *.instructure.com).
+const isCanvas = (url) =>
+  /^\/feeds\/calendars\/[\w.-]+\.ics$/i.test(url.pathname) &&
+  (url.hostname.endsWith('.instructure.com') || url.hostname.endsWith('.edu'));
+
+const SOURCES = {
+  apple: { ok: (u) => isICloud(u.hostname), name: 'Apple Calendar', wrong: 'Only Apple Calendar (iCloud) links are supported.' },
+  canvas: { ok: isCanvas, name: 'Canvas', wrong: 'That isn’t a Canvas calendar feed link. It should end in .ics and contain /feeds/calendars/.' },
+};
 
 export class CalendarError extends Error {
   constructor(message, status = 400) {
@@ -12,8 +21,9 @@ export class CalendarError extends Error {
   }
 }
 
-/** Only https iCloud links are fetched, including any redirects. */
-async function fetchICS(rawUrl) {
+/** Only https links from the allowed source are fetched, including any redirects. */
+async function fetchICS(rawUrl, source = 'apple') {
+  const src = SOURCES[source] || SOURCES.apple;
   let url;
   try {
     url = new URL(String(rawUrl || '').trim().replace(/^webcals?:\/\//i, 'https://'));
@@ -21,29 +31,31 @@ async function fetchICS(rawUrl) {
     throw new CalendarError('That doesn’t look like a calendar link.');
   }
   for (let hop = 0; hop < 4; hop++) {
-    if (url.protocol !== 'https:' || !isICloud(url.hostname)) {
-      throw new CalendarError('Only Apple Calendar (iCloud) links are supported.');
+    if (url.protocol !== 'https:' || !src.ok(url)) {
+      throw new CalendarError(src.wrong);
     }
     const res = await fetch(url, { redirect: 'manual', headers: { 'User-Agent': 'lifestyle-plus calendar' } });
     if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
       url = new URL(res.headers.get('location'), url);
       continue;
     }
-    if (res.status === 404) throw new CalendarError('Apple says this calendar link doesn’t exist. Check that Public Calendar is still on.', 404);
-    if (!res.ok) throw new CalendarError(`Apple Calendar didn’t respond (error ${res.status}). Try again in a minute.`, 502);
+    if (res.status === 404 || res.status === 401) {
+      throw new CalendarError(source === 'canvas' ? 'Canvas says this feed link doesn’t work. Copy a fresh one from the Canvas Calendar page.' : 'Apple says this calendar link doesn’t exist. Check that Public Calendar is still on.', 404);
+    }
+    if (!res.ok) throw new CalendarError(`${src.name} didn’t respond (error ${res.status}). Try again in a minute.`, 502);
     const text = await res.text();
     if (text.length > MAX_BYTES) throw new CalendarError('This calendar is too large to load.', 413);
     if (!text.includes('BEGIN:VCALENDAR')) throw new CalendarError('That link didn’t return a calendar.');
     return text;
   }
-  throw new CalendarError('Too many redirects from Apple Calendar.', 502);
+  throw new CalendarError(`Too many redirects from ${src.name}.`, 502);
 }
 
 const out = (t, allDay) => (allDay ? t.toString().slice(0, 10) : t.toJSDate().toISOString());
 
 /** Returns { name, events: [{ id, title, start, end, allDay }] } for events overlapping [from, to]. */
-export async function readCalendar({ url, from, to }) {
-  return parseCalendar(await fetchICS(url), from, to);
+export async function readCalendar({ url, from, to, source }) {
+  return parseCalendar(await fetchICS(url, source), from, to);
 }
 
 export function parseCalendar(text, from, to) {
@@ -86,12 +98,15 @@ export function parseCalendar(text, from, to) {
     if ((component.getFirstPropertyValue('status') || '').toUpperCase() === 'CANCELLED') return;
     if (end.compare(rangeStart) <= 0 || start.compare(rangeEnd) >= 0) return;
     const allDay = start.isDate;
+    const link = component.getFirstPropertyValue('url');
     events.push({
       id: `${ev.uid}|${start.toString()}`,
+      uid: ev.uid,
       title: (item ? item.summary : ev.summary) || 'Busy',
       start: out(start, allDay),
       end: out(end, allDay),
       allDay,
+      ...(typeof link === 'string' && /^https:\/\//.test(link) ? { link } : {}),
     });
   };
 
@@ -118,13 +133,13 @@ export function parseCalendar(text, from, to) {
 
 /** Shared request handling for Node-style req/res. */
 export async function handle(body, send) {
-  const { url, from, to } = body || {};
+  const { url, from, to, source } = body || {};
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (!url || !dateRe.test(from || '') || !dateRe.test(to || '')) {
     return send(400, { error: 'Send a calendar link plus a from and to date.' });
   }
   try {
-    send(200, await readCalendar({ url, from, to }));
+    send(200, await readCalendar({ url, from, to, source: source === 'canvas' ? 'canvas' : 'apple' }));
   } catch (e) {
     send(e instanceof CalendarError ? e.status : 500, {
       error: e instanceof CalendarError ? e.message : 'Something went wrong reading the calendar.',

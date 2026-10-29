@@ -11,7 +11,8 @@ const KEY = 'lifestyleplus.calendar.v1';
 /* ---------- Colors ----------
    Each calendar gets its own color. Picked from this list by position until you choose one,
    and kept away from the block-type colors (sky, lilac, coral, mint) so events don't look like blocks. */
-export const CAL_COLORS = ['#ff86b8', '#f0a35e', '#5fd3c6', '#c9d36a', '#a7b4ff', '#e6e2d8', '#d79bff', '#ffb3a1'];
+// Orange sits late in the list because Canvas items use orange.
+export const CAL_COLORS = ['#ff86b8', '#5fd3c6', '#c9d36a', '#a7b4ff', '#d79bff', '#e6e2d8', '#f0a35e', '#ffb3a1'];
 export const calColor = (cal, i) => (cal && cal.color) || CAL_COLORS[i % CAL_COLORS.length];
 
 export function setCalendarColor(id, color) {
