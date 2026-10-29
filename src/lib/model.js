@@ -186,8 +186,11 @@ export function resumeHabit(h) {
 export function habitStats(h, { lookup, startOf, today = todayISO() }) {
   const first = startOf(h);
   const t = lookup(h, today);
-  // Today counts once you've marked it (a slip today resets the streak right away).
-  const end = t.set ? today : addDays(today, -1);
+  // Today only adds to the streak once it's done (or skipped). Until then the streak runs through
+  // yesterday, even if today was checked and then unchecked. On an avoid habit, a slip today
+  // resets the streak right away.
+  const countsToday = h.mode === 'avoid' ? t.set : t.code === 'd' || t.code === 's';
+  const end = countsToday ? today : addDays(today, -1);
 
   let streak = 0;
   for (let d = end, i = 0; d >= first && i < MAX_DAYS; d = addDays(d, -1), i++) {
