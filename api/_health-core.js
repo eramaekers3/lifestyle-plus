@@ -56,7 +56,13 @@ export function parseHealthLines(text) {
 
   for (const line of lines) {
     const [metric, start, end, value, unit] = line.split('|').map((p) => (p || '').trim());
-    const m = metric.toLowerCase();
+    // Accept typed words or Apple's own type names ("Steps", "Body Mass", "Sleep Analysis", "Workout").
+    const t = metric.toLowerCase();
+    const m = /step/.test(t) ? 'steps'
+      : /weight|body ?mass/.test(t) ? 'weight'
+      : /sleep/.test(t) ? 'sleep'
+      : /workout|exercise/.test(t) ? 'workout'
+      : t;
     const sd = readDate(start);
     const ed = readDate(end) || sd;
     if (!sd) {
