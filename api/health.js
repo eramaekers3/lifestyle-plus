@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   const text = Array.isArray(body && body.lines) ? body.lines.join('\n') : (body && body.lines) || '';
   const parsed = parseHealthLines(text);
   // Shows up in Vercel's runtime logs, to help debug the Shortcut. No health values are logged.
-  console.log('health upload', JSON.stringify({ bytes: text.length, received: parsed.counts }));
+  console.log('health upload', JSON.stringify({ bytes: text.length, received: parsed.counts, skippedShapes: parsed.skippedShapes }));
 
   // Keep fields already saved for a day (e.g. steps) when only sleep arrives, and vice versa.
   const healthIds = toRecords(parsed).filter((r) => r.kind === 'health').map((r) => r.id);
@@ -64,5 +64,6 @@ export default async function handler(req, res) {
     ok: true,
     message: `Saved ${Object.keys(parsed.days).length} days, ${Object.keys(parsed.weights).length} weigh-ins and ${parsed.workouts.length} workouts.`,
     received: c,
+    ...(c.skipped ? { skippedExample: parsed.skippedShapes[0], tip: 'Skipped lines should look like steps|2026-10-28T00:00:00-05:00|2026-10-29T00:00:00-05:00|8231|count' } : {}),
   });
 }

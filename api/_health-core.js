@@ -13,7 +13,27 @@ const num = (v) => {
   const n = parseFloat(String(v || '').replace(/[^\d.\-]/g, ''));
   return Number.isFinite(n) ? n : null;
 };
-const isoDate = (s) => (/^\d{4}-\d{2}-\d{2}/.test(s || '') ? s.slice(0, 10) : null);
+const pad = (n) => String(n).padStart(2, '0');
+
+/**
+ * Reads a date from the Shortcut. ISO 8601 is best, but the phone's normal formats also work
+ * ("Oct 28, 2026 at 11:41 PM", "10/28/26, 11:41 PM"). Returns { date: 'YYYY-MM-DD', ms } or null.
+ */
+export function readDate(raw) {
+  const s = String(raw || '').replace(/[\u202f\u00a0]/g, ' ').trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const ms = Date.parse(s.length > 10 ? s.replace(' ', 'T') : `${s}T00:00:00`);
+    return { date: s.slice(0, 10), ms: Number.isFinite(ms) ? ms : Date.parse(`${s.slice(0, 10)}T00:00:00`) };
+  }
+  // Parsed as wall-clock time in the server's zone; reading it back the same way keeps the phone's date.
+  const d = new Date(s.replace(/\s+at\s+/i, ' '));
+  if (Number.isNaN(d.getTime())) return null;
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, ms: d.getTime() };
+}
+
+/** A skipped line with every digit masked, so logs show its shape but no health values. */
+export const lineShape = (line) => String(line).slice(0, 120).replace(/\d/g, '9');
 
 /** Returns { days: {date: {steps, sleepMin}}, weights: {date: lbs}, workouts: [...], counts } */
 export function parseHealthLines(text) {
@@ -28,44 +48,51 @@ export function parseHealthLines(text) {
   const sleep = {}; // wake date -> [[start, end], ...]
   const workouts = [];
   const counts = { steps: 0, weight: 0, sleep: 0, workout: 0, skipped: 0 };
+  const skippedShapes = [];
+  const skip = (line) => {
+    counts.skipped++;
+    if (skippedShapes.length < 3) skippedShapes.push(lineShape(line));
+  };
 
   for (const line of lines) {
     const [metric, start, end, value, unit] = line.split('|').map((p) => (p || '').trim());
     const m = metric.toLowerCase();
-    const d = isoDate(start);
-    if (!d) {
-      counts.skipped++;
+    const sd = readDate(start);
+    const ed = readDate(end) || sd;
+    if (!sd) {
+      skip(line);
       continue;
     }
+    const d = sd.date;
     if (m === 'steps') {
       const v = num(value);
-      if (v === null) { counts.skipped++; continue; }
+      if (v === null) { skip(line); continue; }
       steps[d] = (steps[d] || 0) + v;
       counts.steps++;
     } else if (m === 'weight') {
       let v = num(value);
-      if (v === null) { counts.skipped++; continue; }
+      if (v === null) { skip(line); continue; }
       if (/kg/i.test(unit || '')) v *= 2.20462;
       const prev = weights[d];
-      if (!prev || start > prev.at) weights[d] = { lbs: Math.round(v * 10) / 10, at: start };
+      if (!prev || sd.ms > prev.at) weights[d] = { lbs: Math.round(v * 10) / 10, at: sd.ms };
       counts.weight++;
     } else if (m === 'sleep') {
       // Count time asleep only: skip "In Bed" and "Awake" samples.
       if (/bed|awake/i.test(value || '')) continue;
-      const s = Date.parse(start);
-      const e = Date.parse(end);
-      const wake = isoDate(end);
-      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s || !wake) { counts.skipped++; continue; }
+      const s = sd.ms;
+      const e = ed.ms;
+      const wake = ed.date;
+      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) { skip(line); continue; }
       (sleep[wake] = sleep[wake] || []).push([s, e]);
       counts.sleep++;
     } else if (m === 'workout') {
-      const s = Date.parse(start);
-      const e = Date.parse(end);
-      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) { counts.skipped++; continue; }
-      workouts.push({ date: d, start, end, minutes: Math.round((e - s) / 60000), type: value || 'Workout' });
+      const s = sd.ms;
+      const e = ed.ms;
+      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) { skip(line); continue; }
+      workouts.push({ date: d, start: new Date(s).toISOString(), end: new Date(e).toISOString(), minutes: Math.round((e - s) / 60000), type: value || 'Workout' });
       counts.workout++;
     } else {
-      counts.skipped++;
+      skip(line);
     }
   }
 
@@ -95,6 +122,7 @@ export function parseHealthLines(text) {
     weights: Object.fromEntries(Object.entries(weights).map(([d, w]) => [d, w.lbs])),
     workouts,
     counts,
+    skippedShapes,
   };
 }
 
