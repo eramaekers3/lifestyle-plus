@@ -66,7 +66,7 @@ export default function DayView({ date }) {
         {cal.allDay.length > 0 && (
           <div className="allday" aria-label="All-day events">
             {cal.allDay.map((e) => (
-              <span key={e.id} className="allday-chip" title={e.calendar}>{e.title}</span>
+              <span key={e.id} className="allday-chip" title={e.calendar} style={{ '--c': e.color }}>{e.title}</span>
             ))}
           </div>
         )}

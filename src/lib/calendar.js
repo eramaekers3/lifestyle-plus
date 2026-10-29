@@ -7,6 +7,17 @@ import { newId } from './ids.js';
 import { addDays, iso, todayISO } from './dates.js';
 
 const KEY = 'lifestyleplus.calendar.v1';
+
+/* ---------- Colors ----------
+   Each calendar gets its own color. Picked from this list by position until you choose one,
+   and kept away from the block-type colors (sky, lilac, coral, mint) so events don't look like blocks. */
+export const CAL_COLORS = ['#ff86b8', '#f0a35e', '#5fd3c6', '#c9d36a', '#a7b4ff', '#e6e2d8', '#d79bff', '#ffb3a1'];
+export const calColor = (cal, i) => (cal && cal.color) || CAL_COLORS[i % CAL_COLORS.length];
+
+export function setCalendarColor(id, color) {
+  const s = get(SETTINGS_ID) || {};
+  saveSettings({ calendars: (s.calendars || []).map((c, i) => (c.id === id ? { ...c, color } : { ...c, color: calColor(c, i) })) });
+}
 const REFRESH_MS = 10 * 60 * 1000;
 
 function load() {
@@ -41,8 +52,12 @@ const snapshot = () => cache;
 
 export function addCalendar(url) {
   const s = get(SETTINGS_ID) || {};
-  const cal = { id: newId(), url: url.trim() };
-  saveSettings({ calendars: [...(s.calendars || []), cal] });
+  // Lock in colors so removing one calendar never reshuffles the rest.
+  const existing = (s.calendars || []).map((c, i) => ({ ...c, color: calColor(c, i) }));
+  const used = new Set(existing.map((c) => c.color));
+  const color = CAL_COLORS.find((x) => !used.has(x)) || CAL_COLORS[existing.length % CAL_COLORS.length];
+  const cal = { id: newId(), url: url.trim(), color };
+  saveSettings({ calendars: [...existing, cal] });
   return cal;
 }
 
@@ -84,7 +99,7 @@ export async function refreshCalendar(cal, force = false) {
 export function useCalendarStatus() {
   const { calendars = [] } = useSettings();
   const c = useSyncExternalStore(subscribe, snapshot);
-  return calendars.map((cal) => ({ ...cal, ...(c[cal.id] || {}) }));
+  return calendars.map((cal, i) => ({ ...cal, ...(c[cal.id] || {}), color: calColor(cal, i) }));
 }
 
 /** Keeps calendars fresh while the app is open. Mount once. */
@@ -119,13 +134,14 @@ export function useCalendarDays() {
   return useMemo(() => {
     const days = {};
     const day = (d) => (days[d] = days[d] || { timed: [], allDay: [] });
-    for (const cal of calendars) {
+    calendars.forEach((cal, i) => {
       const entry = c[cal.id];
-      if (!entry || !entry.events) continue;
+      if (!entry || !entry.events) return;
       const calendar = entry.name || 'Apple Calendar';
+      const color = calColor(cal, i);
       for (const ev of entry.events) {
         if (ev.allDay) {
-          for (let d = ev.start; d < ev.end; d = addDays(d, 1)) day(d).allDay.push({ id: `${cal.id}:${ev.id}`, title: ev.title, calendar });
+          for (let d = ev.start; d < ev.end; d = addDays(d, 1)) day(d).allDay.push({ id: `${cal.id}:${ev.id}`, title: ev.title, calendar, color });
           continue;
         }
         const s = new Date(ev.start);
@@ -141,12 +157,13 @@ export function useCalendarDays() {
             start,
             end: Math.max(end, start + 15),
             calendar,
+            color,
             cal: true,
             type: 'cal',
           });
         }
       }
-    }
+    });
     return days;
   }, [calendars, c]);
 }

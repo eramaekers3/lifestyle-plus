@@ -9,7 +9,7 @@ import {
 } from '../store.js';
 import { minToLabel } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
-import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus } from '../lib/calendar.js';
+import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCalendarColor } from '../lib/calendar.js';
 
 export default function SettingsSheet({ onClose }) {
   const s = useSettings();
@@ -173,12 +173,20 @@ function CalendarSection() {
   return (
     <section className="set-sec">
       <h3>Apple Calendar</h3>
-      <p className="muted small">Your events show on the day timeline as fixed blocks. Read-only, refreshed every 10 minutes.</p>
+      <p className="muted small">Your events show on the day timeline as fixed blocks. Read-only, refreshed every 10 minutes. Tap a calendar’s dot to change its color.</p>
 
       {calendars.length > 0 && (
         <ul className="rows cal-list">
           {calendars.map((c) => (
             <li key={c.id} className="row">
+              <label className="cal-swatch" style={{ '--c': c.color }} title="Change color">
+                <input
+                  type="color"
+                  value={c.color}
+                  onChange={(e) => setCalendarColor(c.id, e.target.value)}
+                  aria-label={`Color for ${c.name || 'calendar'}`}
+                />
+              </label>
               <span className="row-title">
                 <b>{c.name || 'Loading…'}</b>
                 <span className="muted small cal-state">

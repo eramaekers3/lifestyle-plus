@@ -3,7 +3,7 @@ import { put, useKind, useRecord, useSettings } from '../store.js';
 import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, iso, todayISO, weekStart } from '../lib/dates.js';
 import { BLOCK_TYPES } from '../lib/model.js';
-import { useCalendarDays } from '../lib/calendar.js';
+import { useCalendarDays, useCalendarStatus } from '../lib/calendar.js';
 
 export default function WeekView({ date, openDay }) {
   const ws = weekStart(date);
@@ -15,7 +15,7 @@ export default function WeekView({ date, openDay }) {
   const plan = useRecord(idFor(`week:${ws}`));
   const today = todayISO();
   const calDays = useCalendarDays();
-  const hasCal = Object.keys(calDays).length > 0;
+  const cals = useCalendarStatus().filter((c) => c.events);
 
   const byDay = useMemo(() => {
     const m = {};
@@ -72,6 +72,7 @@ export default function WeekView({ date, openDay }) {
                         key={b.id}
                         className={`t-${b.type}`}
                         style={{
+                          '--c': b.color,
                           left: `${Math.max(0, ((b.start - s) / span) * 100)}%`,
                           width: `${Math.max(1, ((Math.min(b.end, s + span) - Math.max(b.start, s)) / span) * 100)}%`,
                         }}
@@ -91,12 +92,12 @@ export default function WeekView({ date, openDay }) {
               {t.label}
             </span>
           ))}
-          {hasCal && (
-            <span className="t-cal">
+          {cals.map((c) => (
+            <span key={c.id} className="t-cal" style={{ '--c': c.color }}>
               <i aria-hidden="true" />
-              Apple Calendar
+              {c.name || 'Calendar'}
             </span>
-          )}
+          ))}
         </div>
       </section>
     </>

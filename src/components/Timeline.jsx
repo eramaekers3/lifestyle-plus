@@ -63,6 +63,7 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
                     height: h,
                     left: `calc(${(col / n) * 100}% + 3px)`,
                     width: `calc(${100 / n}% - 6px)`,
+                    '--c': b.color,
                   }}
                   onClick={(ev) => {
                     ev.stopPropagation();
