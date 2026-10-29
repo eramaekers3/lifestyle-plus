@@ -17,7 +17,10 @@ export default async function handler(req, res) {
   }
 
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return res.status(401).json({ error: 'Missing your lifestyle+ health key.' });
+  if (!token) {
+    console.log('health upload rejected: no key');
+    return res.status(401).json({ error: 'Missing your lifestyle+ health key.' });
+  }
 
   const db = createClient(SUPABASE_URL, SERVER_KEY, { auth: { persistSession: false } });
   const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -39,6 +42,8 @@ export default async function handler(req, res) {
   }
   const text = Array.isArray(body && body.lines) ? body.lines.join('\n') : (body && body.lines) || '';
   const parsed = parseHealthLines(text);
+  // Shows up in Vercel's runtime logs, to help debug the Shortcut. No health values are logged.
+  console.log('health upload', JSON.stringify({ bytes: text.length, received: parsed.counts }));
 
   // Keep fields already saved for a day (e.g. steps) when only sleep arrives, and vice versa.
   const healthIds = toRecords(parsed).filter((r) => r.kind === 'health').map((r) => r.id);
