@@ -22,11 +22,11 @@ const valid = (hex) => (/^#[0-9a-f]{6}$/i.test(hex || '') ? hex : DEFAULT_HEART)
 const HEART =
   'M512 836C468 806 168 620 168 384C168 262 258 178 360 178C430 178 484 214 512 270C540 214 594 178 664 178C766 178 856 262 856 384C856 620 556 806 512 836Z';
 // The plus sits on the heart's right side, running right out to its edge.
-const PX = 674;
+const PX = 664;
 const PY = 484;
-const ARM = 160; // half length, to the outside of the rounded corners
-const T = 56; // bar thickness before rounding
-const ROUND = 18; // corner rounding (drawn as a stroke the same color as the fill)
+const ARM = 180; // half length, to the outside of the rounded corners
+const T = 50; // bar thickness before rounding
+const ROUND = 40; // corner rounding (drawn as a stroke the same color as the fill)
 const GAP = 34; // background showing between the plus and the heart
 const a = ARM - ROUND / 2;
 const plusPath = `M${PX - T / 2} ${PY - a}h${T}v${a - T / 2}h${a - T / 2}v${T}h${-(a - T / 2)}v${a - T / 2}h${-T}v${-(a - T / 2)}h${-(a - T / 2)}v${-T}h${a - T / 2}z`;
@@ -65,6 +65,7 @@ export function heartSVG(color, { bg = false, id = 'lp' } = {}) {
   ${bg ? `<rect width="1024" height="1024" fill="${BG}"/>` : ''}
   <g mask="url(#${id}-cut)">${shadow(heart)}</g>
   ${heart(c)}
+  ${shadow(plus)}
   ${plus('#ffffff')}
   ${bg ? `<rect width="1024" height="1024" fill="#fff" opacity=".05" filter="url(#${id}-grain)"/>` : ''}
 </svg>`;
