@@ -112,9 +112,16 @@ function HabitChips({ date }) {
       <div className="chips">
         {habits.map((h) => {
           const on = isDone(h, date);
+          const avoid = h.mode === 'avoid';
           return (
-            <button key={h.id} className={`chip habit-chip${on ? ' on' : ''}`} aria-pressed={on} onClick={() => toggleHabit(h, date, on)}>
-              <span className="tick">{on && <Icon name="check" size={12} />}</span>
+            <button
+              key={h.id}
+              className={`chip habit-chip${on ? ' on' : ''}${avoid ? ' avoid' : ''}${avoid && !on ? ' slipped' : ''}`}
+              aria-pressed={on}
+              aria-label={avoid ? `${h.name}: ${on ? 'clean so far, tap to mark a slip' : 'slipped, tap to undo'}` : h.name}
+              onClick={() => toggleHabit(h, date, on)}
+            >
+              <span className="tick">{on ? <Icon name="check" size={12} /> : avoid ? '×' : null}</span>
               {h.name}
             </button>
           );

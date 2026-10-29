@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ACCENTS, FONTS, loadAllFonts } from '../lib/theme.js';
 import { getHealthKeyInfo, createHealthKey, deleteHealthKey } from '../lib/health.js';
+import { parseStreaksExport, streaksToRecords } from '../lib/streaksImport.js';
+import { list, putMany } from '../store.js';
 import { Sheet } from './ui.jsx';
 import {
   useSettings, saveSettings, useSyncStatus, sync, signIn, signUp, signOut, clearSample, eraseAll,
@@ -74,6 +76,8 @@ export default function SettingsSheet({ onClose }) {
           </label>
         </div>
       </section>
+
+      <StreaksImport />
 
       <section className="set-sec">
         <h3>Data</h3>
@@ -353,6 +357,74 @@ function HealthSection({ signedIn }) {
           </div>
           {err && <p className="err">{err}</p>}
         </>
+      )}
+    </section>
+  );
+}
+
+function StreaksImport() {
+  const [parsed, setParsed] = useState(null);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState('');
+
+  const pick = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr('');
+    setDone('');
+    try {
+      setParsed(parseStreaksExport(await file.text()));
+    } catch (x) {
+      setParsed(null);
+      setErr(x.message);
+    }
+  };
+
+  const run = () => {
+    const items = streaksToRecords(parsed, list('habit'));
+    putMany(items);
+    setDone(`Imported ${parsed.habits.length} habits and ${parsed.entries.toLocaleString()} days of history.`);
+    toast('History imported');
+    setParsed(null);
+  };
+
+  const range = parsed && `${new Date(parsed.from + 'T12:00').toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${new Date(parsed.to + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+  return (
+    <section className="set-sec">
+      <h3>Import from Streaks</h3>
+      <p className="muted small">
+        Bring in your habits and their full history. In Streaks, open Settings → Export Data → CSV, save the file, then choose it here.
+        Importing the same file again updates it instead of making copies.
+      </p>
+      <label className="btn ghost file-btn" htmlFor="streaks-file">
+        Choose CSV file
+        <input id="streaks-file" type="file" accept=".csv,text/csv" onChange={pick} />
+      </label>
+      {err && <p className="err">{err}</p>}
+      {done && <p className="small ok-text">{done}</p>}
+      {parsed && (
+        <div className="import-preview">
+          <p className="small">
+            <b>{parsed.habits.length} habits</b> · {parsed.entries.toLocaleString()} entries · {range}
+          </p>
+          <ul className="rows">
+            {parsed.habits.map((h) => (
+              <li key={h.taskId} className="row small">
+                <span className="row-title">{h.name}</span>
+                {h.mode === 'avoid' && <span className="tag">Avoid</span>}
+                {h.paused && <span className="tag">Paused</span>}
+                <span className="meta">{h.counts.d} done</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">Paused habits only logged skips lately. You can resume any of them from the Habits tab.</p>
+          <div className="btn-row">
+            <button className="btn" onClick={run}>Import {parsed.habits.length} habits</button>
+            <button className="btn ghost" onClick={() => setParsed(null)}>Cancel</button>
+          </div>
+        </div>
       )}
     </section>
   );
