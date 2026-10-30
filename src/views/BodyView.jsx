@@ -145,7 +145,7 @@ function Workouts() {
           <button className="chip" aria-pressed={!mus} onClick={() => setMus(null)}>All</button>
           {used.map((g) => (
             <button key={g.id} className={`chip m-${g.id}`} aria-pressed={mus === g.id} onClick={() => setMus(mus === g.id ? null : g.id)}>
-              <MuscleIcon group={g.id} size={16} /> {g.label}
+              <MuscleIcon group={g.id} size={20} /> {g.label}
             </button>
           ))}
         </div>
@@ -158,7 +158,7 @@ function Workouts() {
               <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
                 <b className="routine-name">{r.name}</b>
                 <span className="routine-mus" aria-hidden="true">
-                  {iconsFor(r).map((g) => <span key={g.id} className={`m-${g.id}`}><MuscleIcon group={g.id} size={14} /></span>)}
+                  {iconsFor(r).slice(0, 3).map((g) => <MuscleIcon key={g.id} group={g.id} size={20} />)}
                 </span>
                 <span className="routine-n">{r.exercises.length} ex</span>
               </button>

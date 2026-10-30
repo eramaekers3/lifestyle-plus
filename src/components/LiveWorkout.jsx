@@ -4,7 +4,10 @@ import {
   updateRow, addRow, removeRow, editSessionExercise, addSessionExercise, removeSessionExercise, summarize,
   finishSession, discardSession, addSessionExercises, sessionChanged, saveSessionAsRoutine,
 } from '../lib/workouts.js';
-import { libraryEntry } from '../lib/exercises.js';
+import { libraryEntry, groupOf, GROUPS } from '../lib/exercises.js';
+import { musclesFor } from '../lib/lifting.js';
+import MuscleIcon from './MuscleIcon.jsx';
+import { useDragDismiss } from '../lib/dragDismiss.js';
 import ExercisePicker from './ExercisePicker.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon, useNow } from './ui.jsx';
@@ -38,6 +41,9 @@ export default function LiveWorkout({ onMinimize }) {
   const [picking, setPicking] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null); // exercise id waiting for a second tap
   const chips = useRef(null);
+  // Pull the workout screen down (from the top) to tuck it away into the pill; the workout keeps running.
+  const liveRef = useRef(null);
+  useDragDismiss(liveRef, () => onMinimize(), { key: `${!!s}:${finishing}` });
 
   // Keep the current exercise's chip in view.
   useEffect(() => {
@@ -63,7 +69,7 @@ export default function LiveWorkout({ onMinimize }) {
   if (finishing) {
     const sum = summarize(s, now);
     return (
-      <div className="live" role="dialog" aria-modal="true" aria-label="Finish workout">
+      <div className="live" ref={liveRef} role="dialog" aria-modal="true" aria-label="Finish workout">
         <div className="live-finish">
           <p className="eyebrow">Finish workout</p>
           <h1>{s.name}</h1>
@@ -104,7 +110,8 @@ export default function LiveWorkout({ onMinimize }) {
   }
 
   return (
-    <div className="live" role="dialog" aria-modal="true" aria-label={`${s.name} in progress`}>
+    <div className="live" ref={liveRef} role="dialog" aria-modal="true" aria-label={`${s.name} in progress`}>
+      <div className="grab-bar" aria-hidden="true" />
       <header className="live-top">
         <button className="icon-btn" onClick={onMinimize} aria-label="Minimize workout">
           <Icon name="down" size={20} />
@@ -152,9 +159,7 @@ export default function LiveWorkout({ onMinimize }) {
             <div>
               <span className="eyebrow">Exercise {i + 1} of {s.exercises.length}</span>
               <h2>{e.name}</h2>
-              {(e.target.focus || (libraryEntry(e.name) && libraryEntry(e.name).focus)) && (
-                <p className="ex-focus">Targets: {e.target.focus || libraryEntry(e.name).focus}</p>
-              )}
+              <ExFocus e={e} />
               <p className="target">
                 {e.target.sets} × {e.target.reps || '—'}
                 {e.target.rest && <> · rest {e.target.rest}</>}
@@ -351,5 +356,19 @@ function SaveAsNew({ s }) {
         <button className="btn ghost" disabled={!name.trim() || !s.exercises.length}>Save</button>
       </div>
     </form>
+  );
+}
+
+/** The muscle figure and what the exercise targets, under its name. */
+function ExFocus({ e }) {
+  const lib = libraryEntry(e.name);
+  const focus = e.target.focus || (lib && lib.focus);
+  const group = groupOf(e.name, musclesFor);
+  if (!focus && !group) return null;
+  return (
+    <p className="ex-focus">
+      {group && <MuscleIcon group={group} muscles={musclesFor(e.name)} size={30} />}
+      <span>{focus ? `Targets: ${focus}` : (GROUPS.find((g) => g.id === group) || {}).label}</span>
+    </p>
   );
 }

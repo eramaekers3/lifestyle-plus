@@ -686,14 +686,21 @@ form.inline .num-in { flex: 0 1 92px; }
 .m-triceps { --mc: #ff9f4a; } .m-forearms { --mc: #e6c79c; } .m-quads { --mc: #7fdca0; } .m-hamstrings { --mc: #5fd3c6; }
 .m-glutes { --mc: #ff86b8; } .m-calves { --mc: #c9d36a; } .m-core { --mc: #9fb4ff; }
 .mus-icon { flex: none; }
+/* Body-figure muscle icons */
+.mus-fig { flex: none; display: block; }
+.mus-fig path { stroke: #1d2033; stroke-width: 1.1; stroke-linejoin: round; }
+.mus-fig .base { fill: #8f97b9; }
+.mus-fig .hi { fill: #ff4d64; }
+.mus-fig .help { fill: #ff9a4a; }
+.mus-fig .ln { fill: none; stroke: #1d2033; stroke-width: 0.9; stroke-linecap: round; opacity: 0.55; }
 
 /* Exercise picker */
 .picker { display: flex; flex-direction: column; gap: 12px; }
 .mus-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
 .mus-tile {
   width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px;
-  border-radius: 14px; border: 1.5px solid color-mix(in srgb, var(--mc) 35%, var(--line));
-  background: color-mix(in srgb, var(--mc) 9%, var(--raised)); color: var(--ink); text-align: left;
+  border-radius: 14px; border: 1.5px solid var(--line);
+  background: var(--raised); color: var(--ink); text-align: left;
 }
 .mus-tile .mus-icon { color: var(--mc); margin-bottom: 4px; }
 .mus-tile b { font-size: 14.5px; }
@@ -703,11 +710,11 @@ form.inline .num-in { flex: 0 1 92px; }
 .pk-head > div { display: flex; flex-direction: column; min-width: 0; }
 .pk-head b { font: var(--display-weight) 20px/1.1 var(--display); }
 .pk-head > div span { font-size: 13px; color: var(--muted); }
-.pk-ic { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; color: var(--mc); background: color-mix(in srgb, var(--mc) 16%, var(--raised)); }
+.pk-ic { display: grid; place-items: center; }
 .pk-list { margin: 0; }
 .pk-list .row { padding: 0; }
-.pk-row { width: 100%; display: flex; align-items: flex-start; gap: 12px; padding: 10px 2px; border: 0; background: none; color: var(--ink); text-align: left; }
-.pk-row .check { margin-top: 2px; pointer-events: none; }
+.pk-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 2px; border: 0; background: none; color: var(--ink); text-align: left; }
+.pk-row .check { flex: none; pointer-events: none; }
 .pk-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pk-text b { font-size: 15px; }
 .pk-focus { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--sun) 80%, var(--ink)); }
@@ -719,7 +726,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .pk-go { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -10px 18px var(--surface); }
 
 /* In a workout */
-.ex-focus { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: color-mix(in srgb, var(--sun) 80%, var(--ink)); }
+.ex-focus { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; font-size: 13.5px; font-weight: 700; color: color-mix(in srgb, var(--sun) 80%, var(--ink)); }
 .live-ex-btns { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
 .mini.danger { background: var(--coral); border-color: var(--coral); color: #2a0f0b; }
 .save-new { display: flex; flex-direction: column; gap: 6px; }
@@ -966,6 +973,9 @@ form.inline .num-in { flex: 0 1 92px; }
 /* With the keyboard up, the sheet sits right on top of it: no home-bar padding needed. */
 .scrim.kb .sheet { padding-bottom: 16px; }
 .scrim.top { z-index: 70; }
+.grab-bar { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: -8px auto 10px; flex: none; }
+.live > .grab-bar { width: 40px; margin: -4px auto 0; }
+.sheet { overscroll-behavior: contain; }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .sheet-head h2 { margin: 0; font: var(--display-weight) 28px/1 var(--display); letter-spacing: var(--display-tracking); }
 .sheet-sub { margin-top: 0; }

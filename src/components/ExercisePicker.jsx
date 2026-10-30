@@ -61,7 +61,7 @@ export default function ExercisePicker({ top = false, title = 'Add exercises', c
             {GROUPS.map((x) => (
               <li key={x.id}>
                 <button className={`mus-tile m-${x.id}`} onClick={() => setGroup(x.id)}>
-                  <MuscleIcon group={x.id} size={26} />
+                  <MuscleIcon group={x.id} size={40} />
                   <b>{x.label}</b>
                   <span>{counts[x.id]} exercises</span>
                 </button>
@@ -75,7 +75,7 @@ export default function ExercisePicker({ top = false, title = 'Add exercises', c
             {!results && g && (
               <div className="pk-head">
                 <button className="icon-btn" onClick={() => setGroup(null)} aria-label="All muscle groups"><Icon name="left" /></button>
-                <span className={`pk-ic m-${g.id}`}><MuscleIcon group={g.id} size={24} /></span>
+                <span className={`pk-ic m-${g.id}`}><MuscleIcon group={g.id} size={40} /></span>
                 <div>
                   <b>{g.label}</b>
                   <span>{g.blurb}</span>
@@ -89,11 +89,11 @@ export default function ExercisePicker({ top = false, title = 'Add exercises', c
                   <li key={(e.mine ? 'mine:' : '') + e.name} className="row">
                     <button className={`pk-row${on ? ' on' : ''}`} aria-pressed={on} onClick={() => toggle(e)}>
                       <span className={`check${on ? ' on' : ''}`} aria-hidden="true">{on && <Icon name="check" size={16} />}</span>
+                      {e.group && <MuscleIcon group={e.group} muscles={e.muscles} size={38} />}
                       <span className="pk-text">
                         <b>{e.name}</b>
                         {e.focus ? (
                           <span className="pk-focus">
-                            {results && e.group && <MuscleIcon group={e.group} size={14} />}
                             Targets: {e.focus}
                           </span>
                         ) : (

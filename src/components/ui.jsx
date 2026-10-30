@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { heartSVG } from '../lib/logo.js';
 import { createPortal } from 'react-dom';
 import { pad } from '../lib/dates.js';
+import { useDragDismiss } from '../lib/dragDismiss.js';
 import { useToast, dismissToast } from '../lib/toast.js';
 
 export function useNow(ms = 30000) {
@@ -95,6 +96,9 @@ export function Sheet({ title, onClose, children, top = false }) {
   const area = useVisibleArea();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const sheetRef = useRef(null);
+  const scrimRef = useRef(null);
+  useDragDismiss(sheetRef, () => closeRef.current(), { scrim: scrimRef });
   // Runs once per sheet. (onClose is often a fresh function each render; re-running this on every
   // keystroke would unpin and re-pin the page, which makes it jump.)
   useEffect(() => {
@@ -113,11 +117,13 @@ export function Sheet({ title, onClose, children, top = false }) {
   }, []);
   return createPortal(
     <div
+      ref={scrimRef}
       className={`scrim${top ? ' top' : ''}${area && area.keyboard ? ' kb' : ''}`}
       style={area ? { top: area.top, height: area.height, bottom: 'auto', '--vh': `${area.height}px` } : undefined}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} ref={sheetRef}>
+        <div className="grab-bar" aria-hidden="true" />
         <div className="sheet-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close">
