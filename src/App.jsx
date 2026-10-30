@@ -10,6 +10,8 @@ import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
 import { usePushKeepAlive } from './lib/push.js';
+import { useSeedRoutines, useSession } from './lib/workouts.js';
+import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import PlanView from './views/PlanView.jsx';
 import StackView from './views/StackView.jsx';
 import HabitsView from './views/HabitsView.jsx';
@@ -55,6 +57,16 @@ export default function App() {
   useCalendarSync();
   useCanvasSync();
   usePushKeepAlive(!!sync.email);
+  useSeedRoutines();
+
+  // The workout screen opens when a workout starts on this device; after a reload it waits behind the pill.
+  const session = useSession();
+  const [liveOpen, setLiveOpen] = useState(false);
+  const sessionStart = session && session.startedAt;
+  useEffect(() => {
+    if (sessionStart && Date.now() - sessionStart < 5000) setLiveOpen(true);
+    if (!sessionStart) setLiveOpen(false);
+  }, [sessionStart]);
   useTheme();
   useHeartIcon();
 
@@ -146,6 +158,8 @@ export default function App() {
 
       {capture && <CaptureSheet onClose={() => setCapture(false)} />}
       {settings && <SettingsSheet onClose={() => setSettings(false)} />}
+      {session && !liveOpen && <WorkoutPill onOpen={() => setLiveOpen(true)} />}
+      {session && liveOpen && <LiveWorkout onMinimize={() => setLiveOpen(false)} />}
       {morning && (
         <MorningSheet
           onClose={() => {

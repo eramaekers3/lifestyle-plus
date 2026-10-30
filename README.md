@@ -173,3 +173,16 @@ One-time setup:
    `https://lifestyle-plus.vercel.app` and `{{CRON_SECRET}}` with the same secret, and run it. This
    creates the tables and a job that calls `/api/push-tick` every minute.
 3. In the app: **Settings → Notifications → Turn on for this phone**, then **Send a test**.
+
+## Workouts
+
+The Body tab starts with the eight workouts from *The Training Guide* (Biceps & Triceps, Heavy Legs,
+Plyometrics, Chest & Back, Pull, Push, Abs, Cardio). Tap one to edit anything: name, length/focus, notes,
+and each exercise's sets, reps, rest, notes and what you log (weight & reps, reps only, or time). Drag to
+reorder exercises or workouts, add your own, or delete them.
+
+**Start** opens the workout screen: a stopwatch for the whole workout (pause/resume), a stopwatch for each
+exercise (it runs while that exercise is open, and can be reset), and a row per set for weight and reps,
+pre-filled from last time. Check off each set you do; only checked sets are saved. The workout survives
+closing the app; a bar at the bottom brings you back. **Finish** shows a summary and saves it to Recent
+workouts.

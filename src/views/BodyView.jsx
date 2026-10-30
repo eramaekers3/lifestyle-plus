@@ -3,6 +3,10 @@ import { put, remove, useKind, useRecord } from '../store.js';
 import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, parse, todayISO } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
+import { Icon } from '../components/ui.jsx';
+import { useRoutines, addRoutine, startSession, useSession, reorderRoutines } from '../lib/workouts.js';
+import RoutineSheet from '../components/RoutineSheet.jsx';
+import SortableList from '../components/SortableList.jsx';
 
 const DRAFT_ID = idFor('draft-workout');
 
@@ -36,6 +40,10 @@ export default function BodyView() {
         <p>{thisWeek} workout{thisWeek === 1 ? '' : 's'} in the last 7 days.</p>
       </header>
 
+      <Workouts />
+
+      {draft && <Workout draft={draft} exercises={exercises} />}
+
       <section className="card" aria-labelledby="wt-h">
         <div className="card-head"><h2 id="wt-h">Weight</h2></div>
         <div className="hero-row">
@@ -63,7 +71,6 @@ export default function BodyView() {
 
       <HealthCard today={today} />
 
-      <Workout draft={draft} exercises={exercises} />
 
       <section className="card" aria-labelledby="rw-h">
         <div className="card-head"><h2 id="rw-h">Recent workouts</h2></div>
@@ -75,7 +82,9 @@ export default function BodyView() {
                 <li key={w.id} className="row">
                   <span className="row-title">
                     <b>{w.name}</b>{' '}
-                    <span className="muted">· {w.sets.length} sets · {vol.toLocaleString()} lb moved</span>
+                    <span className="muted">
+                      · {w.durationSec ? `${Math.max(1, Math.round(w.durationSec / 60))} min · ` : ''}{w.sets.length} sets{vol ? ` · ${vol.toLocaleString()} lb moved` : ''}
+                    </span>
                   </span>
                   <span className="meta">{w.date === today ? 'Today' : fmt(w.date, { month: 'short', day: 'numeric' })}</span>
                   <button className="x" onClick={() => { remove(w.id); toast('Workout deleted'); }} aria-label={`Delete ${w.name} workout`}>×</button>
@@ -88,6 +97,57 @@ export default function BodyView() {
         )}
       </section>
     </>
+  );
+}
+
+/** Your workout plans. Tap one to see or edit it; Start opens the workout screen. */
+function Workouts() {
+  const routines = useRoutines();
+  const session = useSession();
+  const [open, setOpen] = useState(null);
+  return (
+    <section className="card" aria-labelledby="wk-h">
+      <div className="card-head">
+        <h2 id="wk-h">Workouts</h2>
+        <span className="meta">{routines.length}</span>
+      </div>
+      {routines.length > 0 ? (
+        <SortableList items={routines} onReorder={reorderRoutines} className="rows routine-list" rowClass={() => 'row routine-row'}>
+          {(r, grip) => (
+            <>
+              <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
+                <b className="routine-name">{r.name}</b>
+                <span className="task-meta">
+                  {r.tagline && <span>{r.tagline}</span>}
+                  <span>{r.exercises.length} exercise{r.exercises.length === 1 ? '' : 's'}</span>
+                </span>
+              </button>
+              <button
+                className="mini sun"
+                disabled={!!session || !r.exercises.length}
+                onClick={() => startSession(r)}
+                aria-label={`Start ${r.name}`}
+              >
+                Start
+              </button>
+              {grip}
+            </>
+          )}
+        </SortableList>
+      ) : (
+        <p className="empty">No workouts yet.</p>
+      )}
+      {session && <p className="hint">{session.name} is in progress. Finish it to start another.</p>}
+      <div className="btn-row">
+        <button className="btn ghost" onClick={() => setOpen(addRoutine().id)}>
+          <Icon name="plus" size={16} /> New workout
+        </button>
+        <button className="btn ghost" disabled={!!session} onClick={() => startSession(null)}>
+          Start empty
+        </button>
+      </div>
+      {open && <RoutineSheet id={open} onClose={() => setOpen(null)} />}
+    </section>
   );
 }
 

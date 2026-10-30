@@ -308,6 +308,101 @@ form.inline .num-in { flex: 0 1 92px; }
 .row.just-added { animation: flash 1.6s 0.9s var(--ease-out); }
 @keyframes flash { 0% { background: color-mix(in srgb, var(--sun) 22%, transparent); } 100% { background: transparent; } }
 
+/* ---------- Workouts ---------- */
+.routine-name { font: var(--display-weight) 18px/1.15 var(--display); letter-spacing: -0.02em; }
+.routine-row .row-title { display: flex; flex-direction: column; }
+.start-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding-block: 13px; }
+.danger-link, .link-btn.danger-link { color: var(--coral); }
+.ex-list .ex-row { display: block; padding: 0; }
+.ex-item { padding: 10px 0; }
+.ex-line { display: flex; align-items: center; gap: 10px; }
+.ex-line .row-title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ex-line .pos { flex: none; width: 22px; text-align: right; color: var(--dim); font-weight: 800; font-size: 13px; }
+.ex-fields { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 4px 32px; padding: 12px; border-radius: 14px; background: var(--raised); }
+.ex-fields .input { background: var(--surface); }
+.ex-grid { display: grid; grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.ex-kind { display: flex; flex-wrap: wrap; gap: 8px; }
+.ex-kind .seg { background: var(--surface); }
+.ex-kind .seg button { padding: 6px 10px; font-size: 13px; }
+.ex-fields .danger-link { align-self: flex-start; padding-top: 0; }
+
+/* The workout in progress: a full screen of its own. */
+.live {
+  position: fixed; inset: 0; z-index: 55; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: var(--bg); display: flex; flex-direction: column; gap: 14px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: sheetUp 0.35s var(--ease-out) both;
+}
+.live > * { flex: none; width: 100%; max-width: 640px; margin-inline: auto; }
+.live-top { display: flex; align-items: center; gap: 10px; }
+.live-title { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: center; }
+.live-title b { font: var(--display-weight) 18px/1.1 var(--display); letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-title .eyebrow { color: var(--mint); }
+.finish-btn { padding: 9px 16px; }
+.total-clock { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+.total-clock .big { font: var(--display-weight) 52px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.total-clock .btn { display: inline-flex; align-items: center; gap: 6px; }
+.total-clock.paused .big { color: var(--muted); animation: blink 1.6s ease-in-out infinite; }
+.ex-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; margin-inline: -2px; }
+.ex-chips::-webkit-scrollbar { display: none; }
+.ex-chip {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 200px; padding: 7px 12px 7px 7px;
+  border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted);
+  font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ex-chip .n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); color: var(--ink); font-size: 12px; }
+.ex-chip[aria-current='step'] { border-color: var(--sun); color: var(--ink); background: color-mix(in srgb, var(--sun) 12%, var(--surface)); }
+.ex-chip.started .n { background: color-mix(in srgb, var(--mint) 35%, var(--raised)); }
+.ex-chip.complete .n { background: var(--mint); color: #12301d; }
+.live-ex { display: flex; flex-direction: column; gap: 12px; }
+/* Animate the contents, not the card: a transform on the card would draw its shadow on top of it. */
+.live-ex > * { animation: stepIn 0.24s var(--ease-out) both; }
+.live-ex-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.live-ex-head h2 { margin: 2px 0 4px; font: var(--display-weight) 24px/1.1 var(--display); letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.live-ex-head .target { margin: 0; color: var(--muted); font-weight: 700; font-size: 14px; }
+.live-ex .ex-fields { margin-left: 0; }
+.ex-notes {
+  border: 0; background: none; padding: 0; text-align: left; color: var(--muted); font-size: 13.5px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ex-notes.open { display: block; }
+.ex-clock { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--raised); }
+.ex-clock .label { flex: 1; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ex-clock .t { font: var(--display-weight) 26px/1 var(--display); font-variant-numeric: tabular-nums; color: var(--sun); }
+.ex-clock.paused .t { color: var(--muted); }
+.last-time { margin: -2px 0 0; font-size: 13px; color: var(--muted); }
+.set-table { display: flex; flex-direction: column; gap: 6px; }
+.set-row { display: grid; align-items: center; gap: 8px; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 44px 26px; }
+.set-table:not(.k-weight) .set-row { grid-template-columns: 34px minmax(0, 1fr) 44px 26px; }
+.set-row.head { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.set-row .set-n { text-align: center; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.set-row .input { padding: 10px 8px; text-align: center; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.set-row .check { width: 44px; height: 44px; border-radius: 12px; }
+.set-row.done .input { border-color: color-mix(in srgb, var(--mint) 60%, transparent); background: color-mix(in srgb, var(--mint) 10%, var(--raised)); }
+.set-row.done .check { background: var(--mint); border-color: var(--mint); color: #12301d; }
+.set-row.done .set-n { color: var(--mint); }
+.add-set { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 0; }
+.live-nav { display: flex; gap: 10px; }
+.live-nav .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-block: 13px; }
+.live-intro { text-align: center; }
+.live-finish { display: flex; flex-direction: column; gap: 12px; padding-top: 30px; }
+.live-finish h1 { margin: 0 0 6px; font: var(--display-weight) 36px/1.05 var(--display); letter-spacing: var(--display-tracking); }
+.live-finish .link-btn { align-self: center; color: var(--muted); }
+.live-finish .link-btn.danger-link { color: var(--coral); }
+.wo-pill {
+  position: fixed; z-index: 21; left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 8px; max-width: calc(100% - 120px); padding: 11px 16px 11px 13px;
+  border: 1.5px solid var(--mint); border-radius: 999px; background: color-mix(in srgb, var(--mint) 18%, #1c1c1b); color: var(--ink);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); font-size: 14px;
+}
+.wo-pill b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wo-pill .t { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mint); }
+.wo-pill .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--mint); animation: blink 1.4s ease-in-out infinite; }
+.wo-pill.paused { border-color: var(--line); }
+.wo-pill.paused .dot { background: var(--muted); animation: none; }
+.wo-pill.paused .t { color: var(--muted); }
+
 /* ---------- Settings toggles ---------- */
 .toggles { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
 .toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; font-size: 14px; }

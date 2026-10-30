@@ -132,7 +132,7 @@ export default function SortableList({ items, onReorder, className = 'rows', row
       {ids.map((id, i) => {
         const t = byId[id];
         const grip = (
-          <button className="grip" aria-label={`Move “${t.title}”. Drag, or use the arrow keys.`} onPointerDown={down(id)} onKeyDown={key(id)}>
+          <button className="grip" aria-label={`Move “${t.title || t.name}”. Drag, or use the arrow keys.`} onPointerDown={down(id)} onKeyDown={key(id)}>
             <Icon name="grip" size={18} />
           </button>
         );
