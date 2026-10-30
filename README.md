@@ -87,6 +87,27 @@ Run it once and allow access to Health when asked. Then make it automatic: Short
 **+** → **Alarm → Is Stopped** (or a time of day) → **Run Immediately** → choose the shortcut.
 iPhones block Health data while locked, so pick a moment when you're usually holding your phone.
 
+## Connect your banks (Plaid)
+
+The Money tab reads balances, transactions and investments through [Plaid](https://plaid.com).
+Plaid's free **Trial plan** covers up to 10 bank logins with real data. lifestyle+ can only read;
+it can't move money. Bank access tokens stay on the server, in a table the app itself can't read.
+
+1. **Database:** in Supabase → SQL Editor, run `supabase/plaid.sql`.
+2. **Plaid account:** sign up at [dashboard.plaid.com](https://dashboard.plaid.com/signup). In
+   **Developers → Keys**, copy your **client_id** and your **Production secret**.
+3. **Redirect URI** (for banks that sign you in on their own site, like Capital One): in
+   **Developers → API → Allowed redirect URIs**, add `https://lifestyle-plus.vercel.app/` exactly.
+4. **Vercel:** Project → Settings → Environment Variables, add `PLAID_CLIENT_ID`, `PLAID_SECRET`
+   and `PLAID_ENV` = `production`, then redeploy. (`PLAID_ENV` = `sandbox` with the Sandbox secret
+   lets you try it with Plaid's fake bank: user `user_good`, password `pass_good`.)
+5. In lifestyle+, open **Money → Connect a bank**. Do this in **Safari**, not the Home Screen app,
+   so banks that bounce you to their own site can send you back. Once connected, the data shows
+   everywhere you're signed in.
+
+The app updates from your banks when you open Money (at most every 4 hours) or when you tap Update.
+Net worth history starts the day you connect and adds a point each day it updates.
+
 ## Put it on your iPhone
 
 The Home Screen app needs a real web address (https). The easiest host is Vercel:

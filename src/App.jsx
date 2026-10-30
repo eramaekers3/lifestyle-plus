@@ -11,6 +11,7 @@ import ReviewSheet from './components/ReviewSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
+import { toast } from './lib/toast.js';
 import { usePushKeepAlive } from './lib/push.js';
 import { useSwipe } from './lib/swipe.js';
 import { useRecurring } from './lib/recurring.js';
@@ -21,12 +22,15 @@ import PlanView from './views/PlanView.jsx';
 import StackView from './views/StackView.jsx';
 import HabitsView from './views/HabitsView.jsx';
 import BodyView from './views/BodyView.jsx';
+import MoneyView from './views/MoneyView.jsx';
+import { resumeBankSignIn } from './lib/finance.js';
 
 const TABS = [
   { id: 'plan', label: 'Plan', View: PlanView },
   { id: 'stack', label: 'Stack', View: StackView },
   { id: 'habits', label: 'Habits', View: HabitsView },
   { id: 'body', label: 'Body', View: BodyView },
+  { id: 'money', label: 'Money', View: MoneyView },
 ];
 // "Not now" on the morning page holds until tomorrow on this device.
 const SKIP_KEY = 'lifestyleplus.morningSkipped';
@@ -67,6 +71,15 @@ export default function App() {
   useCalendarSync();
   useCanvasSync();
   useCanvasTasks();
+
+  // Coming back from a bank's own sign-in page (Capital One and others): finish connecting it.
+  useEffect(() => {
+    const p = resumeBankSignIn();
+    if (!p) return;
+    setTab('money');
+    tabRef.current = 'money';
+    p.then((name) => name && toast(`${name} connected`)).catch((e) => toast(e.message));
+  }, []);
   usePushKeepAlive(!!sync.email);
   useSeedRoutines();
   useRecurring();
