@@ -192,7 +192,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="pager" ref={pager}>
+      <div className="pager app-pager" ref={pager}>
         <main className={`view${enter ? (enter > 0 ? ' enter-next' : ' enter-prev') : ''}`} key={tab}>
           <View />
         </main>
