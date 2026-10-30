@@ -42,7 +42,7 @@ export default function TaskMeta({ t }) {
   const cats = useCategories();
   const cat = t.category && cats.find((c) => c.id === t.category);
   const due = t.status !== 'done' && dueLabel(t);
-  if (!cat && !due && !t.recurId) return null;
+  if (!cat && !due && !t.recurId && !t.course) return null;
   return (
     <span className="task-meta">
       {cat && (
@@ -51,6 +51,7 @@ export default function TaskMeta({ t }) {
           {cat.name}
         </span>
       )}
+      {t.course && <span className="course">{t.course.split(/\s+/).slice(0, 2).join(' ')}</span>}
       {due && <span className={due.late ? 'late' : ''}>{due.text}</span>}
       {t.recurId && (
         <span className="rc-meta" aria-label="Repeats">

@@ -81,6 +81,13 @@ export default function TaskSheet({ id, onClose }) {
         </div>
       )}
 
+      {t.link && (
+        <div className="edit-sec">
+          <a className="btn ghost" href={t.link} target="_blank" rel="noreferrer">Open in Canvas</a>
+          <p className="hint-quiet">From Canvas{t.course ? ` · ${t.course}` : ''}. Finishing this task checks it off in School too.</p>
+        </div>
+      )}
+
       <div className="edit-sec">
         <p className="cap-label">Repeat</p>
         <button className="mini repeat-btn" onClick={() => setRepeat(true)}>

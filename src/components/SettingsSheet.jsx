@@ -451,6 +451,7 @@ function CanvasToken({ c }) {
 
 function CanvasSection() {
   const c = useCanvasStatus();
+  const { canvasToStack } = useSettings();
   const [url, setUrl] = useState('');
   const [err, setErr] = useState('');
   const [help, setHelp] = useState(!c);
@@ -513,6 +514,13 @@ function CanvasSection() {
         </form>
       )}
       {err && <p className="err">{err}</p>}
+
+      {c && (
+        <label className="toggle">
+          <input type="checkbox" checked={canvasToStack !== false} onChange={(e) => saveSettings({ canvasToStack: e.target.checked })} />
+          <span>Add homework and tests due in the next 2 weeks to my backlog (finishing one checks it off here too)</span>
+        </label>
+      )}
 
       {c && <CanvasToken c={c} />}
 

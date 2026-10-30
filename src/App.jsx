@@ -14,6 +14,7 @@ import { todayISO } from './lib/dates.js';
 import { usePushKeepAlive } from './lib/push.js';
 import { useSwipe } from './lib/swipe.js';
 import { useRecurring } from './lib/recurring.js';
+import { useCanvasTasks } from './lib/canvasStack.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import PlanView from './views/PlanView.jsx';
@@ -65,6 +66,7 @@ export default function App() {
   const sync = useSyncStatus();
   useCalendarSync();
   useCanvasSync();
+  useCanvasTasks();
   usePushKeepAlive(!!sync.email);
   useSeedRoutines();
   useRecurring();
