@@ -11,6 +11,7 @@ import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import SchoolList from '../components/SchoolList.jsx';
+import CardStack from '../components/CardStack.jsx';
 import { PastDoneButton } from './WeekView.jsx';
 import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
 
@@ -59,11 +60,16 @@ export default function DayView({ date }) {
       {isToday && <ReviewBanner />}
       {isToday && <ShutdownBanner date={date} />}
 
-      <NowStack />
-
-      <SchoolDay date={date} />
-
-      <section className="card tl-card" aria-labelledby="tl-h" data-swipe-days>
+      <CardStack
+        page="day"
+        cards={[
+          { id: 'now', title: 'Now', node: <NowStack /> },
+          { id: 'school', title: 'Due today', node: <SchoolDay date={date} /> },
+          {
+            id: 'blocks',
+            title: 'Time blocks',
+            node: (
+              <section className="card tl-card" aria-labelledby="tl-h" data-swipe-days>
         <div className="card-head">
           <h2 id="tl-h">Time blocks</h2>
           <span className="meta">
@@ -102,8 +108,11 @@ export default function DayView({ date }) {
           onEdit={setEdit}
         />
       </section>
-
-      <HabitChips date={date} />
+            ),
+          },
+          { id: 'habits', title: 'Habits', node: <HabitChips date={date} /> },
+        ]}
+      />
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
     </>

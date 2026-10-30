@@ -8,6 +8,7 @@ import { useSchool, overdue, markPastDone } from '../lib/canvas.js';
 import { toast } from '../lib/toast.js';
 import SchoolList from '../components/SchoolList.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
+import CardStack from '../components/CardStack.jsx';
 import { Icon } from '../components/ui.jsx';
 import { reviewWeek, useReviewed } from '../lib/review.js';
 
@@ -64,11 +65,16 @@ export default function WeekView({ date, openDay }) {
 
       <ReviewRow ws={ws} />
 
-      <WeekPlan key={ws + (plan ? 'p' : '')} ws={ws} plan={plan} />
-
-      <SchoolWeek ws={ws} we={we} today={today} />
-
-      <section className="card" aria-labelledby="glance-h" data-swipe-days>
+      <CardStack
+        page="week"
+        cards={[
+          { id: 'plan', title: 'Weekly plan', node: <WeekPlan key={ws + (plan ? 'p' : '')} ws={ws} plan={plan} /> },
+          { id: 'school', title: 'School this week', node: <SchoolWeek ws={ws} we={we} today={today} /> },
+          {
+            id: 'glance',
+            title: 'The week at a glance',
+            node: (
+              <section className="card" aria-labelledby="glance-h" data-swipe-days>
         <div className="card-head">
           <h2 id="glance-h">The week at a glance</h2>
           <span className="meta">
@@ -123,6 +129,10 @@ export default function WeekView({ date, openDay }) {
           ))}
         </div>
       </section>
+            ),
+          },
+        ]}
+      />
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
     </>

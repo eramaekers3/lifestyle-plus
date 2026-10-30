@@ -10,6 +10,7 @@ import { toast } from '../lib/toast.js';
 import NowStack from '../components/NowStack.jsx';
 import { Icon } from '../components/ui.jsx';
 import RecurSheet from '../components/RecurSheet.jsx';
+import CardStack from '../components/CardStack.jsx';
 import { useRecurs, scheduleLabel } from '../lib/recurring.js';
 
 export default function StackView() {
@@ -26,9 +27,15 @@ export default function StackView() {
         <p>Work only on what’s in Now. When a slot opens, pull the next task from the backlog.</p>
       </header>
 
-      <NowStack full />
-
-      <section className="card" aria-labelledby="bl-h">
+      <CardStack
+        page="stack"
+        cards={[
+          { id: 'now', title: 'Now', node: <NowStack full /> },
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            node: (
+              <section className="card" aria-labelledby="bl-h">
         <div className="card-head">
           <h2 id="bl-h">Backlog</h2>
           <span className="meta">{backlog.length} waiting</span>
@@ -63,13 +70,14 @@ export default function StackView() {
         )}
         {!room && backlog.length > 0 && <p className="hint">Now is full, so pulling is paused.</p>}
       </section>
-      {adding && <CaptureSheet onClose={() => setAdding(false)} />}
-      {open && <TaskSheet id={open} onClose={() => setOpen(null)} />}
-
-      <Repeating />
-
-      {done.length > 0 && (
-        <section className="card" aria-labelledby="done-h">
+            ),
+          },
+          { id: 'repeating', title: 'Repeating', node: <Repeating /> },
+          {
+            id: 'done',
+            title: 'Done recently',
+            node: done.length > 0 ? (
+              <section className="card" aria-labelledby="done-h">
           <div className="card-head">
             <h2 id="done-h">Done recently</h2>
             <span className="meta">{done.length} total</span>
@@ -85,7 +93,13 @@ export default function StackView() {
             ))}
           </ul>
         </section>
-      )}
+            ) : null,
+          },
+        ]}
+      />
+      {adding && <CaptureSheet onClose={() => setAdding(false)} />}
+      {open && <TaskSheet id={open} onClose={() => setOpen(null)} />}
+
     </>
   );
 }

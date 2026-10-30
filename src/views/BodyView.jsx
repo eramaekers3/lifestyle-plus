@@ -12,6 +12,7 @@ import { MUSCLES, setsByMuscle, useExerciseHistory, musclesFor } from '../lib/li
 import { GROUPS } from '../lib/exercises.js';
 import MuscleIcon from '../components/MuscleIcon.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
+import CardStack from '../components/CardStack.jsx';
 import { weekStart } from '../lib/dates.js';
 
 const DRAFT_ID = idFor('draft-workout');
@@ -48,12 +49,17 @@ export default function BodyView() {
 
       {draft && <Workout draft={draft} exercises={exercises} />}
 
-      <MuscleWeek workouts={workouts} today={today} />
-
-      <Exercises />
-
-      <section className="card" aria-labelledby="wt-h">
-        <div className="card-head"><h2 id="wt-h">Weight</h2></div>
+      <CardStack
+        page="body"
+        cards={[
+          { id: 'muscles', title: 'Sets this week', node: <MuscleWeek workouts={workouts} today={today} /> },
+          { id: 'exercises', title: 'Exercise history', node: <Exercises /> },
+          {
+            id: 'weight',
+            title: 'Weight',
+            node: (
+              <section className="card" aria-labelledby="wt-h">
+        <div className="card-head"><h2 id="wt-h">Weight</h2>{last && <span className="meta">{last.lbs.toFixed(1)} lb</span>}</div>
         <div className="hero-row">
           <div>
             <div className="label">Latest</div>
@@ -76,12 +82,15 @@ export default function BodyView() {
           <button className="btn">Log</button>
         </form>
       </section>
-
-      <HealthCard today={today} />
-
-
-      <section className="card" aria-labelledby="rw-h">
-        <div className="card-head"><h2 id="rw-h">Recent workouts</h2></div>
+            ),
+          },
+          { id: 'health', title: 'Apple Health', node: <HealthCard today={today} /> },
+          {
+            id: 'recent',
+            title: 'Recent workouts',
+            node: (
+              <section className="card" aria-labelledby="rw-h">
+        <div className="card-head"><h2 id="rw-h">Recent workouts</h2><span className="meta">{thisWeek} this week</span></div>
         {recent.length ? (
           <ul className="rows">
             {recent.map((w) => {
@@ -104,8 +113,11 @@ export default function BodyView() {
           <p className="empty">No workouts yet.</p>
         )}
       </section>
-
-      <Workouts />
+            ),
+          },
+          { id: 'workouts', title: 'Workouts', node: <Workouts /> },
+        ]}
+      />
     </>
   );
 }

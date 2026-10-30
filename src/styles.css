@@ -681,6 +681,26 @@ form.inline .num-in { flex: 0 1 92px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--c); vertical-align: -1px; }
 
+/* Foldable, reorderable cards */
+.fold { position: relative; display: flex; flex-direction: column; }
+.fold:not(:has(.card)) { display: none; }
+.fold > .card > .card-head { padding-right: 34px; cursor: pointer; }
+.fold:not(:has(> .card > .card-head)) > .fold-btn { display: none; }
+.fold-btn {
+  position: absolute; top: 9px; right: 8px; z-index: 2; width: 32px; height: 32px; padding: 0;
+  display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--dim);
+  transition: transform 0.25s var(--ease-out), color 0.2s;
+}
+.fold-btn:active { background: var(--raised); }
+.fold.folded > .fold-btn { transform: rotate(-90deg); color: var(--muted); }
+.fold.folded > .card > :not(.card-head) { display: none; }
+.fold.folded > .card > .card-head { margin-bottom: 0; }
+.fold.folded > .card { padding-block: 13px; }
+.fold.folded > .card > .card-head .add-blk, .fold.folded > .card > .card-head .wk-actions { display: none; }
+.arrange-btn { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--dim); font-size: 13px; font-weight: 700; }
+.arrange-list .row-title { font-weight: 700; }
+.arrange-list .mini[aria-pressed='true'] { color: var(--muted); }
+
 /* Muscle groups: one color each */
 .m-chest { --mc: #ff8a7a; } .m-back { --mc: #7cc4ff; } .m-shoulders { --mc: #bba9ff; } .m-biceps { --mc: #ffcf5c; }
 .m-triceps { --mc: #ff9f4a; } .m-forearms { --mc: #e6c79c; } .m-quads { --mc: #7fdca0; } .m-hamstrings { --mc: #5fd3c6; }
