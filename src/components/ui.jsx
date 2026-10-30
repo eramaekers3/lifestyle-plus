@@ -26,6 +26,7 @@ const paths = {
   stack: <><path d="M12 3.8 3.5 8.2 12 12.6l8.5-4.4L12 3.8Z" /><path d="m3.5 12.4 8.5 4.4 8.5-4.4" /><path d="m3.5 16.4 8.5 4.4 8.5-4.4" /></>,
   habits: <><circle cx="12" cy="12" r="8.5" /><path d="m8 12.3 2.7 2.7L16 9.6" /></>,
   body: <path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" />,
+  lists: <><path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10" /><path d="m3.8 6.4 1.3 1.3L7.4 5.3" /><path d="m3.8 11.9 1.3 1.3 2.3-2.4" /><circle cx="5.3" cy="17.5" r="1.4" /></>,
   settings: <><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></>,
   left: <path d="m14.5 6-6 6 6 6" />,
   right: <path d="m9.5 6 6 6-6 6" />,

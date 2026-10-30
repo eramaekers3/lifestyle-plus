@@ -23,11 +23,13 @@ import StackView from './views/StackView.jsx';
 import HabitsView from './views/HabitsView.jsx';
 import BodyView from './views/BodyView.jsx';
 import MoneyView from './views/MoneyView.jsx';
+import ListsView from './views/ListsView.jsx';
 import { resumeBankSignIn } from './lib/finance.js';
 
 const TABS = [
   { id: 'plan', label: 'Plan', View: PlanView },
   { id: 'stack', label: 'Stack', View: StackView },
+  { id: 'lists', label: 'Lists', View: ListsView },
   { id: 'habits', label: 'Habits', View: HabitsView },
   { id: 'body', label: 'Body', View: BodyView },
   { id: 'money', label: 'Money', View: MoneyView },

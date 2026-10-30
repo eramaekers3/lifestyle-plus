@@ -1205,3 +1205,32 @@ form.inline .num-in { flex: 0 1 92px; }
   .flip { font-size: 25px; }
   .form-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- Lists (groceries and packing) ---------- */
+.li-add { display: flex; gap: 8px; margin-bottom: 4px; }
+.li-add .input { flex: 1; }
+.li-add .btn { flex: none; width: 46px; padding: 0; display: grid; place-items: center; }
+.li-add .btn .icon { stroke-width: 2.8; }
+.li-recent { display: flex; gap: 6px; overflow-x: auto; margin: 10px -16px 2px; padding: 2px 16px 6px; scrollbar-width: none; }
+.li-recent::-webkit-scrollbar { display: none; }
+.li-again { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; font-size: 13px; border-style: dashed; color: var(--muted); }
+.li-again:active { transform: scale(0.95); color: var(--ink); }
+.li-items { margin-top: 6px; }
+.li-row .row-title { font-size: 16px; font-weight: 600; }
+.li-row .x { opacity: 0.7; }
+.li-row.got .row-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: color-mix(in srgb, var(--sun) 70%, transparent); }
+.li-row.got .check.on { background: color-mix(in srgb, var(--sun) 55%, var(--raised)); border-color: transparent; }
+.li-row.fresh { animation: dropIn 0.4s var(--spring) both; }
+.li-done-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.li-done-head .mini-h { margin: 0; }
+.li-ring {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: var(--sun-ink);
+  background: conic-gradient(var(--sun) calc(var(--p) * 360deg), var(--raised) 0);
+  -webkit-mask: radial-gradient(circle, transparent 7px, #000 7.5px); mask: radial-gradient(circle, transparent 7px, #000 7.5px);
+}
+.li-ring:has(.icon) { -webkit-mask: none; mask: none; }
+.li-ring .icon { stroke-width: 3.4; }
+.li-from { margin-top: 14px; }
+.li-rename { margin: -4px 0 12px; }
+.li-actions { margin-top: 18px; }
+.settling .li-row .check.on, .settling .li-row.fresh { animation-delay: -10s !important; }
