@@ -43,8 +43,6 @@ export default function BodyView() {
         <p>{thisWeek} workout{thisWeek === 1 ? '' : 's'} in the last 7 days.</p>
       </header>
 
-      <Workouts />
-
       {draft && <Workout draft={draft} exercises={exercises} />}
 
       <MuscleWeek workouts={workouts} today={today} />
@@ -103,31 +101,37 @@ export default function BodyView() {
           <p className="empty">No workouts yet.</p>
         )}
       </section>
+
+      <Workouts />
     </>
   );
 }
 
-/** Your workout plans. Tap one to see or edit it; Start opens the workout screen. */
+/** Your workout plans, one tight row each. Tap a name to see or edit it; Start opens the workout screen. */
 function Workouts() {
   const routines = useRoutines();
   const session = useSession();
   const [open, setOpen] = useState(null);
   return (
-    <section className="card" aria-labelledby="wk-h">
+    <section className="card wk-card" aria-labelledby="wk-h">
       <div className="card-head">
         <h2 id="wk-h">Workouts</h2>
         <span className="meta">{routines.length}</span>
+        <div className="wk-actions">
+          <button className="mini" disabled={!!session} onClick={() => startSession(null)}>Empty</button>
+          <button className="mini" onClick={() => setOpen(addRoutine().id)} aria-label="New workout">
+            <Icon name="plus" size={14} /> New
+          </button>
+        </div>
       </div>
+      {session && <p className="hint wk-hint">{session.name} is in progress. Finish it to start another.</p>}
       {routines.length > 0 ? (
         <SortableList items={routines} onReorder={reorderRoutines} className="rows routine-list" rowClass={() => 'row routine-row'}>
           {(r, grip) => (
             <>
               <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
                 <b className="routine-name">{r.name}</b>
-                <span className="task-meta">
-                  {r.tagline && <span>{r.tagline}</span>}
-                  <span>{r.exercises.length} exercise{r.exercises.length === 1 ? '' : 's'}</span>
-                </span>
+                <span className="routine-n">{r.exercises.length} ex</span>
               </button>
               <button
                 className="mini sun"
@@ -144,15 +148,6 @@ function Workouts() {
       ) : (
         <p className="empty">No workouts yet.</p>
       )}
-      {session && <p className="hint">{session.name} is in progress. Finish it to start another.</p>}
-      <div className="btn-row">
-        <button className="btn ghost" onClick={() => setOpen(addRoutine().id)}>
-          <Icon name="plus" size={16} /> New workout
-        </button>
-        <button className="btn ghost" disabled={!!session} onClick={() => startSession(null)}>
-          Start empty
-        </button>
-      </div>
       {open && <RoutineSheet id={open} onClose={() => setOpen(null)} />}
     </section>
   );

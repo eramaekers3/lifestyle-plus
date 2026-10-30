@@ -74,17 +74,23 @@ export function reorderRoutines(routines) {
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-/** The sets you logged for this exercise the last time you did it: [{ wt, reps }]. */
-export function lastSetsFor(name, workouts) {
+/**
+ * The sets you logged for this exercise the last time you did it: [{ wt, reps }].
+ * With a routineId, the last time you did it in that same workout wins; otherwise the last time anywhere.
+ */
+export function lastSetsFor(name, workouts, routineId = null) {
   const n = norm(name);
   const sorted = [...workouts].sort((a, b) => (b.startedAt || b.date).localeCompare(a.startedAt || a.date));
-  for (const w of sorted) {
-    const e = (w.exercises || []).find((x) => norm(x.name) === n);
-    if (e && e.sets.length) return e.sets;
-    const flat = (w.sets || []).filter((s) => norm(s.ex) === n);
-    if (flat.length) return flat.map((s) => ({ wt: s.wt, reps: s.reps }));
-  }
-  return [];
+  const find = (list) => {
+    for (const w of list) {
+      const e = (w.exercises || []).find((x) => norm(x.name) === n);
+      if (e && e.sets.length) return e.sets;
+      const flat = (w.sets || []).filter((s) => norm(s.ex) === n);
+      if (flat.length) return flat.map((s) => ({ wt: s.wt, reps: s.reps }));
+    }
+    return null;
+  };
+  return (routineId && find(sorted.filter((w) => w.routineId === routineId))) || find(sorted) || [];
 }
 
 /* ---------- The session ---------- */
@@ -93,9 +99,10 @@ export const useSession = () => useRecord(SESSION_ID);
 
 const blankRow = (prev) => ({ wt: prev && prev.wt ? String(prev.wt) : '', reps: prev && prev.reps ? String(prev.reps) : '', done: false });
 
-function sessionExercise(e, history) {
-  const last = lastSetsFor(e.name, history);
-  const n = Math.max(1, e.sets || 1);
+function sessionExercise(e, history, routineId = null) {
+  const last = lastSetsFor(e.name, history, routineId);
+  // Start with as many sets as last time (or the plan's count the first time), filled with last time's numbers.
+  const n = Math.max(1, last.length || e.sets || 1);
   return {
     id: newId(),
     name: e.name,
@@ -121,7 +128,7 @@ export function startSession(routine) {
     pausedMs: 0,
     cur: 0,
     curSince: now,
-    exercises: routine ? routine.exercises.map((e) => sessionExercise(e, history)) : [],
+    exercises: routine ? routine.exercises.map((e) => sessionExercise(e, history, routine.id)) : [],
   });
 }
 
@@ -173,7 +180,7 @@ export const editSessionExercise = (i, changes) =>
 
 export function addSessionExercise(name) {
   update((s, now) => {
-    const e = sessionExercise(newExercise(name), list('workout'));
+    const e = sessionExercise(newExercise(name), list('workout'), s.routineId);
     const exercises = [...banked(s, now), e];
     return { exercises, cur: exercises.length - 1, curSince: s.pausedAt ? null : now };
   });

@@ -681,6 +681,18 @@ form.inline .num-in { flex: 0 1 92px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--c); vertical-align: -1px; }
 
+/* Workouts list: compact rows */
+.wk-card .card-head { flex-wrap: nowrap; }
+.wk-actions { display: flex; gap: 6px; margin-left: auto; }
+.wk-actions .mini { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; }
+.wk-hint { margin: 0 0 6px; }
+.wk-card .routine-row { padding-block: 6px; gap: 8px; min-height: 0; }
+.wk-card .routine-row .row-title { flex-direction: row; align-items: baseline; gap: 8px; min-width: 0; }
+.wk-card .routine-name { font: 700 15px/1.25 var(--body); letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wk-card .routine-n { flex: none; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.wk-card .routine-row .mini.sun { padding: 4px 11px; }
+.wk-card .routine-row .grip { width: 28px; height: 28px; }
+
 /* Workouts: sets per muscle, exercise history */
 .muscles { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
 .muscles li { display: grid; grid-template-columns: 84px 1fr 30px; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; }
