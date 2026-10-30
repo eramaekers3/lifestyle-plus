@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { put, putMany, useKind, useRecord, useSettings } from '../store.js';
+import { get, put, putMany, useKind, useRecord, useSettings } from '../store.js';
 import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, minToLabel, todayISO } from '../lib/dates.js';
 import { useStack, pullTask } from '../lib/model.js';
@@ -19,7 +19,8 @@ export function useDayStarted(date = todayISO()) {
 }
 
 export function startDay(date = todayISO()) {
-  put('day', { id: dayId(date), date, startedAt: new Date().toISOString() });
+  const id = dayId(date);
+  put('day', { ...(get(id) || {}), id, date, startedAt: new Date().toISOString() });
 }
 
 /** True when the morning page should open by itself: a morning, the day not started yet. */

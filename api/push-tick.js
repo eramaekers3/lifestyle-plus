@@ -42,6 +42,14 @@ async function forUser(db, userId, subs, now) {
   const settings = (settingsRows && settingsRows[0] && settingsRows[0].data) || {};
   const blocks = (blockRows || []).map((r) => r.data);
   const started = (dayRows || []).some((r) => r.data && r.data.startedAt);
+  const shutDown = (dayRows || []).some((r) => r.data && r.data.shutdownAt);
+
+  // Sundays: has next week been reviewed yet?
+  let reviewed = true;
+  if (new Date(`${date}T12:00:00Z`).getUTCDay() === 0) {
+    const { data: weekRows } = await db.from('records').select('data').eq('user_id', userId).eq('kind', 'week').eq('deleted', false).eq('data->>week', addDays(date, 1));
+    reviewed = (weekRows || []).some((r) => r.data && r.data.reviewedAt);
+  }
 
   const taskIds = [...new Set(blocks.map((b) => b.taskId).filter(Boolean))];
   let tasksById = {};
@@ -69,7 +77,7 @@ async function forUser(db, userId, subs, now) {
     }
   }
 
-  const notes = dueNotifications({ now, tz, settings, blocks, tasksById, started, school });
+  const notes = dueNotifications({ now, tz, settings, blocks, tasksById, started, school, shutDown, reviewed });
   let sent = 0;
   for (const note of notes) {
     // Claim the key first; if it's already there, this one went out on an earlier tick.

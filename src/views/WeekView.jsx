@@ -9,6 +9,7 @@ import { toast } from '../lib/toast.js';
 import SchoolList from '../components/SchoolList.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
 import { Icon } from '../components/ui.jsx';
+import { reviewWeek, useReviewed } from '../lib/review.js';
 
 export default function WeekView({ date, openDay }) {
   const ws = weekStart(date);
@@ -60,6 +61,8 @@ export default function WeekView({ date, openDay }) {
           </h1>
         </div>
       </header>
+
+      <ReviewRow ws={ws} />
 
       <WeekPlan key={ws + (plan ? 'p' : '')} ws={ws} plan={plan} />
 
@@ -123,6 +126,29 @@ export default function WeekView({ date, openDay }) {
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
     </>
+  );
+}
+
+/** The review button on the week it plans: a prompt until it's done, then a quiet "reviewed" line. */
+function ReviewRow({ ws }) {
+  const reviewed = useReviewed(ws);
+  if (ws !== reviewWeek()) return null;
+  if (reviewed) {
+    return (
+      <a className="reviewed-line" href="#review">
+        <Icon name="check" size={14} /> Week reviewed · open again
+      </a>
+    );
+  }
+  return (
+    <a className="start-banner review-banner" href="#review">
+      <Icon name="review" size={22} />
+      <span>
+        <b>Do the weekly review</b>
+        <span>About 10 minutes. Look back, clear the backlog, set three priorities.</span>
+      </span>
+      <Icon name="right" />
+    </a>
   );
 }
 

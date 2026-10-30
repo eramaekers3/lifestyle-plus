@@ -170,7 +170,7 @@ export function CategoryStep({ category, setCategory, label = 'Category', autoAd
           </button>
         </div>
       )}
-      {!cats.length && !adding && <p className="hint-quiet">No categories yet. Add your own, or tap Next to skip.</p>}
+      {!cats.length && !adding && <p className="hint-quiet">No categories yet. Add your own{autoAdd ? ', or tap Next to skip' : ' if you like'}.</p>}
     </div>
   );
 }

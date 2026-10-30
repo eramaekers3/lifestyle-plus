@@ -1,4 +1,5 @@
 import { useCategories } from '../lib/model.js';
+import { Icon } from './ui.jsx';
 import { addDays, fmt, minToLabel, nowMin, todayISO } from '../lib/dates.js';
 
 /** "Today 3pm", "Tomorrow", "Fri", "Nov 12" — or "Overdue · Tue" once it's passed. */
@@ -41,7 +42,7 @@ export default function TaskMeta({ t }) {
   const cats = useCategories();
   const cat = t.category && cats.find((c) => c.id === t.category);
   const due = t.status !== 'done' && dueLabel(t);
-  if (!cat && !due) return null;
+  if (!cat && !due && !t.recurId) return null;
   return (
     <span className="task-meta">
       {cat && (
@@ -51,6 +52,11 @@ export default function TaskMeta({ t }) {
         </span>
       )}
       {due && <span className={due.late ? 'late' : ''}>{due.text}</span>}
+      {t.recurId && (
+        <span className="rc-meta" aria-label="Repeats">
+          <Icon name="repeat" size={12} />
+        </span>
+      )}
     </span>
   );
 }

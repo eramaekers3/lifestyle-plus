@@ -73,6 +73,9 @@ export function get(id) {
   return r && !r.deleted ? r.data : undefined;
 }
 
+/** True if this id was ever written on this device, even if it was deleted since. */
+export const exists = (id) => !!db.records[id];
+
 export const isEmpty = () => Object.keys(db.records).length === 0;
 
 export function useKind(kind) {

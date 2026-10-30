@@ -6,11 +6,14 @@ import { useCalendarSync } from './lib/calendar.js';
 import { useCanvasSync } from './lib/canvas.js';
 import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
+import ShutdownSheet from './components/ShutdownSheet.jsx';
+import ReviewSheet from './components/ReviewSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
 import { usePushKeepAlive } from './lib/push.js';
 import { useSwipe } from './lib/swipe.js';
+import { useRecurring } from './lib/recurring.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import PlanView from './views/PlanView.jsx';
@@ -57,11 +60,14 @@ export default function App() {
   const { sample } = settingsData;
   const started = useDayStarted(todayISO());
   const [morning, setMorning] = useState(() => window.location.hash === '#morning');
+  // The shutdown and weekly review open from a link (#shutdown, #review), e.g. a notification or a banner.
+  const [ritual, setRitual] = useState(() => ['#shutdown', '#review'].includes(window.location.hash) ? window.location.hash.slice(1) : null);
   const sync = useSyncStatus();
   useCalendarSync();
   useCanvasSync();
   usePushKeepAlive(!!sync.email);
   useSeedRoutines();
+  useRecurring();
 
   // The workout screen opens when a workout starts on this device; after a reload it waits behind the pill.
   const session = useSession();
@@ -89,6 +95,10 @@ export default function App() {
     const onHash = () => {
       if (window.location.hash === '#morning') {
         setMorning(true);
+        return;
+      }
+      if (window.location.hash === '#shutdown' || window.location.hash === '#review') {
+        setRitual(window.location.hash.slice(1));
         return;
       }
       const next = tabFromHash();
@@ -128,6 +138,11 @@ export default function App() {
     can: (dir) => !!TABS[tabIdx + dir],
     onSwipe: (dir) => TABS[tabIdx + dir] && go(TABS[tabIdx + dir].id),
   });
+
+  const closeRitual = () => {
+    setRitual(null);
+    if (['#shutdown', '#review'].includes(window.location.hash)) history.replaceState(null, '', `#${tab}`);
+  };
 
   const { View } = TABS.find((t) => t.id === tab);
   const syncLabel = {
@@ -192,6 +207,8 @@ export default function App() {
           }}
         />
       )}
+      {ritual === 'shutdown' && <ShutdownSheet onClose={closeRitual} />}
+      {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
       <Toaster />
     </div>
   );

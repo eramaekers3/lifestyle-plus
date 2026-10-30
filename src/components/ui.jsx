@@ -39,6 +39,9 @@ const paths = {
   play: <path d="M8 5.5v13l10.5-6.5L8 5.5Z" />,
   pause: <path d="M8.5 5.5v13M15.5 5.5v13" />,
   bell: <><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15l1.5-2Z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /></>,
+  moon: <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />,
+  repeat: <><path d="M17 3.5 20 6.5l-3 3" /><path d="M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3" /><path d="M20 12.5v1a4 4 0 0 1-4 4H4" /></>,
+  review: <><path d="M4 19.5V10M10 19.5V5M16 19.5v-7M21 19.5H3" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" /></>,
 };
 export function Icon({ name, size = 20 }) {

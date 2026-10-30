@@ -259,7 +259,7 @@ function CalendarSection() {
   );
 }
 
-const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 480, school: true, schoolAt: 1200 };
+const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 480, school: true, schoolAt: 1200, shutdown: true, shutdownAt: 1260 };
 const timeOptions = (from, to) => Array.from({ length: (to - from) * 2 + 1 }, (_, i) => from * 60 + i * 30);
 
 function CategoriesSection() {
@@ -358,6 +358,13 @@ function NotifySection({ signedIn }) {
           <span>Evening heads-up for homework due tomorrow and tests</span>
           <select className="input" value={n.schoolAt} disabled={!n.school} onChange={(e) => setN({ schoolAt: +e.target.value })} aria-label="School reminder time">
             {timeOptions(16, 22).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={n.shutdown} onChange={(e) => setN({ shutdown: e.target.checked })} />
+          <span>Shutdown reminder at night (weekly review on Sundays)</span>
+          <select className="input" value={n.shutdownAt} disabled={!n.shutdown} onChange={(e) => setN({ shutdownAt: +e.target.value })} aria-label="Shutdown reminder time">
+            {timeOptions(17, 23).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
           </select>
         </label>
         <label className="toggle">

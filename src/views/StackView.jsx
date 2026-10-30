@@ -9,6 +9,8 @@ import { fmt, iso } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import NowStack from '../components/NowStack.jsx';
 import { Icon } from '../components/ui.jsx';
+import RecurSheet from '../components/RecurSheet.jsx';
+import { useRecurs, scheduleLabel } from '../lib/recurring.js';
 
 export default function StackView() {
   const { stackLimit } = useSettings();
@@ -64,6 +66,8 @@ export default function StackView() {
       {adding && <CaptureSheet onClose={() => setAdding(false)} />}
       {open && <TaskSheet id={open} onClose={() => setOpen(null)} />}
 
+      <Repeating />
+
       {done.length > 0 && (
         <section className="card" aria-labelledby="done-h">
           <div className="card-head">
@@ -83,5 +87,41 @@ export default function StackView() {
         </section>
       )}
     </>
+  );
+}
+
+/** Repeating tasks: each makes a normal task on the days it's scheduled. */
+function Repeating() {
+  const recurs = useRecurs();
+  const [open, setOpen] = useState(null); // template id, or 'new'
+  return (
+    <section className="card" aria-labelledby="rc-h">
+      <div className="card-head">
+        <h2 id="rc-h">Repeating</h2>
+        <span className="meta">{recurs.length ? `${recurs.length}` : ''}</span>
+        <button className="mini add-blk" onClick={() => setOpen('new')}>
+          <Icon name="plus" size={14} /> New
+        </button>
+      </div>
+      {recurs.length ? (
+        <ul className="rows">
+          {recurs.map((r) => (
+            <li key={r.id} className="row">
+              <span className="rc-icon" aria-hidden="true"><Icon name="repeat" size={16} /></span>
+              <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Edit “${r.title}”`}>
+                <span className="title-line">{r.title}</span>
+                <span className="task-meta">
+                  <span>{scheduleLabel(r)}</span>
+                  <span>{r.to === 'now' ? 'to Now' : 'to backlog'}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="empty">Chores and routines that come back, like laundry on Sundays. They drop into your stack on their own.</p>
+      )}
+      {open && <RecurSheet id={open === 'new' ? null : open} onClose={() => setOpen(null)} />}
+    </section>
   );
 }

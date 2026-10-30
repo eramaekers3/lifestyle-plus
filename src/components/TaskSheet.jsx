@@ -6,6 +6,9 @@ import { CategoryStep, DateStep, TimeStep } from './CaptureSheet.jsx';
 import { toast } from '../lib/toast.js';
 import { Sheet } from './ui.jsx';
 import { priority } from './TaskMeta.jsx';
+import RecurSheet from './RecurSheet.jsx';
+import { Icon } from './ui.jsx';
+import { scheduleLabel } from '../lib/recurring.js';
 
 const LEVELS = [
   { p: null, label: 'Auto', hint: 'from the due date' },
@@ -27,6 +30,8 @@ const fromInput = (v) => {
 export default function TaskSheet({ id, onClose }) {
   const t = useRecord(id);
   const [title, setTitle] = useState(t ? t.title : '');
+  const [repeat, setRepeat] = useState(false);
+  const recur = useRecord((t && t.recurId) || '__none');
   if (!t) return null;
   const manual = t.priority !== undefined && t.priority !== null;
   const auto = priority({ ...t, priority: null });
@@ -74,6 +79,16 @@ export default function TaskSheet({ id, onClose }) {
         <div className="edit-sec">
           <TimeStep due={t.due} time={toInput(t.dueTime)} setTime={(v) => patch(t.id, { dueTime: fromInput(v) })} />
         </div>
+      )}
+
+      <div className="edit-sec">
+        <p className="cap-label">Repeat</p>
+        <button className="mini repeat-btn" onClick={() => setRepeat(true)}>
+          <Icon name="repeat" size={14} /> {recur ? `${scheduleLabel(recur)} · edit` : 'Make this repeat'}
+        </button>
+      </div>
+      {repeat && (
+        <RecurSheet id={recur ? recur.id : null} fromTask={recur ? null : { ...t, title }} onClose={() => setRepeat(false)} />
       )}
 
       <div className="btn-row">

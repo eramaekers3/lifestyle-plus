@@ -2,7 +2,7 @@
 // so it can be tested on its own; api/push-tick.js gathers the data and does the sending.
 import { localParts } from '../src/lib/school.js';
 
-export const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 8 * 60, school: true, schoolAt: 20 * 60 };
+export const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 8 * 60, school: true, schoolAt: 20 * 60, shutdown: true, shutdownAt: 21 * 60 };
 // The tick runs every minute; a few minutes of grace covers a late or skipped run.
 // Each notification has a key, and push_log makes sure a key is only ever sent once.
 const GRACE = 4;
@@ -42,8 +42,10 @@ export function needsSchool(now, tz, settings) {
  *   tasksById: titles for blocks linked to a task
  *   started:   whether today's morning page was finished
  *   school:    Canvas items (from toItem, with done flags), or null when not loaded
+ *   shutDown:  whether today's shutdown was finished
+ *   reviewed:  on Sundays, whether next week's review is done
  */
-export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksById = {}, started = false, school = null }) {
+export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksById = {}, started = false, school = null, shutDown = false, reviewed = true }) {
   const n = { ...DEFAULT_NOTIFY, ...(settings.notify || {}) };
   const { date, min } = localParts(now, tz);
   const out = [];
@@ -100,6 +102,16 @@ export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksByI
         body: bits.join(' · '),
         url: '/#plan',
       });
+    }
+  }
+
+  // 4. Night: shut down the day. On Sundays, the weekly review comes first if it isn't done.
+  if (n.shutdown && isDue(min, n.shutdownAt)) {
+    const sunday = new Date(`${date}T12:00:00Z`).getUTCDay() === 0;
+    if (sunday && !reviewed) {
+      out.push({ key: `r:${date}`, title: 'Weekly review', body: 'Ten minutes: look back at the week, clear the backlog, set three priorities.', url: '/#review' });
+    } else if (!shutDown) {
+      out.push({ key: `sd:${date}`, title: 'Shut down the day', body: 'Close your open loops and block out tomorrow. Then you’re done.', url: '/#shutdown' });
     }
   }
 

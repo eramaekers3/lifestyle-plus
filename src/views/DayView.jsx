@@ -12,6 +12,7 @@ import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import SchoolList from '../components/SchoolList.jsx';
 import { PastDoneButton } from './WeekView.jsx';
+import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
 
 export default function DayView({ date }) {
   const settings = useSettings();
@@ -55,6 +56,8 @@ export default function DayView({ date }) {
       </header>
 
       {isToday && <StartBanner date={date} />}
+      {isToday && <ReviewBanner />}
+      {isToday && <ShutdownBanner date={date} />}
 
       <NowStack />
 
@@ -117,6 +120,40 @@ function StartBanner({ date }) {
       <span>
         <b>Start my day</b>
         <span>Weigh in, see what’s fixed, block it out.</span>
+      </span>
+      <Icon name="right" />
+    </a>
+  );
+}
+
+function ShutdownBanner({ date }) {
+  const done = useShutDown(date);
+  const started = useDayStarted(date);
+  const hour = new Date().getHours();
+  // From 4pm on, until it's done.
+  if (done || hour < 16) return null;
+  return (
+    <a className="start-banner moon-banner" href="#shutdown">
+      <Icon name="moon" size={22} />
+      <span>
+        <b>Shut down the day</b>
+        <span>{started ? 'Close your loops, block out tomorrow, then stop.' : 'Two minutes: close out today and plan tomorrow.'}</span>
+      </span>
+      <Icon name="right" />
+    </a>
+  );
+}
+
+export function ReviewBanner() {
+  const ws = reviewWeek();
+  const reviewed = useReviewed(ws);
+  if (reviewed || !reviewDue()) return null;
+  return (
+    <a className="start-banner review-banner" href="#review">
+      <Icon name="review" size={22} />
+      <span>
+        <b>Weekly review</b>
+        <span>Look back, clear the backlog, set three priorities.</span>
       </span>
       <Icon name="right" />
     </a>

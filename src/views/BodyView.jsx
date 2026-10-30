@@ -7,6 +7,9 @@ import { Icon } from '../components/ui.jsx';
 import { useRoutines, addRoutine, startSession, useSession, reorderRoutines } from '../lib/workouts.js';
 import RoutineSheet from '../components/RoutineSheet.jsx';
 import SortableList from '../components/SortableList.jsx';
+import ExerciseSheet from '../components/ExerciseSheet.jsx';
+import { MUSCLES, setsByMuscle, useExerciseHistory } from '../lib/lifting.js';
+import { weekStart } from '../lib/dates.js';
 
 const DRAFT_ID = idFor('draft-workout');
 
@@ -43,6 +46,10 @@ export default function BodyView() {
       <Workouts />
 
       {draft && <Workout draft={draft} exercises={exercises} />}
+
+      <MuscleWeek workouts={workouts} today={today} />
+
+      <Exercises />
 
       <section className="card" aria-labelledby="wt-h">
         <div className="card-head"><h2 id="wt-h">Weight</h2></div>
@@ -327,5 +334,106 @@ function HealthCard({ today }) {
         </ul>
       )}
     </section>
+  );
+}
+
+/** Sets per muscle group this week (Monday on), with last week for comparison. */
+function MuscleWeek({ workouts, today }) {
+  const ws = weekStart(today);
+  const now = useMemo(() => setsByMuscle(workouts, ws, today), [workouts, ws, today]);
+  const prev = useMemo(() => setsByMuscle(workouts, addDays(ws, -7), addDays(ws, -1)), [workouts, ws]);
+  const any = MUSCLES.some((m) => now[m] || prev[m]);
+  const LOW = 10, HIGH = 20, MAX = 24;
+  const fmtN = (v) => (Number.isInteger(v) ? v : v.toFixed(1));
+  const total = MUSCLES.reduce((a, m) => a + now[m], 0);
+  return (
+    <section className="card" aria-labelledby="mw-h">
+      <div className="card-head">
+        <h2 id="mw-h">Sets this week</h2>
+        <span className="meta">by muscle · since Monday</span>
+      </div>
+      {!any ? (
+        <p className="empty">Finish a workout and the sets you checked off show up here, grouped by muscle.</p>
+      ) : (
+        <>
+          <ul className="muscles">
+            {MUSCLES.map((m) => {
+              const v = now[m];
+              const state = v >= HIGH ? 'over' : v >= LOW ? 'in' : v > 0 ? 'some' : '';
+              return (
+                <li key={m} className={state}>
+                  <span className="mu-name">{m}</span>
+                  <span className="mu-bar" aria-hidden="true">
+                    <span className="mu-zone" style={{ left: `${(LOW / MAX) * 100}%`, width: `${((HIGH - LOW) / MAX) * 100}%` }} />
+                    <i style={{ width: `${Math.min(100, (v / MAX) * 100)}%` }} />
+                    {prev[m] > 0 && <b className="mu-prev" style={{ left: `${Math.min(100, (prev[m] / MAX) * 100)}%` }} title={`Last week: ${fmtN(prev[m])}`} />}
+                  </span>
+                  <span className="mu-n">{fmtN(v)}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="card-sub">
+            {fmtN(total)} sets so far. The shaded band is 10–20 sets a week, a common target for growth; the tick is last week. A muscle that only helps (like triceps on bench) gets half a set.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Everything you've lifted, most recent first. Tap one for its history. */
+function Exercises() {
+  const list = useExerciseHistory();
+  const [open, setOpen] = useState(null);
+  const [all, setAll] = useState(false);
+  if (!list.length) return null;
+  const shown = all ? list : list.slice(0, 6);
+  const ex = open && list.find((x) => x.key === open);
+  return (
+    <section className="card" aria-labelledby="ex-h">
+      <div className="card-head">
+        <h2 id="ex-h">Exercise history</h2>
+        <span className="meta">{list.length}</span>
+      </div>
+      <ul className="rows">
+        {shown.map((x) => {
+          const n = x.scores.length;
+          const prev = n > 1 ? x.scores[n - 2].score : null;
+          const lastS = x.scores[n - 1];
+          const trend = prev === null ? null : lastS.score > prev ? 'up' : lastS.score < prev ? 'down' : 'flat';
+          return (
+            <li key={x.key} className="row">
+              <button className="row-title task-open" onClick={() => setOpen(x.key)} aria-label={`${x.name} history`}>
+                <span className="title-line">{x.name}</span>
+                <span className="task-meta">
+                  <span>{x.weighted ? `Best ${x.best.wt}×${x.best.reps}` : `Best ${x.best.score}${x.kind === 'time' ? ` ${x.unit || 'sec'}` : ' reps'}`}</span>
+                  <span>{n} session{n === 1 ? '' : 's'}</span>
+                </span>
+              </button>
+              <Spark pts={x.scores} />
+              {trend && <span className={`ex-trend ${trend}`} aria-label={`Last session ${trend === 'flat' ? 'the same' : trend}`}>{trend === 'up' ? '▲' : trend === 'down' ? '▼' : '–'}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      {!all && list.length > shown.length && <button className="mini" onClick={() => setAll(true)}>Show all {list.length}</button>}
+      {ex && <ExerciseSheet ex={ex} onClose={() => setOpen(null)} />}
+    </section>
+  );
+}
+
+function Spark({ pts }) {
+  const p = pts.slice(-8);
+  if (p.length < 2) return <span className="spark" />;
+  const v = p.map((x) => x.score);
+  const lo = Math.min(...v);
+  const hi = Math.max(...v);
+  const W = 56, H = 22;
+  const d = p.map((x, i) => `${(i / (p.length - 1)) * W},${H - 2 - ((x.score - lo) / (hi - lo || 1)) * (H - 4)}`).join(' ');
+  return (
+    <svg className="spark" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <polyline points={d} />
+    </svg>
   );
 }

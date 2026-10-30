@@ -431,6 +431,33 @@ form.inline .num-in { flex: 0 1 92px; }
 .start-banner > span span { font-size: 13px; color: var(--muted); }
 .start-banner:active { transform: translateY(1px); }
 .morning { display: flex; flex-direction: column; gap: 4px; }
+.moon-banner > .icon:first-child, .review-banner > .icon:first-child { color: var(--lilac); }
+.shutdown .mo-date > .icon, .review .mo-date > .icon { color: var(--lilac); margin-bottom: 2px; }
+.reviewed-line { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; color: var(--muted); font-size: 13px; font-weight: 700; text-decoration: none; }
+.reviewed-line .icon { color: var(--mint); }
+.sd-b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mo-blocks li.later { opacity: 0.55; }
+.sd-tag { flex: none; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--raised); color: var(--muted); }
+.sd-tag.ok { color: var(--mint); }
+.sd-loops { margin: 0 0 4px; }
+.sd-loops .row { gap: 8px; }
+.sd-edit { padding: 0; text-align: left; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sd-go { background: var(--lilac); border-color: var(--lilac); color: #1b1630; }
+.rv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 4px; }
+.rv-stats div { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-radius: 12px; background: var(--raised); text-align: center; }
+.rv-stats b { font: var(--display-weight) 19px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.rv-stats span { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.rv-big { margin: 0; }
+.rv-habits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rv-habits li { display: grid; grid-template-columns: 1fr auto 34px; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+.rv-h-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-dots { display: flex; gap: 4px; }
+.rv-dots i { width: 11px; height: 11px; border-radius: 3px; background: var(--raised); border: 1px solid var(--line); }
+.rv-dots i.on { background: var(--mint); border-color: var(--mint); }
+.rv-dots i.future { opacity: 0.35; }
+.rv-n { text-align: right; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.rv-cal { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
+.rv-cal b { color: var(--ink); }
 .mo-date { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
 .mo-day { font: var(--display-weight) 30px/1 var(--display); letter-spacing: var(--display-tracking); }
 .mo-step { padding: 14px 0; border-top: 1px solid var(--line); }
@@ -653,6 +680,46 @@ form.inline .num-in { flex: 0 1 92px; }
 .wk-hrs { text-align: right; color: var(--muted); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--c); vertical-align: -1px; }
+
+/* Workouts: sets per muscle, exercise history */
+.muscles { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.muscles li { display: grid; grid-template-columns: 84px 1fr 30px; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; }
+.mu-name { color: var(--muted); }
+.muscles li.in .mu-name, .muscles li.over .mu-name { color: var(--ink); }
+.mu-bar { position: relative; height: 12px; border-radius: 6px; background: var(--raised); overflow: visible; }
+.mu-zone { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--mint) 16%, transparent); border-inline: 1px dashed color-mix(in srgb, var(--mint) 45%, transparent); }
+.mu-bar i { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 4px; background: var(--sky); transition: width 0.5s var(--ease-out); }
+.muscles li.in .mu-bar i { background: var(--mint); }
+.muscles li.over .mu-bar i { background: var(--sun); }
+.mu-prev { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--muted); opacity: 0.8; }
+.mu-n { text-align: right; font-variant-numeric: tabular-nums; }
+.spark { flex: none; width: 56px; height: 22px; }
+.spark polyline { fill: none; stroke: var(--sky); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ex-trend { flex: none; width: 14px; text-align: center; font-size: 11px; color: var(--muted); }
+.ex-trend.up { color: var(--mint); }
+.ex-trend.down { color: var(--coral); }
+.ex-stats { grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); margin-bottom: 10px; }
+.ex-stats b.up { color: var(--mint); }
+.ex-stats b.down { color: var(--coral); }
+.chart.ex-chart .trend { stroke: var(--sky); }
+.chart.ex-chart .end { fill: var(--sun); }
+.ex-sets { display: flex; flex-wrap: wrap; gap: 4px 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ex-sets .top { color: var(--sun); }
+
+/* Repeating tasks */
+.recur-form { display: flex; flex-direction: column; gap: 10px; }
+.recur-form .cap-label { margin: 6px 0 0; }
+.recur-seg { display: flex; width: 100%; }
+.recur-seg button { flex: 1; padding-inline: 6px; }
+.day-pick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-pick button {
+  aspect-ratio: 1; border-radius: 50%; border: 1.5px solid var(--line); background: var(--raised);
+  color: var(--muted); font-weight: 800; font-size: 13px; padding: 0;
+}
+.day-pick button[aria-pressed='true'] { background: var(--sun); border-color: var(--sun); color: var(--sun-ink); animation: hop 0.3s var(--spring) both; }
+.rc-icon { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--raised); color: var(--sun); }
+.rc-meta { display: inline-flex; align-items: center; color: var(--sun); }
+.repeat-btn { display: inline-flex; align-items: center; gap: 6px; }
 
 /* Stack tasks offered in the block sheet */
 .stack-pick { gap: 6px; }
