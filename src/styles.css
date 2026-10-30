@@ -964,6 +964,14 @@ form.inline .num-in { flex: 0 1 92px; }
 .chart .dot { fill: var(--muted); opacity: 0.7; }
 .chart .trend { fill: none; stroke: var(--coral); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
 .chart .end { fill: var(--coral); stroke: var(--surface); stroke-width: 2; }
+.wt-chart .dot { fill: var(--ink); opacity: 0.55; }
+.wt-chart .latest { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+.wt-chart .trend { opacity: 0.95; }
+.wt-change { margin-top: 2px; text-transform: none; letter-spacing: 0; }
+.wt-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 13px; }
+.wt-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); opacity: 0.6; }
+.lg-line { width: 16px; height: 3px; border-radius: 2px; background: var(--coral); }
 .wo-name { margin: 0 0 10px; font: var(--display-weight) 24px var(--display); letter-spacing: -0.03em; }
 .live-card { border-color: color-mix(in srgb, var(--coral) 55%, var(--line)); }
 .tablebox { overflow-x: auto; margin-bottom: 8px; }

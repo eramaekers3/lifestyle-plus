@@ -25,8 +25,14 @@ export default function BodyView() {
 
   const ws = useMemo(() => [...weights].sort((a, b) => a.date.localeCompare(b.date)), [weights]);
   const last = ws.at(-1);
-  const weekAgo = ws.filter((w) => w.date <= addDays(today, -7)).at(-1);
-  const delta = last && weekAgo ? last.lbs - weekAgo.lbs : null;
+  // Daily weight swings a few pounds with water and food, so the 7-day average is the number to watch.
+  const avgOver = (from, to) => {
+    const xs = ws.filter((w) => w.date >= from && w.date <= to);
+    return xs.length ? xs.reduce((a, w) => a + w.lbs, 0) / xs.length : null;
+  };
+  const avgNow = avgOver(addDays(today, -6), today);
+  const avgPrev = avgOver(addDays(today, -13), addDays(today, -7));
+  const delta = avgNow !== null && avgPrev !== null ? avgNow - avgPrev : null;
   const thisWeek = workouts.filter((w) => w.date > addDays(today, -7)).length;
   const recent = [...workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
   const exercises = [...new Set(workouts.flatMap((w) => w.sets.map((s) => s.ex)))];
@@ -68,15 +74,21 @@ export default function BodyView() {
               <span> lb</span>
             </div>
           </div>
-          {delta !== null && (
+          {avgNow !== null && (
             <div className="right">
-              <div className="label">vs. a week ago</div>
-              <div className="delta">{delta > 0 ? '+' : ''}{delta.toFixed(1)} lb</div>
+              <div className="label">7-day average</div>
+              <div className="delta">{avgNow.toFixed(1)} lb</div>
+              {delta !== null && (
+                <div className="label wt-change">{delta > 0 ? '▲ ' : delta < 0 ? '▼ ' : ''}{Math.abs(delta).toFixed(1)} lb vs. the week before</div>
+              )}
             </div>
           )}
         </div>
-        <WeightChart points={ws.filter((w) => w.date >= addDays(today, -29))} today={today} />
-        <p className="card-sub">Dots are daily weigh-ins. The line is the smoothed trend.</p>
+        <WeightChart all={ws} today={today} />
+        <p className="card-sub wt-legend">
+          <span><i className="lg-dot" aria-hidden="true" /> a day’s weigh-in</span>
+          <span><i className="lg-line" aria-hidden="true" /> 7-day average (evens out water swings)</span>
+        </p>
         <form className="inline" onSubmit={logWeight}>
           <input id="lbs" className="input" type="number" inputMode="decimal" step="0.1" min="50" max="600" value={lbs} onChange={(e) => setLbs(e.target.value)} placeholder="Today’s weight (lb)" />
           <button className="btn">Log</button>
@@ -287,31 +299,41 @@ function Workout({ draft, exercises }) {
   );
 }
 
-function WeightChart({ points, today }) {
+/**
+ * The last 30 days of weigh-ins (or less, if that's all there is, so a new history isn't squeezed into
+ * one corner). Dots are single days; the line is the average of each day's previous 7 days of weigh-ins.
+ */
+function WeightChart({ all, today }) {
+  const from = addDays(today, -29);
+  const points = all.filter((w) => w.date >= from);
   if (points.length < 2) return <p className="empty">Log a few weigh-ins to see your trend.</p>;
-  let ema = points[0].lbs;
-  const trend = points.map((p) => (ema = ema + 0.25 * (p.lbs - ema)));
-  const all = points.map((p) => p.lbs).concat(trend);
-  const lo = Math.floor(Math.min(...all) - 0.5);
-  const hi = Math.ceil(Math.max(...all) + 0.5);
-  const W = 340, H = 170, L = 34, R = 10, T = 10, B = 22;
-  const x0 = parse(addDays(today, -29)).getTime();
-  const span = 29 * 864e5;
+  const avg = points.map((p) => {
+    const xs = all.filter((w) => w.date <= p.date && w.date > addDays(p.date, -7));
+    return xs.reduce((a, w) => a + w.lbs, 0) / xs.length;
+  });
+  const vals = points.map((p) => p.lbs).concat(avg);
+  const lo = Math.floor(Math.min(...vals) - 0.5);
+  const hi = Math.ceil(Math.max(...vals) + 0.5);
+  const start = points[0].date < addDays(today, -6) ? points[0].date : addDays(today, -6);
+  const W = 340, H = 170, L = 34, R = 14, T = 12, B = 22;
+  const x0 = parse(start).getTime();
+  const span = Math.max(1, parse(today).getTime() - x0);
   const x = (d) => L + (W - L - R) * ((parse(d).getTime() - x0) / span);
   const y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
   const ticks = [lo, (lo + hi) / 2, hi];
+  const last = points.at(-1);
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weight over the last 30 days">
+    <svg className="chart wt-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Weight since ${fmt(start, { month: 'short', day: 'numeric' })}: weigh-ins and 7-day average`}>
       {ticks.map((v) => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="grid" />
           <text x={L - 6} y={y(v) + 4} textAnchor="end">{+v.toFixed(1)}</text>
         </g>
       ))}
-      {points.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.lbs)} r="2.6" className="dot" />)}
-      <polyline className="trend" points={points.map((p, i) => `${x(p.date)},${y(trend[i])}`).join(' ')} />
-      <circle cx={x(points.at(-1).date)} cy={y(trend.at(-1))} r="4.5" className="end" />
-      <text x={L} y={H - 5}>{fmt(addDays(today, -29), { month: 'short', day: 'numeric' })}</text>
+      <polyline className="trend" points={points.map((p, i) => `${x(p.date)},${y(avg[i])}`).join(' ')} />
+      {points.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.lbs)} r="3" className="dot" />)}
+      <circle cx={x(last.date)} cy={y(last.lbs)} r="4.5" className="latest" />
+      <text x={L} y={H - 5}>{fmt(start, { month: 'short', day: 'numeric' })}</text>
       <text x={W - R} y={H - 5} textAnchor="end">Today</text>
     </svg>
   );
