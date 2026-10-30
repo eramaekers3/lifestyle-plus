@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { remove, useRecord } from '../store.js';
-import { setTaskPriority, renameTask, useCategories } from '../lib/model.js';
+import { setTaskPriority, renameTask } from '../lib/model.js';
+import { patch } from '../store.js';
+import { CategoryStep, DateStep, TimeStep } from './CaptureSheet.jsx';
 import { toast } from '../lib/toast.js';
 import { Sheet } from './ui.jsx';
-import { priority, dueLabel } from './TaskMeta.jsx';
+import { priority } from './TaskMeta.jsx';
 
 const LEVELS = [
   { p: null, label: 'Auto', hint: 'from the due date' },
@@ -14,14 +16,18 @@ const LEVELS = [
 ];
 const NAMES = ['No priority', 'Low', 'Medium', 'High'];
 
-/** Tap a task to open it: rename it, set its priority, or delete it. */
+const toInput = (m) => (m == null ? '' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+const fromInput = (v) => {
+  if (!v) return null;
+  const [h, m] = v.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/** Tap a task to open it and change anything: name, priority, category, due date and time, or delete it. */
 export default function TaskSheet({ id, onClose }) {
   const t = useRecord(id);
-  const cats = useCategories();
   const [title, setTitle] = useState(t ? t.title : '');
   if (!t) return null;
-  const cat = t.category && cats.find((c) => c.id === t.category);
-  const due = dueLabel(t);
   const manual = t.priority !== undefined && t.priority !== null;
   const auto = priority({ ...t, priority: null });
   const close = () => {
@@ -52,11 +58,22 @@ export default function TaskSheet({ id, onClose }) {
             : 'Auto goes by the due date, and this task has none. Pick a level to set one yourself.'}
       </p>
 
-      {(cat || due) && (
-        <p className="muted small" style={{ marginTop: 14 }}>
-          {cat && <>Category: <b>{cat.name}</b>{due ? ' · ' : ''}</>}
-          {due && <>Due <b>{due.text}</b></>}
-        </p>
+      <div className="edit-sec">
+        <CategoryStep autoAdd={false} category={t.category || null} setCategory={(c) => patch(t.id, { category: c })} />
+      </div>
+
+      <div className="edit-sec">
+        <DateStep
+          label="Due date"
+          due={t.due || null}
+          setDue={(d) => patch(t.id, d ? { due: d } : { due: null, dueTime: null })}
+        />
+      </div>
+
+      {t.due && (
+        <div className="edit-sec">
+          <TimeStep due={t.due} time={toInput(t.dueTime)} setTime={(v) => patch(t.id, { dueTime: fromInput(v) })} />
+        </div>
       )}
 
       <div className="btn-row">

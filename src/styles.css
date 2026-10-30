@@ -304,7 +304,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .prio.p2 { background: #ff9f4a; }
 .prio.p1 { background: var(--sun); }
 /* A task you just added drops into the backlog once the add sheet has closed. */
-.row.just-added { animation: dropIn 0.5s 1.05s var(--spring) both, flash 1.4s 1.05s var(--ease-out); }
+.row.just-added { animation: flash 1.6s 0.9s var(--ease-out); }
 @keyframes flash { 0% { background: color-mix(in srgb, var(--sun) 22%, transparent); } 100% { background: transparent; } }
 
 /* ---------- Settings toggles ---------- */
@@ -389,6 +389,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .sortable .grip { margin: 0 -8px 0 0; }
 .sortable > li.dragging { position: relative; z-index: 30; background: var(--surface); border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45); }
 .prio-seg { display: flex; width: 100%; }
+.edit-sec { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .prio-seg button { flex: 1; padding-inline: 4px; }
 
 .slots { display: flex; gap: 4px; }
@@ -672,7 +673,7 @@ form.inline .num-in { flex: 0 1 92px; }
 
 /* ---------- Sheets ---------- */
 .scrim {
-  position: fixed; inset: 0; z-index: 50; transition: height 0.18s var(--ease-out);
+  position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: flex-end; justify-content: center;
   background: rgba(14, 17, 22, 0.55);
   animation: fade 0.22s var(--ease-out) both;

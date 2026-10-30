@@ -106,9 +106,9 @@ function NameStep({ title, setTitle }) {
   );
 }
 
-function CategoryStep({ category, setCategory }) {
+export function CategoryStep({ category, setCategory, label = 'Category', autoAdd = true }) {
   const cats = useCategories();
-  const [adding, setAdding] = useState(cats.length === 0);
+  const [adding, setAdding] = useState(autoAdd && cats.length === 0);
   const [name, setName] = useState('');
   const ref = useRef(null);
   useEffect(() => {
@@ -126,7 +126,7 @@ function CategoryStep({ category, setCategory }) {
 
   return (
     <div className="cap-q">
-      <p className="cap-label">Category</p>
+      <p className="cap-label">{label}</p>
       <div className="chips">
         {cats.map((c) => (
           <button
@@ -175,16 +175,16 @@ function CategoryStep({ category, setCategory }) {
   );
 }
 
-function DateStep({ due, setDue }) {
+export function DateStep({ due, setDue, label = 'When does it need to be done?' }) {
   const today = todayISO();
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i));
   const later = due && !week.includes(due);
   const [picking, setPicking] = useState(later);
-  const label = (d, i) => (i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmt(d, { weekday: 'short' }));
+  const dayName = (d, i) => (i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmt(d, { weekday: 'short' }));
 
   return (
     <div className="cap-q">
-      <p className="cap-label">When does it need to be done?</p>
+      <p className="cap-label">{label}</p>
       <div className="date-grid">
         {week.map((d, i) => (
           <button
@@ -197,7 +197,7 @@ function DateStep({ due, setDue }) {
               setPicking(false);
             }}
           >
-            <b>{label(d, i)}</b>
+            <b>{dayName(d, i)}</b>
             <span>{fmt(d, { month: 'short', day: 'numeric' })}</span>
           </button>
         ))}
@@ -218,12 +218,12 @@ function DateStep({ due, setDue }) {
           aria-label="Pick a later due date"
         />
       )}
-      <p className="hint-quiet">{due ? `Due ${fmt(due, { weekday: 'long', month: 'long', day: 'numeric' })}.` : 'No due date. Tap Skip to add it without one.'}</p>
+      <p className="hint-quiet">{due ? `Due ${fmt(due, { weekday: 'long', month: 'long', day: 'numeric' })}. Tap it again to clear.` : 'No due date.'}</p>
     </div>
   );
 }
 
-function TimeStep({ due, time, setTime }) {
+export function TimeStep({ due, time, setTime }) {
   const quick = [9 * 60, 12 * 60, 17 * 60, 23 * 60 + 59];
   const toInput = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
   return (
@@ -245,7 +245,7 @@ function TimeStep({ due, time, setTime }) {
         onChange={(e) => setTime(e.target.value)}
         aria-label="Due time"
       />
-      <p className="hint-quiet">Optional. Skip it and the task is due any time that day.</p>
+      <p className="hint-quiet">{time ? 'Tap the time again to clear it.' : 'Optional. Without a time, it’s due any time that day.'}</p>
     </div>
   );
 }

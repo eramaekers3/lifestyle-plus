@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { heartSVG } from '../lib/logo.js';
 import { createPortal } from 'react-dom';
 import { pad } from '../lib/dates.js';
@@ -62,17 +62,24 @@ function useVisibleArea() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    // Only follow real size changes (the keyboard opening or closing), not scrolling, and ignore
+    // sub-pixel jitter: reacting to every scroll fights iPhone's own scroll-to-the-text-box and
+    // makes the sheet jump back and forth.
     let frame = 0;
     const update = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setArea(read()));
+      frame = requestAnimationFrame(() =>
+        setArea((prev) => {
+          const next = read();
+          if (prev && next && Math.abs(prev.height - next.height) < 2 && Math.abs(prev.top - next.top) < 2) return prev;
+          return next;
+        })
+      );
     };
     vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
     return () => {
       cancelAnimationFrame(frame);
       vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
     };
   }, []);
   return area;
@@ -80,16 +87,24 @@ function useVisibleArea() {
 
 export function Sheet({ title, onClose, children }) {
   const area = useVisibleArea();
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // Runs once per sheet. (onClose is often a fresh function each render; re-running this on every
+  // keystroke would unpin and re-pin the page, which makes it jump.)
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Pin the page in place while a sheet is open, so iPhone can't scroll it underneath.
+    const y = window.scrollY;
+    const b = document.body.style;
+    const prev = { position: b.position, top: b.top, width: b.width, overflow: b.overflow };
+    Object.assign(b, { position: 'fixed', top: `-${y}px`, width: '100%', overflow: 'hidden' });
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      Object.assign(b, prev);
+      window.scrollTo(0, y);
     };
-  }, [onClose]);
+  }, []);
   return createPortal(
     <div
       className={`scrim${area && area.keyboard ? ' kb' : ''}`}
