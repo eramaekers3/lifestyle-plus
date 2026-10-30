@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { heartSVG } from '../lib/logo.js';
 import { createPortal } from 'react-dom';
 import { pad } from '../lib/dates.js';
-import { useToast } from '../lib/toast.js';
+import { useToast, dismissToast } from '../lib/toast.js';
 
 export function useNow(ms = 30000) {
   const [now, setNow] = useState(Date.now());
@@ -174,8 +174,19 @@ export function Toaster() {
   const t = useToast();
   if (!t) return null;
   return (
-    <div className="toast" key={t.key} role="status">
+    <div className={`toast${t.action ? ' has-action' : ''}`} key={t.key} role="status">
       {t.text}
+      {t.action && (
+        <button
+          className="toast-action"
+          onClick={() => {
+            t.action.run();
+            dismissToast();
+          }}
+        >
+          {t.action.label}
+        </button>
+      )}
     </div>
   );
 }

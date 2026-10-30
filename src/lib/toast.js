@@ -4,14 +4,18 @@ let current = null;
 const listeners = new Set();
 let timer;
 
-export function toast(text) {
-  current = { text, key: Date.now() };
+/** action: optional { label, run } shown as a button (e.g. Undo); the toast then stays a little longer. */
+export function toast(text, action = null) {
+  current = { text, action, key: Date.now() };
   listeners.forEach((l) => l());
   clearTimeout(timer);
-  timer = setTimeout(() => {
-    current = null;
-    listeners.forEach((l) => l());
-  }, 1800);
+  timer = setTimeout(dismissToast, action ? 4000 : 1800);
+}
+
+export function dismissToast() {
+  clearTimeout(timer);
+  current = null;
+  listeners.forEach((l) => l());
 }
 
 export function useToast() {
