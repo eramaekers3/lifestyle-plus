@@ -4,6 +4,7 @@ import { getHealthKeyInfo, createHealthKey, deleteHealthKey } from '../lib/healt
 import { parseStreaksExport, streaksToRecords } from '../lib/streaksImport.js';
 import { list, putMany } from '../store.js';
 import { Sheet, HeartMark } from './ui.jsx';
+import { useCategories, addCategory, removeCategory } from '../lib/model.js';
 import { HEART_COLORS, DEFAULT_HEART } from '../lib/logo.js';
 import {
   useSettings, saveSettings, useSyncStatus, sync, signIn, signUp, signOut, clearSample, eraseAll,
@@ -83,6 +84,8 @@ export default function SettingsSheet({ onClose }) {
           </label>
         </div>
       </section>
+
+      <CategoriesSection />
 
       <StreaksImport />
 
@@ -258,6 +261,38 @@ function CalendarSection() {
 
 const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 480, school: true, schoolAt: 1200 };
 const timeOptions = (from, to) => Array.from({ length: (to - from) * 2 + 1 }, (_, i) => from * 60 + i * 30);
+
+function CategoriesSection() {
+  const cats = useCategories();
+  const [name, setName] = useState('');
+  const add = (e) => {
+    e.preventDefault();
+    if (!name.trim() || cats.some((c) => c.name.toLowerCase() === name.trim().toLowerCase())) return;
+    addCategory(name);
+    setName('');
+  };
+  return (
+    <section className="set-sec">
+      <h3>Task categories</h3>
+      <p className="muted small">Pick one when you add a task. Removing a category keeps its tasks; they just lose the label.</p>
+      {cats.length > 0 && (
+        <div className="chips" style={{ marginBottom: 10 }}>
+          {cats.map((c) => (
+            <span key={c.id} className="chip cat-chip" style={{ '--c': c.color }}>
+              <i aria-hidden="true" />
+              {c.name}
+              <button className="x" onClick={() => { removeCategory(c); toast(`Removed ${c.name}`); }} aria-label={`Remove ${c.name}`}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <form className="inline" onSubmit={add}>
+        <input id="cat-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="New category" autoComplete="off" />
+        <button className="btn">Add</button>
+      </form>
+    </section>
+  );
+}
 
 function NotifySection({ signedIn }) {
   const s = useSettings();

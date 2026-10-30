@@ -3,6 +3,7 @@ import { useSettings } from '../store.js';
 import { useStack, pullTask, completeTask, sendBack } from '../lib/model.js';
 import { toast } from '../lib/toast.js';
 import { Icon } from './ui.jsx';
+import TaskMeta from './TaskMeta.jsx';
 
 export function TaskRow({ t, showBack }) {
   const [leaving, setLeaving] = useState(false);
@@ -20,7 +21,10 @@ export function TaskRow({ t, showBack }) {
       <button className={`check${leaving ? ' on' : ''}`} onClick={finish} aria-label={`Mark “${t.title}” done`}>
         {leaving && <Icon name="check" size={16} />}
       </button>
-      <span className="row-title">{t.title}</span>
+      <span className="row-title">
+        {t.title}
+        <TaskMeta t={t} />
+      </span>
       {showBack && !leaving && (
         <button className="mini" onClick={() => sendBack(t)} title="Send back to the backlog">
           Back

@@ -29,15 +29,40 @@ function backlogOrders() {
     .map((t) => t.order ?? 0);
 }
 
-export function addTask(title) {
+/** extra: { category (id), due ('YYYY-MM-DD'), dueTime (minutes after midnight) } — all optional. */
+export function addTask(title, extra = {}) {
   const orders = backlogOrders();
+  const clean = Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== undefined && v !== null && v !== ''));
   return put('task', {
     title: title.trim(),
     status: 'backlog',
     order: (orders.length ? Math.max(...orders) : 0) + 1,
     createdAt: new Date().toISOString(),
+    ...clean,
   });
 }
+
+/* ---------- Task categories (your own list) ---------- */
+
+export const CATEGORY_COLORS = ['#7cc4ff', '#bba9ff', '#7fdca0', '#ff86b8', '#ffcf5c', '#5fd3c6', '#ff9f4a', '#e6e2d8'];
+
+export function useCategories() {
+  const cats = useKind('category');
+  return useMemo(() => [...cats].sort(byOrder), [cats]);
+}
+
+export function addCategory(name) {
+  const cats = list('category');
+  const used = new Set(cats.map((c) => c.color));
+  return put('category', {
+    name: name.trim(),
+    order: (cats.length ? Math.max(...cats.map((c) => c.order ?? 0)) : 0) + 1,
+    color: CATEGORY_COLORS.find((c) => !used.has(c)) || CATEGORY_COLORS[cats.length % CATEGORY_COLORS.length],
+  });
+}
+
+/** Removes a category; its tasks just lose the label. */
+export const removeCategory = (c) => remove(c.id);
 
 export const pullTask = (t) => patch(t.id, { status: 'active', pulledAt: new Date().toISOString() });
 

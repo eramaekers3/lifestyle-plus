@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { remove, useSettings } from '../store.js';
-import { useStack, addTask, pullTask, moveToTop, reopenTask } from '../lib/model.js';
+import { useStack, pullTask, moveToTop, reopenTask } from '../lib/model.js';
+import TaskMeta from '../components/TaskMeta.jsx';
+import CaptureSheet from '../components/CaptureSheet.jsx';
 import { fmt, iso } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import NowStack from '../components/NowStack.jsx';
@@ -9,15 +11,8 @@ import { Icon } from '../components/ui.jsx';
 export default function StackView() {
   const { stackLimit } = useSettings();
   const { active, backlog, done } = useStack();
-  const [title, setTitle] = useState('');
+  const [adding, setAdding] = useState(false);
   const room = active.length < stackLimit;
-
-  const add = (e) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    addTask(title);
-    setTitle('');
-  };
 
   return (
     <>
@@ -33,24 +28,18 @@ export default function StackView() {
           <h2 id="bl-h">Backlog</h2>
           <span className="meta">{backlog.length} waiting</span>
         </div>
-        <form className="inline" onSubmit={add}>
-          <input
-            id="backlog-title"
-            className="input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Add to the backlog"
-            autoComplete="off"
-            enterKeyHint="done"
-          />
-          <button className="btn">Add</button>
-        </form>
+        <button className="btn ghost wide add-task-btn" onClick={() => setAdding(true)}>
+          <Icon name="plus" size={18} /> Add a task
+        </button>
         {backlog.length ? (
           <ol className="rows backlog">
             {backlog.map((t, i) => (
               <li key={t.id} className="row">
                 <span className="pos">{i + 1}</span>
-                <span className="row-title">{t.title}</span>
+                <span className="row-title">
+                  {t.title}
+                  <TaskMeta t={t} />
+                </span>
                 {i > 0 && (
                   <button className="icon-btn sm" onClick={() => moveToTop(t)} aria-label={`Move “${t.title}” to the top`} title="Move to top">
                     <Icon name="up" size={16} />
@@ -77,6 +66,7 @@ export default function StackView() {
         )}
         {!room && backlog.length > 0 && <p className="hint">Now is full, so pulling is paused.</p>}
       </section>
+      {adding && <CaptureSheet onClose={() => setAdding(false)} />}
 
       {done.length > 0 && (
         <section className="card" aria-labelledby="done-h">
