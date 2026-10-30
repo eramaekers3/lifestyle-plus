@@ -36,6 +36,12 @@ export function readDate(raw) {
 /** A skipped line with every digit masked, so logs show its shape but no health values. */
 export const lineShape = (line) => String(line).slice(0, 120).replace(/\d/g, '9');
 
+const nextDay = (d) => {
+  const x = new Date(`${d}T12:00:00Z`);
+  x.setUTCDate(x.getUTCDate() + 1);
+  return x.toISOString().slice(0, 10);
+};
+
 /** Minutes after local midnight, read from the phone's own wall clock in the date text. */
 function wallMin(raw, ms) {
   const m = /T(\d{2}):(\d{2})/.exec(String(raw || ''));
@@ -134,9 +140,14 @@ export function parseHealthLines(text) {
       if (stage === 'inbed') continue;
       const st = sd.ms;
       const e = ed.ms;
-      const wake = ed.date;
       if (!Number.isFinite(st) || !Number.isFinite(e) || e <= st) { skip(line); continue; }
-      const n = (sleep[wake] = sleep[wake] || { parts: [], stages: {}, bed: null, end: null });
+      // A night belongs to the morning you wake up: sleep that starts at 6pm or later counts toward the
+      // next day, so the minutes before midnight stay with the rest of the night.
+      const sm = wallMin(start, st);
+      const wake = sm >= 18 * 60 ? nextDay(sd.date) : sd.date;
+      const n = (sleep[wake] = sleep[wake] || { parts: [], stages: {}, bed: null, end: null, anchor: null });
+      // The night's 6pm-the-evening-before, so every sample can be placed on one clock axis.
+      if (n.anchor === null) n.anchor = st - (sm >= 18 * 60 ? sm - 18 * 60 : sm + 6 * 60) * 60000;
       (n.stages[stage] = n.stages[stage] || []).push([st, e]);
       if (stage !== 'awake') {
         n.parts.push([st, e]);
@@ -177,7 +188,20 @@ export function parseHealthLines(text) {
     const last = Math.max(...asleep.map((x) => x[1]));
     const bed = n.bed.ms === first ? n.bed.min : n.bed.min + Math.round((first - n.bed.ms) / 60000);
     const wake = n.end.ms === last ? n.end.min : n.end.min - Math.round((n.end.ms - last) / 60000);
-    nights[date] = { sleepMin: unionMin(asleep), bedMin: (bed + 1440) % 1440, wakeMin: (wake + 1440) % 1440, stages };
+    // When each stage happened, as [from, to, stage] in minutes after 6pm the evening before.
+    const CODE = { deep: 'd', core: 'c', rem: 'r', awake: 'w', asleep: 's' };
+    const kinds = staged.length ? ['deep', 'core', 'rem', 'awake'] : ['asleep', 'awake'];
+    const segs = kinds
+      .flatMap((k) => (n.stages[k] || []).map(([a, b]) => [Math.round((a - n.anchor) / 60000), Math.round((b - n.anchor) / 60000), CODE[k]]))
+      .filter(([a, b]) => b > a)
+      .sort((x, y) => x[0] - y[0]);
+    const merged = [];
+    for (const sg of segs) {
+      const prev = merged[merged.length - 1];
+      if (prev && prev[2] === sg[2] && sg[0] <= prev[1] + 1) prev[1] = Math.max(prev[1], sg[1]);
+      else merged.push([...sg]);
+    }
+    nights[date] = { sleepMin: unionMin(asleep), bedMin: (bed + 1440) % 1440, wakeMin: (wake + 1440) % 1440, stages, segs: merged };
   }
   const days = {};
   for (const [d, v] of Object.entries(steps)) (days[d] = days[d] || {}).steps = Math.round(v);
@@ -211,7 +235,7 @@ export function toRecords(parsed, existing = {}) {
     if (date === parsed.stepsEdge && old.steps > (v.steps || 0)) data.steps = old.steps;
     // Same for the oldest night: a window that starts mid-night only caught the end of it.
     if (date === parsed.sleepEdge && old.sleepMin > (v.sleepMin || 0)) {
-      Object.assign(data, { sleepMin: old.sleepMin, bedMin: old.bedMin, wakeMin: old.wakeMin, stages: old.stages });
+      Object.assign(data, { sleepMin: old.sleepMin, bedMin: old.bedMin, wakeMin: old.wakeMin, stages: old.stages, segs: old.segs });
     }
     rows.push({ id, kind: 'health', data, updated_at: now, deleted: false });
   }
