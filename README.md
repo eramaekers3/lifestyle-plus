@@ -62,9 +62,11 @@ Supabase SQL Editor.
 
 **Build the Shortcut** (Shortcuts app → + → name it "Send to lifestyle+"):
 
-1. Add **Find Health Samples**. Type: **Steps**. Filter: **Start Date is in the last 7 days**.
-   Leave **Group By** off for steps, and add **Source** as a sixth part of the line (`…|Unit|Source`), so
-   lifestyle+ can remove steps counted by both your iPhone and Apple Watch, like the Health app does.
+1. Add **Find Health Samples**. Type: **Steps**. Filter: **Start Date is in the last 2 days**.
+   Leave **Group By** off for steps (grouping adds iPhone and Apple Watch steps together, so they double),
+   and add **Source** as a sixth part of the line (`…|Unit|Source`), so lifestyle+ can remove steps
+   counted by both devices, like the Health app does. Two days keeps the Shortcut quick; the oldest day
+   in each upload is only partly covered, so it never lowers a total that's already saved.
 2. Add **Repeat with Each** (it uses the Health Samples automatically).
 3. Inside the repeat, add a **Text** action and build this line, with no spaces:
    `steps|` **Start Date** `|` **End Date** `|` **Value** `|` **Unit**

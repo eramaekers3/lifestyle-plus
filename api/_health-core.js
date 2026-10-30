@@ -140,8 +140,13 @@ export function parseHealthLines(text) {
   for (const [d, v] of Object.entries(steps)) (days[d] = days[d] || {}).steps = Math.round(v);
   for (const [d, v] of Object.entries(sleepMin)) (days[d] = days[d] || {}).sleepMin = v;
 
+  // The oldest day in an upload is usually only partly covered (a "last 2 days" window starts
+  // mid-day), so its step count is a floor, not the day's total. See toRecords.
+  const stepDays = Object.keys(steps).sort();
+
   return {
     days,
+    stepsEdge: stepDays.length > 1 ? stepDays[0] : null,
     weights: Object.fromEntries(Object.entries(weights).map(([d, w]) => [d, w.lbs])),
     workouts,
     counts,
@@ -155,7 +160,11 @@ export function toRecords(parsed, existing = {}) {
   const rows = [];
   for (const [date, v] of Object.entries(parsed.days)) {
     const id = idFor(`h:${date}`);
-    rows.push({ id, kind: 'health', data: { ...(existing[id] || {}), ...v, id, date }, updated_at: now, deleted: false });
+    const old = existing[id] || {};
+    const data = { ...old, ...v, id, date };
+    // A partly covered oldest day never lowers a total saved by an earlier, fuller upload.
+    if (date === parsed.stepsEdge && old.steps > (v.steps || 0)) data.steps = old.steps;
+    rows.push({ id, kind: 'health', data, updated_at: now, deleted: false });
   }
   for (const [date, lbs] of Object.entries(parsed.weights)) {
     const id = idFor(`w:${date}`);
