@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   useSession, totalMs, exerciseMs, clock, goToExercise, pauseSession, resumeSession, resetExerciseClock,
   updateRow, addRow, removeRow, editSessionExercise, addSessionExercise, removeSessionExercise, summarize,
-  finishSession, discardSession,
+  finishSession, discardSession, addSessionExercises, sessionChanged, saveSessionAsRoutine,
 } from '../lib/workouts.js';
+import { libraryEntry } from '../lib/exercises.js';
+import ExercisePicker from './ExercisePicker.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon, useNow } from './ui.jsx';
 import { ExerciseFields } from './RoutineSheet.jsx';
@@ -33,6 +35,8 @@ export default function LiveWorkout({ onMinimize }) {
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null); // exercise id waiting for a second tap
   const chips = useRef(null);
 
   // Keep the current exercise's chip in view.
@@ -81,6 +85,7 @@ export default function LiveWorkout({ onMinimize }) {
           >
             Save workout
           </button>
+          <SaveAsNew s={s} />
           <button className="btn ghost wide" onClick={() => setFinishing(false)}>Keep going</button>
           <button
             className={`link-btn ${confirmDiscard ? 'danger-link' : ''}`}
@@ -147,14 +152,36 @@ export default function LiveWorkout({ onMinimize }) {
             <div>
               <span className="eyebrow">Exercise {i + 1} of {s.exercises.length}</span>
               <h2>{e.name}</h2>
+              {(e.target.focus || (libraryEntry(e.name) && libraryEntry(e.name).focus)) && (
+                <p className="ex-focus">Targets: {e.target.focus || libraryEntry(e.name).focus}</p>
+              )}
               <p className="target">
                 {e.target.sets} × {e.target.reps || '—'}
                 {e.target.rest && <> · rest {e.target.rest}</>}
               </p>
             </div>
-            <button className="mini" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>
-              {editing ? 'Done' : 'Edit'}
-            </button>
+            <div className="live-ex-btns">
+              <button className="mini" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>
+                {editing ? 'Done' : 'Edit'}
+              </button>
+              <button
+                className={`mini${confirmRemove === e.id ? ' danger' : ''}`}
+                onClick={() => {
+                  if (confirmRemove !== e.id) {
+                    setConfirmRemove(e.id);
+                    setTimeout(() => setConfirmRemove((c) => (c === e.id ? null : c)), 3000);
+                    return;
+                  }
+                  removeSessionExercise(i);
+                  setConfirmRemove(null);
+                  setEditing(false);
+                  toast(`Removed ${e.name}`);
+                }}
+                aria-label={confirmRemove === e.id ? `Tap again to remove ${e.name}` : `Remove ${e.name} from this workout`}
+              >
+                {confirmRemove === e.id ? 'Remove?' : 'Remove'}
+              </button>
+            </div>
           </div>
 
           {editing ? (
@@ -272,16 +299,57 @@ export default function LiveWorkout({ onMinimize }) {
         <p className="empty card">No exercises yet. Add one below.</p>
       )}
 
-      <button
-        className="btn ghost wide add-task-btn"
-        onClick={() => {
-          addSessionExercise('New exercise');
-          setEditing(true);
-        }}
-      >
+      <button className="btn ghost wide add-task-btn" onClick={() => setPicking(true)}>
         <Icon name="plus" size={18} /> Add exercise
       </button>
+      {picking && (
+        <ExercisePicker
+          top
+          title="Add to this workout"
+          onClose={() => setPicking(false)}
+          onAdd={(list) => {
+            addSessionExercises(list);
+            setPicking(false);
+            setEditing(false);
+            toast(list.length === 1 ? `Added ${list[0].name}` : `Added ${list.length} exercises`);
+          }}
+        />
+      )}
+      <SaveAsNew s={s} key={s.exercises.length} />
       {s.intro && <p className="hint-quiet live-intro">{s.intro}</p>}
     </div>
+  );
+}
+
+/** Save what you did as a new workout in your list, under a name you pick. */
+function SaveAsNew({ s }) {
+  const changed = sessionChanged(s);
+  const [open, setOpen] = useState(changed);
+  const [name, setName] = useState(() => (s.routineId ? `${s.name} (my version)` : ''));
+  const [saved, setSaved] = useState(null);
+  if (saved) {
+    return <p className="save-new done"><Icon name="check" size={16} /> Saved “{saved}” to your workouts.</p>;
+  }
+  if (!open) {
+    return <button className="link-btn save-new-link" onClick={() => setOpen(true)}>Save as a new workout…</button>;
+  }
+  return (
+    <form
+      className="save-new"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim() || !s.exercises.length) return;
+        saveSessionAsRoutine(s, name);
+        setSaved(name.trim());
+      }}
+    >
+      <p className="muted small">
+        {changed ? 'You changed the exercises. ' : ''}Save this lineup as a new workout you can start again later{s.routineId ? `; ${s.name} stays as it was` : ''}.
+      </p>
+      <div className="inline">
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name it, e.g. Upper body B" aria-label="New workout name" autoComplete="off" />
+        <button className="btn ghost" disabled={!name.trim() || !s.exercises.length}>Save</button>
+      </div>
+    </form>
   );
 }

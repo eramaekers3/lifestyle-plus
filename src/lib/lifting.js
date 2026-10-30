@@ -1,6 +1,7 @@
 // Exercise history and weekly sets per muscle group, worked out from finished workouts.
 import { useMemo } from 'react';
 import { useKind } from '../store.js';
+import { libraryEntry } from './exercises.js';
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -70,12 +71,13 @@ export function useExerciseHistory() {
 
 /* ---------- Muscle groups ---------- */
 
-export const MUSCLES = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
+export const MUSCLES = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
 
 // First matching rule wins. A primary muscle counts each set as 1, a helper muscle as ½.
 const RULES = [
   [/jump|pogo|\bhops?\b|bound|walk|bike|\brun|treadmill|interval|cardio|rowing machine|elliptical/, {}],
-  [/calf|calves/, { Calves: 1 }],
+  [/calf|calves|tibialis/, { Calves: 1 }],
+  [/wrist|farmer|dead hang|grip|reverse curl/, { Forearms: 1 }],
   [/romanian|\brdl\b|deadlift|hamstring|leg curl|good morning|nordic/, { Hamstrings: 1, Glutes: 0.5 }],
   [/split squat|lunge|step-?up/, { Quads: 1, Glutes: 1 }],
   [/squat|leg press|leg extension|hack/, { Quads: 1, Glutes: 0.5 }],
@@ -91,6 +93,8 @@ const RULES = [
 ];
 
 export function musclesFor(name) {
+  const lib = libraryEntry(name);
+  if (lib) return lib.muscles;
   const n = norm(name);
   for (const [re, m] of RULES) if (re.test(n)) return m;
   return {};

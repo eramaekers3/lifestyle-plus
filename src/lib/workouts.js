@@ -108,7 +108,7 @@ function sessionExercise(e, history, routineId = null) {
     name: e.name,
     kind: e.kind || 'weight',
     unit: e.unit,
-    target: { sets: e.sets, reps: e.reps, rest: e.rest, notes: e.notes },
+    target: { sets: e.sets, reps: e.reps, rest: e.rest, notes: e.notes, ...(e.focus ? { focus: e.focus } : {}) },
     last,
     ms: 0,
     rows: Array.from({ length: n }, (_, i) => blankRow(last[i] || last[last.length - 1])),
@@ -179,10 +179,66 @@ export const editSessionExercise = (i, changes) =>
   update((s) => ({ exercises: s.exercises.map((e, j) => (j !== i ? e : { ...e, ...changes })) }));
 
 export function addSessionExercise(name) {
+  addSessionExercises([newExercise(name)]);
+}
+
+/** Adds exercises (e.g. from the library) to the end and jumps to the first one added. */
+export function addSessionExercises(list_) {
+  if (!list_.length) return;
   update((s, now) => {
-    const e = sessionExercise(newExercise(name), list('workout'), s.routineId);
-    const exercises = [...banked(s, now), e];
-    return { exercises, cur: exercises.length - 1, curSince: s.pausedAt ? null : now };
+    const history = list('workout');
+    const added = list_.map((e) => sessionExercise({ ...newExercise(e.name), ...e }, history, s.routineId));
+    const exercises = [...banked(s, now), ...added];
+    return { exercises, cur: exercises.length - added.length, curSince: s.pausedAt ? null : now };
+  });
+}
+
+/** A session's exercises, as a workout plan's exercises. */
+const planOf = (s) =>
+  s.exercises.map((e) => ({
+    id: newId(),
+    name: e.name,
+    sets: Math.max(1, e.rows.length || e.target.sets || 1),
+    reps: e.target.reps || '',
+    rest: e.target.rest || '',
+    notes: e.target.notes || '',
+    kind: e.kind || 'weight',
+    ...(e.unit ? { unit: e.unit } : {}),
+    ...(e.target.focus ? { focus: e.target.focus } : {}),
+  }));
+
+/** True when exercises were added, removed or reordered compared with the plan it started from. */
+export function sessionChanged(s) {
+  const r = s.routineId && get(s.routineId);
+  if (!r) return s.exercises.length > 0;
+  const a = s.exercises.map((e) => norm(e.name)).join('|');
+  const b = (r.exercises || []).map((e) => norm(e.name)).join('|');
+  return a !== b;
+}
+
+/** Saves what you're doing now as a new workout in your list. */
+export function saveSessionAsRoutine(s, name) {
+  const all = list('routine');
+  const src = s.routineId && get(s.routineId);
+  return put('routine', {
+    name: name.trim() || 'New workout',
+    tagline: '',
+    intro: (src && src.intro) || '',
+    note: '',
+    order: (all.length ? Math.max(...all.map((r) => r.order ?? 0)) : 0) + 1,
+    exercises: planOf(s),
+  });
+}
+
+/** A copy of a workout under a new name, added to the end of your list. */
+export function duplicateRoutine(r, name) {
+  const all = list('routine');
+  const { id, slug, num, ...rest } = r;
+  return put('routine', {
+    ...rest,
+    name: name.trim() || `${r.name} copy`,
+    order: (all.length ? Math.max(...all.map((x) => x.order ?? 0)) : 0) + 1,
+    exercises: r.exercises.map((e) => ({ ...e, id: newId() })),
   });
 }
 

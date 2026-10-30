@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 // Things that already use a sideways drag (or need the finger for themselves) keep it.
 const SKIP = [
   'input', 'textarea', 'select', '[contenteditable]',
-  '.school-swipe', '.slide-check', '.grip', '.heat-wrap', '.ex-chips', '.tablebox',
+  '.school-swipe', '.slide-check', '.grip', '.heat-wrap', '.ex-chips', '.tablebox', '.mus-filter', '.pk-picked',
   '[data-noswipe]',
 ].join(',');
 

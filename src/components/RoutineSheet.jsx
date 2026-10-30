@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { patch, remove, useRecord } from '../store.js';
-import { KINDS, newExercise, startSession, updateExercise } from '../lib/workouts.js';
+import { KINDS, newExercise, startSession, updateExercise, duplicateRoutine } from '../lib/workouts.js';
+import { libraryEntry } from '../lib/exercises.js';
+import { newId } from '../lib/ids.js';
+import ExercisePicker from './ExercisePicker.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon, Sheet } from './ui.jsx';
 import SortableList from './SortableList.jsx';
@@ -70,17 +73,31 @@ export function ExerciseFields({ e, onChange, onRemove }) {
 const scheme = (e) => `${e.sets} × ${e.reps || '—'}${e.kind === 'time' && e.unit && !/\b(sec|min)\b/.test(e.reps || '') ? ` ${e.unit}` : ''}`;
 
 /** View and edit a workout plan: its name, notes and exercises. Every change saves as you go. */
-export default function RoutineSheet({ id, onClose, onStart }) {
+export default function RoutineSheet({ id, onClose, onStart, onOpen }) {
   const r = useRecord(id);
   const [open, setOpen] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copyName, setCopyName] = useState('');
   if (!r) return null;
   const set = (changes) => patch(r.id, changes);
 
-  const addExercise = () => {
-    const e = newExercise();
-    set({ exercises: [...r.exercises, e] });
-    setOpen(e.id);
+  const addExercises = (list) => {
+    const added = list.map((e) => ({ ...newExercise(e.name), ...e, id: newId() }));
+    set({ exercises: [...r.exercises, ...added] });
+    setPicking(false);
+    toast(added.length === 1 ? `Added ${added[0].name}` : `Added ${added.length} exercises`);
+  };
+
+  const saveCopy = (e) => {
+    e.preventDefault();
+    if (!copyName.trim()) return;
+    const c = duplicateRoutine(r, copyName);
+    toast(`Saved “${c.name}”. Editing the copy now.`);
+    setCopying(false);
+    setOpen(null);
+    if (onOpen) onOpen(c.id);
   };
 
   return (
@@ -97,6 +114,20 @@ export default function RoutineSheet({ id, onClose, onStart }) {
       >
         <Icon name="right" size={18} /> Start workout
       </button>
+
+      {copying ? (
+        <form className="save-new" onSubmit={saveCopy} style={{ marginTop: 12 }}>
+          <p className="muted small">Saves a copy under a new name and opens it, so you can change it and keep {r.name} as it is.</p>
+          <div className="inline">
+            <input className="input" value={copyName} onChange={(e) => setCopyName(e.target.value)} placeholder="Name the new workout" aria-label="New workout name" autoFocus autoComplete="off" />
+            <button className="btn" disabled={!copyName.trim()}>Save</button>
+          </div>
+        </form>
+      ) : (
+        <button className="link-btn save-new-link" onClick={() => (setCopyName(`${r.name} (my version)`), setCopying(true))}>
+          Save as a new workout…
+        </button>
+      )}
 
       <label className="f" htmlFor="rt-name" style={{ marginTop: 16 }}>
         Name
@@ -124,6 +155,7 @@ export default function RoutineSheet({ id, onClose, onStart }) {
                 <button className="row-title task-open" onClick={() => setOpen(open === e.id ? null : e.id)} aria-expanded={open === e.id}>
                   <b>{e.name || 'Untitled exercise'}</b>
                   <span className="task-meta">
+                    {(e.focus || (libraryEntry(e.name) && libraryEntry(e.name).focus)) && <span className="rt-focus">{e.focus || libraryEntry(e.name).focus}</span>}
                     <span>{scheme(e)}</span>
                     {e.rest && <span>rest {e.rest}</span>}
                     {e.kind !== 'weight' && <span>{e.kind === 'time' ? 'time' : 'reps only'}</span>}
@@ -145,9 +177,10 @@ export default function RoutineSheet({ id, onClose, onStart }) {
           )}
         </SortableList>
       )}
-      <button className="btn ghost wide add-task-btn" style={{ marginTop: 10 }} onClick={addExercise}>
+      <button className="btn ghost wide add-task-btn" style={{ marginTop: 10 }} onClick={() => setPicking(true)}>
         <Icon name="plus" size={18} /> Add exercise
       </button>
+      {picking && <ExercisePicker title={`Add to ${r.name}`} onAdd={addExercises} onClose={() => setPicking(false)} />}
 
       <label className="f" htmlFor="rt-note" style={{ marginTop: 16 }}>
         Coaching note

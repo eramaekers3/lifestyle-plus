@@ -91,7 +91,7 @@ function useVisibleArea() {
   return area;
 }
 
-export function Sheet({ title, onClose, children }) {
+export function Sheet({ title, onClose, children, top = false }) {
   const area = useVisibleArea();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -113,7 +113,7 @@ export function Sheet({ title, onClose, children }) {
   }, []);
   return createPortal(
     <div
-      className={`scrim${area && area.keyboard ? ' kb' : ''}`}
+      className={`scrim${top ? ' top' : ''}${area && area.keyboard ? ' kb' : ''}`}
       style={area ? { top: area.top, height: area.height, bottom: 'auto', '--vh': `${area.height}px` } : undefined}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >

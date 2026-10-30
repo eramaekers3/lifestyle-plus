@@ -8,7 +8,10 @@ import { useRoutines, addRoutine, startSession, useSession, reorderRoutines } fr
 import RoutineSheet from '../components/RoutineSheet.jsx';
 import SortableList from '../components/SortableList.jsx';
 import ExerciseSheet from '../components/ExerciseSheet.jsx';
-import { MUSCLES, setsByMuscle, useExerciseHistory } from '../lib/lifting.js';
+import { MUSCLES, setsByMuscle, useExerciseHistory, musclesFor } from '../lib/lifting.js';
+import { GROUPS } from '../lib/exercises.js';
+import MuscleIcon from '../components/MuscleIcon.jsx';
+import ExercisePicker from '../components/ExercisePicker.jsx';
 import { weekStart } from '../lib/dates.js';
 
 const DRAFT_ID = idFor('draft-workout');
@@ -107,30 +110,56 @@ export default function BodyView() {
   );
 }
 
-/** Your workout plans, one tight row each. Tap a name to see or edit it; Start opens the workout screen. */
+/** The muscle groups a workout works hard (main movers only), as group ids. */
+const groupsOf = (r) => {
+  const out = new Set();
+  for (const e of r.exercises || []) for (const [m, w] of Object.entries(musclesFor(e.name))) if (w >= 1) out.add(m.toLowerCase());
+  return out;
+};
+
+/** Your workout plans, one tight row each. Filter by muscle; tap a name to edit; Start opens the workout screen. */
 function Workouts() {
   const routines = useRoutines();
   const session = useSession();
   const [open, setOpen] = useState(null);
+  const [mus, setMus] = useState(null);
+  const [quick, setQuick] = useState(false);
+  const tagged = useMemo(() => routines.map((r) => ({ r, g: groupsOf(r) })), [routines]);
+  const used = GROUPS.filter((g) => tagged.some((t) => t.g.has(g.id)));
+  const shown = mus ? tagged.filter((t) => t.g.has(mus)).map((t) => t.r) : routines;
+  const iconsFor = (r) => GROUPS.filter((g) => tagged.find((t) => t.r === r).g.has(g.id)).slice(0, 4);
   return (
     <section className="card wk-card" aria-labelledby="wk-h">
       <div className="card-head">
         <h2 id="wk-h">Workouts</h2>
         <span className="meta">{routines.length}</span>
         <div className="wk-actions">
-          <button className="mini" disabled={!!session} onClick={() => startSession(null)}>Empty</button>
+          <button className="mini" disabled={!!session} onClick={() => setQuick(true)}>Quick</button>
           <button className="mini" onClick={() => setOpen(addRoutine().id)} aria-label="New workout">
             <Icon name="plus" size={14} /> New
           </button>
         </div>
       </div>
+      {used.length > 1 && (
+        <div className="mus-filter" role="group" aria-label="Filter by muscle">
+          <button className="chip" aria-pressed={!mus} onClick={() => setMus(null)}>All</button>
+          {used.map((g) => (
+            <button key={g.id} className={`chip m-${g.id}`} aria-pressed={mus === g.id} onClick={() => setMus(mus === g.id ? null : g.id)}>
+              <MuscleIcon group={g.id} size={16} /> {g.label}
+            </button>
+          ))}
+        </div>
+      )}
       {session && <p className="hint wk-hint">{session.name} is in progress. Finish it to start another.</p>}
-      {routines.length > 0 ? (
-        <SortableList items={routines} onReorder={reorderRoutines} className="rows routine-list" rowClass={() => 'row routine-row'}>
+      {shown.length > 0 ? (
+        <SortableList items={shown} onReorder={(l) => (mus ? null : reorderRoutines(l))} className="rows routine-list" rowClass={() => 'row routine-row'}>
           {(r, grip) => (
             <>
               <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
                 <b className="routine-name">{r.name}</b>
+                <span className="routine-mus" aria-hidden="true">
+                  {iconsFor(r).map((g) => <span key={g.id} className={`m-${g.id}`}><MuscleIcon group={g.id} size={14} /></span>)}
+                </span>
                 <span className="routine-n">{r.exercises.length} ex</span>
               </button>
               <button
@@ -141,14 +170,26 @@ function Workouts() {
               >
                 Start
               </button>
-              {grip}
+              {!mus && grip}
             </>
           )}
         </SortableList>
       ) : (
-        <p className="empty">No workouts yet.</p>
+        <p className="empty">{mus ? 'None of your workouts hit that muscle yet. Tap New and add some from the library.' : 'No workouts yet.'}</p>
       )}
-      {open && <RoutineSheet id={open} onClose={() => setOpen(null)} />}
+      {open && <RoutineSheet id={open} onClose={() => setOpen(null)} onOpen={setOpen} />}
+      {quick && (
+        <ExercisePicker
+          title="Quick workout"
+          allowNone
+          cta={(n) => (n ? `Start with ${n} exercise${n === 1 ? '' : 's'}` : 'Start empty')}
+          onClose={() => setQuick(false)}
+          onAdd={(list) => {
+            setQuick(false);
+            startSession({ id: null, name: 'Quick workout', intro: '', exercises: list });
+          }}
+        />
+      )}
     </section>
   );
 }
