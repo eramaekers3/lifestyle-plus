@@ -11,6 +11,31 @@ export function dueLabel(t, today = todayISO()) {
   return { text: [late && t.due < today ? `Overdue · ${day}` : day, time].filter(Boolean).join(' '), late };
 }
 
+/**
+ * Priority from the due date: 3 (!!!, high) due today or overdue, 2 (!!) due tomorrow,
+ * 1 (!) due in 2–3 days, 0 otherwise.
+ */
+export function priority(t, today = todayISO()) {
+  if (t.status === 'done') return 0;
+  if (t.priority !== undefined && t.priority !== null) return t.priority; // set by you
+  if (!t.due) return 0;
+  if (t.due <= today) return 3;
+  if (t.due === addDays(today, 1)) return 2;
+  if (t.due <= addDays(today, 3)) return 1;
+  return 0;
+}
+const PRIORITY_LABEL = ['', 'Due soon', 'Due tomorrow', 'High priority'];
+
+export function PriorityBadge({ t }) {
+  const p = priority(t);
+  if (!p) return null;
+  return (
+    <span className={`prio p${p}`} title={PRIORITY_LABEL[p]} aria-label={PRIORITY_LABEL[p]}>
+      {'!'.repeat(p)}
+    </span>
+  );
+}
+
 /** A task's category and due date, under its title. Renders nothing when it has neither. */
 export default function TaskMeta({ t }) {
   const cats = useCategories();

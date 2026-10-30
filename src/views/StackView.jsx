@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { remove, useSettings } from '../store.js';
-import { useStack, pullTask, moveToTop, reopenTask } from '../lib/model.js';
-import TaskMeta from '../components/TaskMeta.jsx';
+import { useSettings } from '../store.js';
+import { useStack, pullTask, reopenTask, reorderTasks } from '../lib/model.js';
+import SortableList from '../components/SortableList.jsx';
+import TaskSheet from '../components/TaskSheet.jsx';
+import TaskMeta, { PriorityBadge } from '../components/TaskMeta.jsx';
 import CaptureSheet from '../components/CaptureSheet.jsx';
 import { fmt, iso } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
@@ -12,6 +14,7 @@ export default function StackView() {
   const { stackLimit } = useSettings();
   const { active, backlog, done } = useStack();
   const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState(null);
   const room = active.length < stackLimit;
 
   return (
@@ -32,41 +35,34 @@ export default function StackView() {
           <Icon name="plus" size={18} /> Add a task
         </button>
         {backlog.length ? (
-          <ol className="rows backlog">
-            {backlog.map((t, i) => (
-              <li key={t.id} className="row">
+          <SortableList
+            as="ol"
+            className="rows backlog"
+            items={backlog}
+            onReorder={(list) => reorderTasks(list, 'order')}
+            rowClass={(t) => `row${t.createdAt && Date.now() - Date.parse(t.createdAt) < 2500 ? ' just-added' : ''}`}
+          >
+            {(t, grip, i) => (
+              <>
                 <span className="pos">{i + 1}</span>
-                <span className="row-title">
-                  {t.title}
+                <button className="row-title task-open" onClick={() => setOpen(t.id)} aria-label={`Open “${t.title}”`}>
+                  <span className="title-line"><PriorityBadge t={t} />{t.title}</span>
                   <TaskMeta t={t} />
-                </span>
-                {i > 0 && (
-                  <button className="icon-btn sm" onClick={() => moveToTop(t)} aria-label={`Move “${t.title}” to the top`} title="Move to top">
-                    <Icon name="up" size={16} />
-                  </button>
-                )}
+                </button>
                 <button className="mini sun" disabled={!room} onClick={() => pullTask(t)}>
                   Pull
                 </button>
-                <button
-                  className="x"
-                  onClick={() => {
-                    remove(t.id);
-                    toast('Task deleted');
-                  }}
-                  aria-label={`Delete “${t.title}”`}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ol>
+                {grip}
+              </>
+            )}
+          </SortableList>
         ) : (
           <p className="empty">Nothing waiting. Capture tasks here or with the + button.</p>
         )}
         {!room && backlog.length > 0 && <p className="hint">Now is full, so pulling is paused.</p>}
       </section>
       {adding && <CaptureSheet onClose={() => setAdding(false)} />}
+      {open && <TaskSheet id={open} onClose={() => setOpen(null)} />}
 
       {done.length > 0 && (
         <section className="card" aria-labelledby="done-h">

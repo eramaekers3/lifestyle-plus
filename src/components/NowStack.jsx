@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useSettings } from '../store.js';
-import { useStack, pullTask, completeTask, sendBack } from '../lib/model.js';
+import { useStack, pullTask, completeTask, sendBack, reorderTasks } from '../lib/model.js';
+import SortableList from './SortableList.jsx';
+import TaskSheet from './TaskSheet.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon } from './ui.jsx';
-import TaskMeta from './TaskMeta.jsx';
+import TaskMeta, { PriorityBadge } from './TaskMeta.jsx';
 
-export function TaskRow({ t, showBack }) {
+export function TaskRow({ t, showBack, grip, onOpen }) {
   const [leaving, setLeaving] = useState(false);
   const fresh = t.pulledAt && Date.now() - Date.parse(t.pulledAt) < 1500;
   const finish = () => {
@@ -17,20 +19,21 @@ export function TaskRow({ t, showBack }) {
     }, 520);
   };
   return (
-    <li className={`row task${leaving ? ' leaving' : ''}${fresh ? ' fresh' : ''}`}>
+    <div className={`task-body${leaving ? ' leaving' : ''}${fresh ? ' fresh' : ''}`}>
       <button className={`check${leaving ? ' on' : ''}`} onClick={finish} aria-label={`Mark “${t.title}” done`}>
         {leaving && <Icon name="check" size={16} />}
       </button>
-      <span className="row-title">
-        {t.title}
+      <button className="row-title task-open" onClick={() => onOpen(t.id)} aria-label={`Open “${t.title}”`}>
+        <span className="title-line"><PriorityBadge t={t} />{t.title}</span>
         <TaskMeta t={t} />
-      </span>
+      </button>
       {showBack && !leaving && (
         <button className="mini" onClick={() => sendBack(t)} title="Send back to the backlog">
           Back
         </button>
       )}
-    </li>
+      {grip}
+    </div>
   );
 }
 
@@ -40,6 +43,7 @@ export default function NowStack({ full = false }) {
   const { active, backlog } = useStack();
   const free = stackLimit - active.length;
   const next = backlog[0];
+  const [open, setOpen] = useState(null);
 
   return (
     <section className="card now-card" aria-labelledby="now-h">
@@ -53,11 +57,9 @@ export default function NowStack({ full = false }) {
       </div>
 
       {active.length > 0 && (
-        <ul className="rows">
-          {active.map((t) => (
-            <TaskRow key={t.id} t={t} showBack={full} />
-          ))}
-        </ul>
+        <SortableList items={active} onReorder={(list) => reorderTasks(list, 'nowOrder')} rowClass={() => 'row task'}>
+          {(t, grip) => <TaskRow t={t} showBack={full} grip={full ? grip : null} onOpen={setOpen} />}
+        </SortableList>
       )}
 
       {free > 0 &&
@@ -78,6 +80,7 @@ export default function NowStack({ full = false }) {
           Backlog · {backlog.length} waiting →
         </a>
       )}
+      {open && <TaskSheet id={open} onClose={() => setOpen(null)} />}
     </section>
   );
 }

@@ -284,6 +284,29 @@ form.inline .num-in { flex: 0 1 92px; }
 .task-meta .late { color: var(--coral); }
 .row-title:has(.task-meta) { display: flex; flex-direction: column; }
 
+/* Task added: a check that draws itself, then the sheet closes. */
+.cap-done { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 26px; text-align: center; }
+.cap-done p { margin: 0; }
+.cap-done-title { font: var(--display-weight) 22px/1.2 var(--display); letter-spacing: -0.02em; overflow-wrap: anywhere; animation: stepIn 0.35s 0.25s var(--ease-out) both; }
+.cap-done .muted { animation: stepIn 0.35s 0.35s var(--ease-out) both; }
+.cap-check { width: 96px; height: 96px; margin-bottom: 8px; animation: stamp 0.5s 0.45s var(--ease-out) both; }
+.cap-check circle { fill: color-mix(in srgb, var(--mint) 22%, transparent); stroke: var(--mint); stroke-width: 6; stroke-dasharray: 277; stroke-dashoffset: 277; animation: draw 0.4s var(--ease-out) forwards; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.cap-check path { fill: none; stroke: var(--mint); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 64; stroke-dashoffset: 64; animation: draw 0.3s 0.32s var(--ease-out) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Priority from the due date. */
+.title-line { display: inline; }
+.prio {
+  display: inline-block; margin-right: 7px; padding: 0 6px; border-radius: 6px; vertical-align: 1px;
+  font-size: 12px; font-weight: 800; line-height: 18px; letter-spacing: 0.04em; color: #2a1408;
+}
+.prio.p3 { background: var(--coral); }
+.prio.p2 { background: #ff9f4a; }
+.prio.p1 { background: var(--sun); }
+/* A task you just added drops into the backlog once the add sheet has closed. */
+.row.just-added { animation: dropIn 0.5s 1.05s var(--spring) both, flash 1.4s 1.05s var(--ease-out); }
+@keyframes flash { 0% { background: color-mix(in srgb, var(--sun) 22%, transparent); } 100% { background: transparent; } }
+
 /* ---------- Settings toggles ---------- */
 .toggles { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
 .toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; font-size: 14px; }
@@ -358,9 +381,15 @@ form.inline .num-in { flex: 0 1 92px; }
 }
 .check .icon { stroke-width: 3.2; }
 .check.on { background: var(--sun); border-color: var(--sun); animation: stamp 0.42s var(--ease-out) both; }
-.row.leaving .row-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
-.row.leaving { animation: outStep 0.34s var(--ease-in) 0.18s forwards; }
-.row.fresh { animation: dropIn 0.45s var(--spring) both; }
+.task-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.task-body.leaving .row-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
+.task-body.leaving { animation: outStep 0.34s var(--ease-in) 0.18s forwards; }
+.task-body.fresh { animation: dropIn 0.45s var(--spring) both; }
+.task-open { border: 0; background: none; padding: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+.sortable .grip { margin: 0 -8px 0 0; }
+.sortable > li.dragging { position: relative; z-index: 30; background: var(--surface); border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45); }
+.prio-seg { display: flex; width: 100%; }
+.prio-seg button { flex: 1; padding-inline: 4px; }
 
 .slots { display: flex; gap: 4px; }
 .slots i { width: 20px; height: 7px; border-radius: 4px; background: var(--raised); }

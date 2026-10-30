@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Sheet, Icon } from './ui.jsx';
 import { addTask, addCategory, useCategories } from '../lib/model.js';
 import { addDays, fmt, minToLabel, todayISO } from '../lib/dates.js';
-import { toast } from '../lib/toast.js';
 
 const STEPS = ['Name', 'Category', 'Due date', 'Due time'];
 
@@ -17,19 +16,30 @@ export default function CaptureSheet({ onClose }) {
   const [category, setCategory] = useState(null);
   const [due, setDue] = useState(null);
   const [time, setTime] = useState('');
-  const [added, setAdded] = useState([]);
+  const [saved, setSaved] = useState(null); // the title just added, while the success animation plays
 
   const save = (t = time) => {
     const [hh, mm] = t ? t.split(':').map(Number) : [];
     addTask(title, { category, due, dueTime: due && t ? hh * 60 + mm : null });
-    setAdded((a) => [title.trim(), ...a].slice(0, 4));
-    toast('Added to the backlog');
-    setStep(0);
-    setTitle('');
-    setCategory(null);
-    setDue(null);
-    setTime('');
+    setSaved(title.trim());
+    if (navigator.vibrate) navigator.vibrate(12);
+    setTimeout(onClose, 1100); // let the check play, then leave
   };
+
+  if (saved) {
+    return (
+      <Sheet title="New task" onClose={onClose}>
+        <div className="cap-done" role="status">
+          <svg className="cap-check" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="44" />
+            <path d="M30 52 L44 66 L71 37" />
+          </svg>
+          <p className="cap-done-title">{saved}</p>
+          <p className="muted small">Added to your backlog</p>
+        </div>
+      </Sheet>
+    );
+  }
 
   const next = () => {
     if (step === 0 && !title.trim()) return;
@@ -74,15 +84,6 @@ export default function CaptureSheet({ onClose }) {
         </div>
       </form>
 
-      {added.length > 0 && step === 0 && (
-        <ul className="captured">
-          {added.map((t, i) => (
-            <li key={`${t}-${i}`}>
-              <Icon name="check" size={14} /> {t}
-            </li>
-          ))}
-        </ul>
-      )}
     </Sheet>
   );
 }

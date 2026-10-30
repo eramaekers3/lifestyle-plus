@@ -1,6 +1,6 @@
 // Shared rules for tasks, time blocks and habits.
 import { useMemo } from 'react';
-import { list, put, patch, remove, useKind } from '../store.js';
+import { list, put, putMany, patch, remove, useKind } from '../store.js';
 import { idFor } from './ids.js';
 import { addDays, todayISO } from './dates.js';
 
@@ -14,7 +14,8 @@ export const byPulled = (a, b) => (a.pulledAt || '').localeCompare(b.pulledAt ||
 export function useStack() {
   const tasks = useKind('task');
   return useMemo(() => {
-    const active = tasks.filter((t) => t.status === 'active').sort(byPulled);
+    // Now keeps the order you drag it into (nowOrder); newly pulled tasks go to the bottom.
+    const active = tasks.filter((t) => t.status === 'active').sort((a, b) => (a.nowOrder ?? Infinity) - (b.nowOrder ?? Infinity) || byPulled(a, b));
     const backlog = tasks.filter((t) => t.status === 'backlog').sort(byOrder);
     const done = tasks
       .filter((t) => t.status === 'done')
@@ -64,7 +65,7 @@ export function addCategory(name) {
 /** Removes a category; its tasks just lose the label. */
 export const removeCategory = (c) => remove(c.id);
 
-export const pullTask = (t) => patch(t.id, { status: 'active', pulledAt: new Date().toISOString() });
+export const pullTask = (t) => patch(t.id, { status: 'active', pulledAt: new Date().toISOString(), nowOrder: null });
 
 export function sendBack(t) {
   const orders = backlogOrders();
@@ -72,6 +73,16 @@ export function sendBack(t) {
 }
 
 export const moveToTop = sendBack;
+
+/** Saves a dragged order. field is 'order' for the backlog, 'nowOrder' for Now. */
+export function reorderTasks(tasks, field) {
+  const changed = tasks.filter((t, i) => t[field] !== i + 1).map((t) => ['task', { ...t, [field]: tasks.indexOf(t) + 1 }]);
+  if (changed.length) putMany(changed);
+}
+
+/** Your own priority: 3 (!!!), 2 (!!), 1 (!), 0 (none), or null to go by the due date. */
+export const setTaskPriority = (t, p) => patch(t.id, { priority: p });
+export const renameTask = (t, title) => title.trim() && patch(t.id, { title: title.trim() });
 export const completeTask = (t) => patch(t.id, { status: 'done', doneAt: new Date().toISOString() });
 export const reopenTask = (t) => patch(t.id, { status: 'active', pulledAt: new Date().toISOString(), doneAt: null });
 
