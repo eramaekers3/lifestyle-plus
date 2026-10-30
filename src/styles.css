@@ -539,6 +539,8 @@ form.inline .num-in { flex: 0 1 92px; }
 .task-body.leaving { animation: outStep 0.34s var(--ease-in) 0.18s forwards; }
 .task-body.fresh { animation: dropIn 0.45s var(--spring) both; }
 .task-open { border: 0; background: none; padding: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+/* Rows are measured from the list itself, so it has to be their positioning parent. */
+.sortable { position: relative; }
 .sortable .grip { margin: 0 -8px 0 0; }
 .sortable > li.dragging { position: relative; z-index: 30; background: var(--surface); border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45); }
 .prio-seg { display: flex; width: 100%; }
