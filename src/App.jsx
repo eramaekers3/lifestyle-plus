@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
 import { Icon, Toaster, HeartMark } from './components/ui.jsx';
 import { DEFAULT_HEART } from './lib/logo.js';
@@ -10,6 +10,7 @@ import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
 import { usePushKeepAlive } from './lib/push.js';
+import { useSwipe } from './lib/swipe.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import PlanView from './views/PlanView.jsx';
@@ -47,6 +48,9 @@ const tabFromHash = () => {
 
 export default function App() {
   const [tab, setTab] = useState(tabFromHash);
+  const tabRef = useRef(tab);
+  const [enter, setEnter] = useState(0); // which side the new tab slides in from
+  const pager = useRef(null);
   const [capture, setCapture] = useState(false);
   const [settings, setSettings] = useState(false);
   const settingsData = useSettings();
@@ -87,7 +91,11 @@ export default function App() {
         setMorning(true);
         return;
       }
-      setTab(tabFromHash());
+      const next = tabFromHash();
+      const idx = (id) => TABS.findIndex((t) => t.id === id);
+      setEnter(Math.sign(idx(next) - idx(tabRef.current)));
+      tabRef.current = next;
+      setTab(next);
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', onHash);
@@ -107,6 +115,13 @@ export default function App() {
     if (id === tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
     window.location.hash = id;
   };
+
+  // Swipe anywhere on a main screen to move between tabs (the calendar swipes days instead).
+  const tabIdx = TABS.findIndex((t) => t.id === tab);
+  useSwipe(pager, {
+    can: (dir) => !!TABS[tabIdx + dir],
+    onSwipe: (dir) => TABS[tabIdx + dir] && go(TABS[tabIdx + dir].id),
+  });
 
   const { View } = TABS.find((t) => t.id === tab);
   const syncLabel = {
@@ -139,9 +154,11 @@ export default function App() {
         </div>
       )}
 
-      <main className="view" key={tab}>
-        <View />
-      </main>
+      <div className="pager" ref={pager}>
+        <main className={`view${enter ? (enter > 0 ? ' enter-next' : ' enter-prev') : ''}`} key={tab}>
+          <View />
+        </main>
+      </div>
 
       <button className="fab" onClick={() => setCapture(true)} aria-label="Capture a task">
         <Icon name="plus" size={28} />

@@ -43,7 +43,7 @@ export default function DayView({ date }) {
 
   return (
     <>
-      <header className="dayhead">
+      <header className="dayhead" data-swipe-days>
         <div>
           <div className="eyebrow">{relDay(date)}</div>
           <h1>
@@ -60,7 +60,7 @@ export default function DayView({ date }) {
 
       <SchoolDay date={date} />
 
-      <section className="card tl-card" aria-labelledby="tl-h">
+      <section className="card tl-card" aria-labelledby="tl-h" data-swipe-days>
         <div className="card-head">
           <h2 id="tl-h">Time blocks</h2>
           <span className="meta">

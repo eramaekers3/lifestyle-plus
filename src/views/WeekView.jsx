@@ -49,7 +49,7 @@ export default function WeekView({ date, openDay }) {
 
   return (
     <>
-      <header className="dayhead">
+      <header className="dayhead" data-swipe-days>
         <div>
           <div className="eyebrow">{ws <= today && today <= we ? 'This week' : ws > today ? 'Coming up' : 'Past week'}</div>
           <h1>
@@ -65,7 +65,7 @@ export default function WeekView({ date, openDay }) {
 
       <SchoolWeek ws={ws} we={we} today={today} />
 
-      <section className="card" aria-labelledby="glance-h">
+      <section className="card" aria-labelledby="glance-h" data-swipe-days>
         <div className="card-head">
           <h2 id="glance-h">The week at a glance</h2>
           <span className="meta">

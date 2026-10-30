@@ -32,7 +32,7 @@
 }
 
 * { box-sizing: border-box; }
-html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; overflow-x: clip; }
 body {
   margin: 0;
   min-height: 100%;
@@ -106,6 +106,15 @@ code { font-size: 0.92em; background: var(--raised); padding: 1px 5px; border-ra
 .view, .subview { display: flex; flex-direction: column; gap: 18px; }
 .view { animation: stepIn 0.32s var(--ease-out) both; }
 .subview.swap { animation: stepIn 0.26s var(--ease-out) both; }
+/* Paging (swipes, arrows, tab taps): the new page slides in from the side it came from. */
+.pager { display: flex; flex-direction: column; touch-action: pan-y pinch-zoom; }
+.view.enter-next, .subview.enter-next { animation: pageFromRight 0.3s var(--ease-out) both; }
+.view.enter-prev, .subview.enter-prev { animation: pageFromLeft 0.3s var(--ease-out) both; }
+@keyframes pageFromRight { from { opacity: 0; transform: translateX(42%); } to { opacity: 1; transform: none; } }
+@keyframes pageFromLeft { from { opacity: 0; transform: translateX(-42%); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .view.enter-next, .view.enter-prev, .subview.enter-next, .subview.enter-prev { animation: fade 0.2s both; }
+}
 
 /* ---------- Tab bar + capture button ---------- */
 .tabbar {
