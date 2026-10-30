@@ -111,9 +111,15 @@ export default function App() {
     return () => clearTimeout(t);
   }, [tab]);
 
+  // Switch tabs directly (no waiting on a hashchange round-trip), then record it in the URL.
   const go = (id) => {
     if (id === tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.location.hash = id;
+    const idx = (x) => TABS.findIndex((t) => t.id === x);
+    setEnter(Math.sign(idx(id) - idx(tabRef.current)));
+    tabRef.current = id;
+    setTab(id);
+    window.scrollTo(0, 0);
+    history.pushState(null, '', `#${id}`);
   };
 
   // Swipe anywhere on a main screen to move between tabs (the calendar swipes days instead).

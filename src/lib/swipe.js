@@ -69,7 +69,7 @@ export function useSwipe(ref, { onSwipe, can = () => true, only, claim = false }
       const el = s.el;
       const v = s.dx / Math.max(1, performance.now() - s.t); // px per ms
       const dir = s.dx < 0 ? 1 : -1;
-      const go = s.ok && (Math.abs(s.dx) > s.w * 0.25 || (Math.abs(v) > 0.4 && Math.abs(s.dx) > 30));
+      const go = s.ok && (Math.abs(s.dx) > s.w * 0.25 || (Math.abs(v) > 0.3 && Math.abs(s.dx) > 24));
 
       // The tap that ends a swipe shouldn't also open whatever was under the finger.
       const swallow = (ev) => {
@@ -86,17 +86,13 @@ export function useSwipe(ref, { onSwipe, can = () => true, only, claim = false }
         setTimeout(() => (el.style.transition = el.style.willChange = ''), 300);
         return;
       }
-      el.style.transition = 'transform 0.15s cubic-bezier(.4,0,1,1), opacity 0.15s linear';
-      el.style.transform = `translateX(${-dir * s.w * 0.55}px)`;
-      el.style.opacity = '0';
-      setTimeout(() => {
-        opts.current.onSwipe(dir);
-        // If nothing re-mounted, put the page back where it was.
-        requestAnimationFrame(() => {
-          if (!el.isConnected) return;
-          el.style.transition = el.style.transform = el.style.opacity = el.style.willChange = '';
-        });
-      }, 140);
+      // Switch right away: the new page mounts on this frame and slides in from the side the
+      // finger was heading, so there's no wait between letting go and seeing it.
+      opts.current.onSwipe(dir);
+      requestAnimationFrame(() => {
+        if (!el.isConnected) return; // re-mounted, as expected
+        el.style.transition = el.style.transform = el.style.opacity = el.style.willChange = '';
+      });
     };
 
     root.addEventListener('touchstart', start, { passive: true });
