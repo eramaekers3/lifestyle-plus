@@ -14,6 +14,7 @@ import SchoolList from '../components/SchoolList.jsx';
 import CardStack from '../components/CardStack.jsx';
 import { PastDoneButton } from './WeekView.jsx';
 import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
+import { toggleHabitFx } from '../lib/game.js';
 
 export default function DayView({ date }) {
   const settings = useSettings();
@@ -216,7 +217,7 @@ function HabitChips({ date }) {
               className={`chip habit-chip${on ? ' on' : ''}${avoid ? ' avoid' : ''}${avoid && !on ? ' slipped' : ''}`}
               aria-pressed={on}
               aria-label={avoid ? `${h.name}: ${on ? 'clean so far, tap to mark a slip' : 'slipped, tap to undo'}` : h.name}
-              onClick={() => toggleHabit(h, date, on)}
+              onClick={(e) => toggleHabitFx(h, date, on, e.currentTarget)}
             >
               <span className="tick">{on ? <Icon name="check" size={12} /> : avoid ? '×' : null}</span>
               {h.name}

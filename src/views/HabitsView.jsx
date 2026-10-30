@@ -5,6 +5,8 @@ import { useHabits, toggleHabit, habitStats, addHabit, resumeHabit, dayClass } f
 import { addDays, fmt, parse, todayISO } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import HabitHistorySheet from '../components/HabitHistorySheet.jsx';
+import { haptic } from '../lib/haptics.js';
+import { toggleHabitFx } from '../lib/game.js';
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -47,8 +49,7 @@ function SlideCheck({ h, code, onToggle }) {
     const end = d.moved ? (pos ?? d.startPos) >= 0.5 : !on; // a tap flips it
     setPos(null);
     if (end !== on) {
-      if (navigator.vibrate) navigator.vibrate(12);
-      onToggle();
+      onToggle(trackRef.current);
     }
   };
 
@@ -68,7 +69,7 @@ function SlideCheck({ h, code, onToggle }) {
         drag.current = null;
         setPos(null);
       }}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onToggle())}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onToggle(trackRef.current))}
       onClick={(e) => e.preventDefault()}
     >
       <span className="fill" aria-hidden="true" />
@@ -156,7 +157,7 @@ function HabitGrid({ habits, paused, children }) {
     const r = home(el);
     setOrder(habits.map((h) => h.id));
     setDrag({ id, grabX: e.clientX - r.left, grabY: e.clientY - r.top, x: e.clientX, y: e.clientY });
-    if (navigator.vibrate) navigator.vibrate(8);
+    haptic('tick');
   };
 
   const onMove = (e) => {
@@ -316,14 +317,14 @@ export default function HabitsView() {
                     className={`day${before ? '' : dayClass(h, code)}${d === today ? ' today' : ''}`}
                     aria-pressed={code === 'd'}
                     aria-label={`${h.name}, ${fmt(d, { weekday: 'long', month: 'short', day: 'numeric' })}: ${before ? 'before you started' : codeLabel(h, code)}`}
-                    onClick={() => toggleHabit(h, d, code === 'd')}
+                    onClick={(e) => toggleHabitFx(h, d, code === 'd', e.currentTarget)}
                   >
                     {DOW[parse(d).getDay()]}
                   </button>
                 );
               })}
             </div>
-            <SlideCheck h={h} code={lookup(h, today).code} onToggle={() => toggleHabit(h, today, lookup(h, today).code === 'd')} />
+            <SlideCheck h={h} code={lookup(h, today).code} onToggle={(el) => toggleHabitFx(h, today, lookup(h, today).code === 'd', el)} />
           </>
         );
         }}

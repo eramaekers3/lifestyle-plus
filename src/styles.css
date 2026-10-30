@@ -1241,3 +1241,43 @@ form.inline .num-in { flex: 0 1 92px; }
 .li-rename { margin: -4px 0 12px; }
 .li-actions { margin-top: 18px; }
 .settling .li-row .check.on, .settling .li-row.fresh { animation-delay: -10s !important; }
+
+/* ---------- Game: level badge, sparks, XP pops ---------- */
+.top-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lvl-badge {
+  position: relative; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); color: var(--ink);
+}
+.lvl-badge svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.lvl-badge circle { fill: none; stroke-width: 3.2; }
+.lvl-track { stroke: var(--line); }
+.lvl-fill { stroke: var(--sun); stroke-linecap: round; transition: stroke-dashoffset 0.7s var(--ease-out); }
+.lvl-badge b { position: relative; font: 800 14px/1 var(--body); font-variant-numeric: tabular-nums; }
+.lvl-badge:active { transform: scale(0.94); }
+.lvl-badge.up { animation: lvlUp 0.9s var(--spring) both; }
+.lvl-badge.up b { color: var(--sun); }
+@keyframes lvlUp { 0% { transform: scale(1); } 25% { transform: scale(1.28) rotate(-8deg); } 55% { transform: scale(0.94) rotate(4deg); } 100% { transform: none; } }
+
+.lvl-bar { height: 10px; border-radius: 6px; background: var(--raised); overflow: hidden; margin: -2px 0 8px; }
+.lvl-bar i { display: block; height: 100%; border-radius: inherit; background: var(--sun); animation: lvlGrow 0.8s 0.15s var(--ease-out) both; transform-origin: left; }
+@keyframes lvlGrow { from { transform: scaleX(0); } }
+.lvl-sub { margin: 0 0 14px; font-variant-numeric: tabular-nums; }
+.lvl-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lvl-tiles .tile { padding: 9px 8px; }
+.lvl-tiles .tile b { font-variant-numeric: tabular-nums; }
+.pr-mark { flex: none; font: 900 10.5px/1 var(--body); letter-spacing: 0.06em; padding: 4px 6px; border-radius: 6px; background: var(--sun); color: var(--sun-ink); }
+.xp-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--muted); }
+.xp-rules li { display: flex; align-items: baseline; gap: 8px; }
+.xp-rules b { flex: none; min-width: 34px; color: var(--sun); font-variant-numeric: tabular-nums; }
+.xp-rules .meta { margin-left: auto; }
+
+#cheer-layer { position: fixed; inset: 0; z-index: 90; pointer-events: none; overflow: hidden; }
+.cheer-spark { position: fixed; border-radius: 50%; will-change: transform, opacity; }
+.cheer-ring { position: fixed; width: 34px; height: 34px; border-radius: 50%; border: 2px solid; will-change: transform, opacity; }
+.cheer-pop {
+  position: fixed; display: flex; flex-direction: column; align-items: center; gap: 1px; white-space: nowrap;
+  padding: 5px 10px 6px; border-radius: 11px; background: var(--ink); color: var(--bg);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 10px 20px rgba(0, 0, 0, 0.35); opacity: 0;
+}
+.cheer-pop b { font: 900 14px/1.1 var(--body); font-variant-numeric: tabular-nums; }
+.cheer-pop span { font-size: 11px; font-weight: 700; opacity: 0.7; }

@@ -16,8 +16,65 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700;800&display=swap" />
+    <style>
+      /* Loading screen: shown the moment the app opens, before any code has loaded. */
+      #splash {
+        position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+        background: #262624; color: #f2f1ed;
+        transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      #splash::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.08;
+        background: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.5 0 0 0 -.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      #splash .sp-in { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: -6vh; }
+      #splash .sp-mark { width: 104px; height: 104px; animation: spPop 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) both, spBeat 1.6s 0.9s ease-in-out infinite; transform-origin: 50% 65%; }
+      #splash .sp-word { font: 800 30px/1 'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif; letter-spacing: -0.045em; animation: spUp 0.5s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      #splash .sp-word b { color: var(--heart, #ff6f61); }
+      #splash .sp-bar { width: 74px; height: 4px; border-radius: 3px; background: #3c3c39; overflow: hidden; animation: spUp 0.5s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      #splash .sp-bar i { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--heart, #ff6f61); animation: spSlide 0.9s 0.4s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate; }
+      #splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+      #splash.out .sp-mark { animation: spOut 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+      @keyframes spPop { 0% { opacity: 0; transform: scale(0.35) rotate(-14deg); } 60% { opacity: 1; } 100% { transform: none; } }
+      @keyframes spBeat { 0%, 70%, 100% { transform: scale(1); } 80% { transform: scale(1.08); } 88% { transform: scale(0.98); } }
+      @keyframes spUp { from { opacity: 0; transform: translateY(10px); } }
+      @keyframes spSlide { from { transform: translateX(-30%); } to { transform: translateX(180%); } }
+      @keyframes spOut { to { transform: scale(1.22); } }
+      @media (prefers-reduced-motion: reduce) { #splash *, #splash { animation: none !important; transition: opacity 0.2s !important; } }
+    </style>
+    <script>
+      // Paint the splash heart in your chosen color, and hide the splash once the app has drawn
+      // (but not before it's been up long enough to see, so it doesn't just flash).
+      (function () {
+        try {
+          var db = JSON.parse(localStorage.getItem('lifestyleplus.v1'));
+          var s = db && db.records && db.records['bb03f251-125a-aad3-4182-52597fc669e1'];
+          var c = s && s.data && s.data.heartColor;
+          if (/^#[0-9a-f]{6}$/i.test(c || '')) document.documentElement.style.setProperty('--heart', c);
+        } catch (e) {}
+        var start = Date.now();
+        window.__hideSplash = function () {
+          var el = document.getElementById('splash');
+          if (!el || el.dataset.hiding) return;
+          el.dataset.hiding = '1';
+          setTimeout(function () {
+            el.classList.add('out');
+            setTimeout(function () { el.remove(); }, 420);
+          }, Math.max(0, 900 - (Date.now() - start)));
+        };
+        // Never get stuck behind it.
+        setTimeout(function () { window.__hideSplash(); }, 6000);
+      })();
+    </script>
   </head>
   <body>
+    <div id="splash" role="status" aria-label="Loading lifestyle+">
+      <div class="sp-in" aria-hidden="true">
+        <div class="sp-mark"><svg class="sp-heart" xmlns="http://www.w3.org/2000/svg" viewBox="150 160 740 740" width="100%" height="100%"><defs><mask id="sp-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><path d="M639 324h50v135h135v50h-135v135h-50v-135h-135v-50h135z" fill="#000" stroke="#000" stroke-width="108" stroke-linejoin="round"/></mask><filter id="sp-dither" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 2.2 -0.9" result="dots"/><feComposite in="dots" in2="SourceGraphic" operator="in"/></filter><filter id="sp-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.6 0 0 0 -0.7"/><feComposite in2="SourceGraphic" operator="in"/></filter></defs><g mask="url(#sp-cut)"><g transform="translate(26 40)"><g opacity=".55"><path d="M512 836C468 806 168 620 168 384C168 262 258 178 360 178C430 178 484 214 512 270C540 214 594 178 664 178C766 178 856 262 856 384C856 620 556 806 512 836Z" fill="#0c0f14" mask="url(#sp-cut)"/></g><g filter="url(#sp-dither)"><path d="M512 836C468 806 168 620 168 384C168 262 258 178 360 178C430 178 484 214 512 270C540 214 594 178 664 178C766 178 856 262 856 384C856 620 556 806 512 836Z" fill="#000" mask="url(#sp-cut)"/></g></g></g><path d="M512 836C468 806 168 620 168 384C168 262 258 178 360 178C430 178 484 214 512 270C540 214 594 178 664 178C766 178 856 262 856 384C856 620 556 806 512 836Z" style="fill:var(--heart,#ff6f61)" mask="url(#sp-cut)"/><g transform="translate(26 40)"><g opacity=".55"><path d="M639 324h50v135h135v50h-135v135h-50v-135h-135v-50h135z" fill="#0c0f14" stroke="#0c0f14" stroke-width="40" stroke-linejoin="round"/></g><g filter="url(#sp-dither)"><path d="M639 324h50v135h135v50h-135v135h-50v-135h-135v-50h135z" fill="#000" stroke="#000" stroke-width="40" stroke-linejoin="round"/></g></g><path d="M639 324h50v135h135v50h-135v135h-50v-135h-135v-50h135z" fill="#ffffff" stroke="#ffffff" stroke-width="40" stroke-linejoin="round"/></svg></div>
+        <div class="sp-word">lifestyle<b>+</b></div>
+        <div class="sp-bar"><i></i></div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

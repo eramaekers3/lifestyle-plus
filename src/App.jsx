@@ -6,6 +6,7 @@ import { useCalendarSync } from './lib/calendar.js';
 import { useCanvasSync } from './lib/canvas.js';
 import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
+import LevelBadge from './components/LevelBadge.jsx';
 import ShutdownSheet from './components/ShutdownSheet.jsx';
 import ReviewSheet from './components/ReviewSheet.jsx';
 import SettingsSheet from './components/SettingsSheet.jsx';
@@ -178,11 +179,14 @@ export default function App() {
           <span aria-hidden="true">lifestyle</span>
           <HeartMark color={settingsData.heartColor || DEFAULT_HEART} />
         </div>
-        <button className="sync-btn" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
-          <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />
-          <span className="sync-text">{syncLabel}</span>
-          <Icon name="settings" />
-        </button>
+        <div className="top-right">
+          <LevelBadge />
+          <button className="sync-btn" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
+            <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />
+            <span className="sync-text">{syncLabel}</span>
+            <Icon name="settings" />
+          </button>
+        </div>
       </header>
 
       {sample && (

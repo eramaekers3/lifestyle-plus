@@ -15,6 +15,8 @@ import {
   renameList,
   deleteList,
 } from '../lib/lists.js';
+import { haptic } from '../lib/haptics.js';
+import { cheer } from '../lib/game.js';
 
 export default function ListsView() {
   const { grocery, packing } = useLists();
@@ -249,7 +251,6 @@ function AddBar({ listId, items, placeholder }) {
     const r = addItem(listId, text, items);
     if (!r) return;
     if (r.status === 'already') toast(`“${r.item.text}” is already on the list`);
-    if (navigator.vibrate) navigator.vibrate(8);
     setText('');
     ref.current && ref.current.focus();
   };
@@ -272,16 +273,25 @@ function AddBar({ listId, items, placeholder }) {
   );
 }
 
+/** Checking an item off gets a little spark (no XP: lists aren't the game). */
+function checkItem(i, el) {
+  toggleItem(i);
+  if (!i.done) {
+    haptic('success');
+    cheer(el);
+  }
+}
+
 function Items({ items }) {
   if (!items.length) return null;
   return (
     <ul className="rows li-items">
       {items.map((i) => (
         <li key={i.id} className={`row li-row${i.done ? ' got' : ''}${!i.done && Date.now() - Date.parse(i.createdAt) < 1500 ? ' fresh' : ''}`}>
-          <button className={`check${i.done ? ' on' : ''}`} onClick={() => toggleItem(i)} aria-label={i.done ? `Uncheck “${i.text}”` : `Check off “${i.text}”`}>
+          <button className={`check${i.done ? ' on' : ''}`} onClick={(e) => checkItem(i, e.currentTarget)} aria-label={i.done ? `Uncheck “${i.text}”` : `Check off “${i.text}”`}>
             {i.done && <Icon name="check" size={16} />}
           </button>
-          <button className="row-title task-open" onClick={() => toggleItem(i)} tabIndex={-1} aria-hidden="true">
+          <button className="row-title task-open" onClick={(e) => checkItem(i, e.currentTarget.previousElementSibling)} tabIndex={-1} aria-hidden="true">
             {i.text}
           </button>
           <button className="x" onClick={() => removeItem(i)} aria-label={`Remove “${i.text}”`}>×</button>

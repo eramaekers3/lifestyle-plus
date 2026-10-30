@@ -5,18 +5,16 @@ import SortableList from './SortableList.jsx';
 import TaskSheet from './TaskSheet.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon } from './ui.jsx';
+import { completeTaskLater } from '../lib/game.js';
 import TaskMeta, { PriorityBadge } from './TaskMeta.jsx';
 
 export function TaskRow({ t, showBack, grip, onOpen }) {
   const [leaving, setLeaving] = useState(false);
   const fresh = t.pulledAt && Date.now() - Date.parse(t.pulledAt) < 1500;
-  const finish = () => {
+  const finish = (e) => {
     if (leaving) return;
     setLeaving(true);
-    setTimeout(() => {
-      completeTask(t);
-      toast('Done. That frees a slot.');
-    }, 520);
+    completeTaskLater(t, e.currentTarget, 520);
   };
   return (
     <div className={`task-body${leaving ? ' leaving' : ''}${fresh ? ' fresh' : ''}`}>

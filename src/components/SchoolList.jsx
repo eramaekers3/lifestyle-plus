@@ -3,6 +3,7 @@ import { fmt, minToLabel, relDay, todayISO } from '../lib/dates.js';
 import { setSchoolDone } from '../lib/canvas.js';
 import { toast } from '../lib/toast.js';
 import { Icon } from './ui.jsx';
+import { haptic } from '../lib/haptics.js';
 
 const dueLabel = (i, showDay) => {
   const day = showDay ? (['Today', 'Tomorrow', 'Yesterday'].includes(relDay(i.date)) ? relDay(i.date) : fmt(i.date, { weekday: 'short' })) : '';
@@ -37,7 +38,7 @@ function SchoolRow({ i, showDay, today }) {
   const commit = (done, dir) => {
     const el = ref.current;
     setLeaving(dir);
-    if (navigator.vibrate) navigator.vibrate(12);
+    haptic('success');
     // Slide off, then fold the row's space shut, then save.
     setTimeout(() => {
       if (el) {

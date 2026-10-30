@@ -12,6 +12,8 @@ import ExercisePicker from './ExercisePicker.jsx';
 import { toast } from '../lib/toast.js';
 import { Icon, useNow } from './ui.jsx';
 import { ExerciseFields } from './RoutineSheet.jsx';
+import { haptic } from '../lib/haptics.js';
+import { cheer, latestGain, prsSince, prLabel, XP } from '../lib/game.js';
 
 const fmtSet = (e, s) =>
   e.kind === 'weight' ? `${s.wt || 0}×${s.reps}` : e.kind === 'time' ? `${s.reps} ${e.unit || 'sec'}` : `${s.reps}`;
@@ -83,9 +85,15 @@ export default function LiveWorkout({ onMinimize }) {
           <button
             className="btn wide"
             disabled={!sum.sets}
-            onClick={() => {
+            onClick={(e) => {
+              const startedAt = new Date(s.startedAt).toISOString();
+              const el = e.currentTarget;
               finishSession();
-              toast('Workout saved');
+              const prs = prsSince(startedAt);
+              const xp = latestGain('workout').xp + prs.length * XP.pr;
+              haptic(prs.length ? 'big' : 'success');
+              cheer(el, { text: `+${xp} XP`, sub: prs.length ? `${prs.length} new PR${prs.length > 1 ? 's' : ''}` : 'Workout saved' });
+              toast(prs.length ? `New PR: ${prs.map(prLabel).join(', ')}` : 'Workout saved');
               onMinimize();
             }}
           >
@@ -271,7 +279,7 @@ export default function LiveWorkout({ onMinimize }) {
                       toast(missing === 'reps' ? (e.kind === 'time' ? 'Enter the time first' : 'Enter your reps first') : 'Enter the weight first');
                       return;
                     }
-                    if (navigator.vibrate) navigator.vibrate(10);
+                    haptic('success');
                     updateRow(i, k, { ...fill, done: true });
                   }}
                   aria-pressed={r.done}

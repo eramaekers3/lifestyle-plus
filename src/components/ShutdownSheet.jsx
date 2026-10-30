@@ -9,6 +9,8 @@ import { toast } from '../lib/toast.js';
 import { Icon, Sheet } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 import BlockSheet from './BlockSheet.jsx';
+import { haptic } from '../lib/haptics.js';
+import { completeTaskFx, toggleHabitFx } from '../lib/game.js';
 
 /**
  * The nightly shutdown (Cal Newport's "shutdown complete"): close out today, glance at tomorrow,
@@ -21,7 +23,7 @@ export default function ShutdownSheet({ onClose }) {
 
   const finish = () => {
     shutDown(today);
-    if (navigator.vibrate) navigator.vibrate([12, 60, 12]);
+    haptic('big');
     toast('Shutdown complete. You’re done for today.');
     onClose();
   };
@@ -114,7 +116,7 @@ function OpenLoops() {
         {active.map((t) => (
           <li key={t.id} className="row">
             <span className="row-title">{t.title}</span>
-            <button className="mini sun" onClick={() => (completeTask(t), toast('Done'))}>Done</button>
+            <button className="mini sun" onClick={(e) => completeTaskFx(t, e.currentTarget)}>Done</button>
             <button className="mini" onClick={() => (sendBack(t), toast('Back to the backlog'))}>Later</button>
           </li>
         ))}
@@ -140,7 +142,7 @@ function HabitCheck({ today }) {
               key={h.id}
               className={`chip habit-chip${on ? ' on' : ''}${avoid ? ' avoid' : ''}${avoid && !on ? ' slipped' : ''}`}
               aria-pressed={on}
-              onClick={() => toggleHabit(h, today, on)}
+              onClick={(e) => toggleHabitFx(h, today, on, e.currentTarget)}
             >
               <span className="tick">{on ? <Icon name="check" size={12} /> : avoid ? '×' : null}</span>
               {h.name}

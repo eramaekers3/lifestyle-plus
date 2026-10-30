@@ -201,7 +201,8 @@ export function deleteHabit(h) {
 }
 
 export function toggleHabit(h, date, current) {
-  put('habitlog', { id: logId(h.id, date), habitId: h.id, date, done: !current });
+  // `at` (when it was checked) lets quick check-offs chain into combos.
+  put('habitlog', { id: logId(h.id, date), habitId: h.id, date, done: !current, at: current ? null : new Date().toISOString() });
 }
 
 export function addHabit(name, mode, order) {

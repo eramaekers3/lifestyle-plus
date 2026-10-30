@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './ui.jsx';
+import { haptic } from '../lib/haptics.js';
 
 /**
  * A vertical list you can reorder by dragging each row's grip (arrow keys work on the grip too).
@@ -64,7 +65,7 @@ export default function SortableList({ items, onReorder, className = 'rows', row
     const el = rows.current.get(id);
     setOrder(items.map((t) => t.id));
     setDrag({ id, grabY: e.clientY - home(el).top, y: e.clientY });
-    if (navigator.vibrate) navigator.vibrate(8);
+    haptic('tick');
   };
 
   const onMove = (e) => {

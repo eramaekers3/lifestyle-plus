@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Sheet, Icon } from './ui.jsx';
 import { addTask, addCategory, useCategories } from '../lib/model.js';
 import { addDays, fmt, minToLabel, todayISO } from '../lib/dates.js';
+import { haptic } from '../lib/haptics.js';
 
 const STEPS = ['Name', 'Category', 'Due date', 'Due time'];
 
@@ -22,7 +23,7 @@ export default function CaptureSheet({ onClose }) {
     const [hh, mm] = t ? t.split(':').map(Number) : [];
     addTask(title, { category, due, dueTime: due && t ? hh * 60 + mm : null });
     setSaved(title.trim());
-    if (navigator.vibrate) navigator.vibrate(12);
+    haptic('success');
     setTimeout(onClose, 1100); // let the check play, then leave
   };
 
