@@ -729,6 +729,25 @@ form.inline .num-in { flex: 0 1 92px; }
 .sl-legend b { margin-left: auto; font-variant-numeric: tabular-nums; }
 .sl-legend .pct { width: 34px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* Weight detail */
+.wt-open { margin-bottom: 4px; }
+.wt-open .card-sub { margin-bottom: 8px; }
+.wt-range { display: flex; width: 100%; margin-bottom: 12px; }
+.wt-range button { flex: 1; padding-inline: 4px; }
+.wt-stats { grid-template-columns: repeat(3, 1fr); margin-bottom: 10px; }
+.wt-stats b, .wt-diff, .wt-num { font-variant-numeric: tabular-nums; }
+.wt-stats b.good, .wt-diff.good { color: var(--mint); }
+.wt-big .goal { stroke: var(--mint); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.wt-big .goal-t { fill: var(--mint); font-weight: 700; }
+.lg-goal { width: 16px; height: 0; border-top: 2px dashed var(--mint); }
+.wt-facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+.wt-facts b { color: var(--ink); }
+.wt-sec { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
+.wt-sec .school-sub { margin-top: 0; }
+.wt-weeks .row, .wt-entries .row { gap: 12px; padding-block: 8px; }
+.wt-num { min-width: 48px; text-align: right; }
+.wt-diff { min-width: 44px; text-align: right; font-size: 13px; color: var(--muted); }
+
 /* Foldable, reorderable cards */
 .fold { position: relative; display: flex; flex-direction: column; }
 .fold:not(:has(.card)) { display: none; }

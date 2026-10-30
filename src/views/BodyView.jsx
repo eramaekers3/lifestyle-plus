@@ -14,6 +14,7 @@ import MuscleIcon from '../components/MuscleIcon.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import CardStack from '../components/CardStack.jsx';
 import SleepCard from '../components/SleepCard.jsx';
+import WeightSheet from '../components/WeightSheet.jsx';
 import { weekStart } from '../lib/dates.js';
 
 const DRAFT_ID = idFor('draft-workout');
@@ -39,6 +40,7 @@ export default function BodyView() {
   const exercises = [...new Set(workouts.flatMap((w) => w.sets.map((s) => s.ex)))];
 
   const [lbs, setLbs] = useState('');
+  const [weightOpen, setWeightOpen] = useState(false);
   const logWeight = (e) => {
     e.preventDefault();
     if (!lbs) return;
@@ -67,6 +69,7 @@ export default function BodyView() {
             node: (
               <section className="card" aria-labelledby="wt-h">
         <div className="card-head"><h2 id="wt-h">Weight</h2>{last && <span className="meta">{last.lbs.toFixed(1)} lb</span>}</div>
+        <button className="sl-open wt-open" onClick={() => setWeightOpen(true)} aria-label="Open weight in detail">
         <div className="hero-row">
           <div>
             <div className="label">Latest</div>
@@ -90,6 +93,8 @@ export default function BodyView() {
           <span><i className="lg-dot" aria-hidden="true" /> a day’s weigh-in</span>
           <span><i className="lg-line" aria-hidden="true" /> 7-day average (evens out water swings)</span>
         </p>
+        </button>
+        {weightOpen && <WeightSheet onClose={() => setWeightOpen(false)} />}
         <form className="inline" onSubmit={logWeight}>
           <input id="lbs" className="input" type="number" inputMode="decimal" step="0.1" min="50" max="600" value={lbs} onChange={(e) => setLbs(e.target.value)} placeholder="Today’s weight (lb)" />
           <button className="btn">Log</button>
