@@ -36,7 +36,42 @@ export function readDate(raw) {
 /** A skipped line with every digit masked, so logs show its shape but no health values. */
 export const lineShape = (line) => String(line).slice(0, 120).replace(/\d/g, '9');
 
-/** Returns { days: {date: {steps, sleepMin}}, weights: {date: lbs}, workouts: [...], counts } */
+/** Minutes after local midnight, read from the phone's own wall clock in the date text. */
+function wallMin(raw, ms) {
+  const m = /T(\d{2}):(\d{2})/.exec(String(raw || ''));
+  if (m) return +m[1] * 60 + +m[2];
+  const d = new Date(ms);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/** Which sleep stage a sample is, from Apple's value text ("Core", "Deep", "REM", "Asleep", "In Bed", "Awake"). */
+export function sleepStage(v) {
+  const t = String(v || '').toLowerCase();
+  if (/bed/.test(t)) return 'inbed';
+  if (/awake/.test(t)) return 'awake';
+  if (/deep/.test(t)) return 'deep';
+  if (/rem/.test(t)) return 'rem';
+  if (/core|light/.test(t)) return 'core';
+  return 'asleep';
+}
+
+/** Total minutes covered by a set of [start, end] ms ranges, counting overlaps once. */
+function unionMin(parts) {
+  if (!parts.length) return 0;
+  const p = [...parts].sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let [cs, ce] = p[0];
+  for (const [s, e] of p.slice(1)) {
+    if (s <= ce) ce = Math.max(ce, e);
+    else {
+      total += ce - cs;
+      [cs, ce] = [s, e];
+    }
+  }
+  return Math.round((total + ce - cs) / 60000);
+}
+
+/** Returns { days: {date: {steps, sleepMin, bedMin, wakeMin, stages}}, weights: {date: lbs}, workouts: [...], counts } */
 export function parseHealthLines(text) {
   const lines = String(text || '')
     .split(/\r?\n/)
@@ -94,13 +129,20 @@ export function parseHealthLines(text) {
       if (!prev || sd.ms > prev.at) weights[d] = { lbs: Math.round(v * 10) / 10, at: sd.ms };
       counts.weight++;
     } else if (m === 'sleep') {
-      // Count time asleep only: skip "In Bed" and "Awake" samples.
-      if (/bed|awake/i.test(value || '')) continue;
-      const s = sd.ms;
+      // Asleep time counts toward the total; "Awake" is kept to show restlessness; "In Bed" is ignored.
+      const stage = sleepStage(value);
+      if (stage === 'inbed') continue;
+      const st = sd.ms;
       const e = ed.ms;
       const wake = ed.date;
-      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) { skip(line); continue; }
-      (sleep[wake] = sleep[wake] || []).push([s, e]);
+      if (!Number.isFinite(st) || !Number.isFinite(e) || e <= st) { skip(line); continue; }
+      const n = (sleep[wake] = sleep[wake] || { parts: [], stages: {}, bed: null, end: null });
+      (n.stages[stage] = n.stages[stage] || []).push([st, e]);
+      if (stage !== 'awake') {
+        n.parts.push([st, e]);
+        if (!n.bed || st < n.bed.ms) n.bed = { ms: st, min: wallMin(start, st) };
+        if (!n.end || e > n.end.ms) n.end = { ms: e, min: wallMin(end, e) };
+      }
       counts.sleep++;
     } else if (m === 'workout') {
       const s = sd.ms;
@@ -119,34 +161,37 @@ export function parseHealthLines(text) {
     steps[d] = (steps[d] || 0) + Math.max(...Object.values(bySource));
   }
 
-  // Merge overlapping sleep pieces (iPhone and Apple Watch can both record the same night).
-  const sleepMin = {};
-  for (const [date, parts] of Object.entries(sleep)) {
-    parts.sort((a, b) => a[0] - b[0]);
-    let total = 0;
-    let [cs, ce] = parts[0];
-    for (const [s, e] of parts.slice(1)) {
-      if (s <= ce) ce = Math.max(ce, e);
-      else {
-        total += ce - cs;
-        [cs, ce] = [s, e];
-      }
-    }
-    total += ce - cs;
-    sleepMin[date] = Math.round(total / 60000);
+  // Each night (by wake-up date): time asleep, counting iPhone and Apple Watch overlap once,
+  // bedtime and wake time on the phone's clock, and minutes in each stage.
+  const nights = {};
+  for (const [date, n] of Object.entries(sleep)) {
+    if (!n.parts.length) continue;
+    const stages = {};
+    for (const [k, parts] of Object.entries(n.stages)) stages[k] = unionMin(parts);
+    // With Apple Watch stages, they're the record (like the Health app); a phone's plain "Asleep"
+    // sample would paper over the times you woke up.
+    const staged = ['core', 'deep', 'rem'].flatMap((k) => n.stages[k] || []);
+    const asleep = staged.length ? staged : n.parts;
+    if (staged.length) delete stages.asleep;
+    const first = Math.min(...asleep.map((x) => x[0]));
+    const last = Math.max(...asleep.map((x) => x[1]));
+    const bed = n.bed.ms === first ? n.bed.min : n.bed.min + Math.round((first - n.bed.ms) / 60000);
+    const wake = n.end.ms === last ? n.end.min : n.end.min - Math.round((n.end.ms - last) / 60000);
+    nights[date] = { sleepMin: unionMin(asleep), bedMin: (bed + 1440) % 1440, wakeMin: (wake + 1440) % 1440, stages };
   }
-
   const days = {};
   for (const [d, v] of Object.entries(steps)) (days[d] = days[d] || {}).steps = Math.round(v);
-  for (const [d, v] of Object.entries(sleepMin)) (days[d] = days[d] || {}).sleepMin = v;
+  for (const [d, v] of Object.entries(nights)) Object.assign((days[d] = days[d] || {}), v);
 
   // The oldest day in an upload is usually only partly covered (a "last 2 days" window starts
   // mid-day), so its step count is a floor, not the day's total. See toRecords.
   const stepDays = Object.keys(steps).sort();
+  const sleepDays = Object.keys(nights).sort();
 
   return {
     days,
     stepsEdge: stepDays.length > 1 ? stepDays[0] : null,
+    sleepEdge: sleepDays.length > 1 ? sleepDays[0] : null,
     weights: Object.fromEntries(Object.entries(weights).map(([d, w]) => [d, w.lbs])),
     workouts,
     counts,
@@ -164,6 +209,10 @@ export function toRecords(parsed, existing = {}) {
     const data = { ...old, ...v, id, date };
     // A partly covered oldest day never lowers a total saved by an earlier, fuller upload.
     if (date === parsed.stepsEdge && old.steps > (v.steps || 0)) data.steps = old.steps;
+    // Same for the oldest night: a window that starts mid-night only caught the end of it.
+    if (date === parsed.sleepEdge && old.sleepMin > (v.sleepMin || 0)) {
+      Object.assign(data, { sleepMin: old.sleepMin, bedMin: old.bedMin, wakeMin: old.wakeMin, stages: old.stages });
+    }
     rows.push({ id, kind: 'health', data, updated_at: now, deleted: false });
   }
   for (const [date, lbs] of Object.entries(parsed.weights)) {

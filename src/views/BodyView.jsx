@@ -13,6 +13,7 @@ import { GROUPS } from '../lib/exercises.js';
 import MuscleIcon from '../components/MuscleIcon.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import CardStack from '../components/CardStack.jsx';
+import SleepCard from '../components/SleepCard.jsx';
 import { weekStart } from '../lib/dates.js';
 
 const DRAFT_ID = idFor('draft-workout');
@@ -96,6 +97,7 @@ export default function BodyView() {
       </section>
             ),
           },
+          { id: 'sleep', title: 'Sleep', node: <SleepCard /> },
           { id: 'health', title: 'Apple Health', node: <HealthCard today={today} /> },
           {
             id: 'recent',

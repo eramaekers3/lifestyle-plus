@@ -683,6 +683,29 @@ form.inline .num-in { flex: 0 1 92px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--c); vertical-align: -1px; }
 
+/* Sleep */
+.sleep-card { --deep: #5b6cff; --core: #7cc4ff; --rem: #c89bff; --awake: #ff8a7a; }
+.sl-window { margin-top: 2px; text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.sl-goal { margin-top: 2px; text-transform: none; letter-spacing: 0; }
+.sl-goal.ok { color: var(--mint); }
+.sl-chart .sl-bar { fill: var(--core); }
+.sl-chart .sl-bar.good { fill: var(--mint); }
+.sl-chart .sl-bar.short { fill: var(--awake); }
+.sl-chart .sl-none { fill: none; stroke: var(--line); stroke-dasharray: 3 4; }
+.sl-chart .sl-hrs { fill: var(--ink); font-weight: 700; }
+.sl-chart .sl-today { fill: var(--sun); font-weight: 800; }
+.sl-facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 2px; font-size: 13px; color: var(--muted); }
+.sl-facts b { color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 3px; }
+.sl-stages { margin-top: 10px; }
+.sl-stack { display: flex; gap: 3px; height: 14px; border-radius: 7px; overflow: hidden; margin: 4px 0 10px; }
+.sl-stack i { min-width: 4px; }
+.st-deep { background: var(--deep); } .st-core { background: var(--core); } .st-rem { background: var(--rem); } .st-awake { background: var(--awake); }
+.sl-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; font-size: 13.5px; }
+.sl-legend li { display: flex; align-items: center; gap: 7px; }
+.sl-legend li i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.sl-legend b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sl-legend .pct { width: 34px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* Foldable, reorderable cards */
 .fold { position: relative; display: flex; flex-direction: column; }
 .fold:not(:has(.card)) { display: none; }
