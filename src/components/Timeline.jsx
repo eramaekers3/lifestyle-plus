@@ -1,30 +1,17 @@
-import { useEffect, useRef } from 'react';
 import { layoutBlocks } from '../lib/model.js';
 import { minToLabel, nowMin, todayISO, fmtDur } from '../lib/dates.js';
 import { useNow } from './ui.jsx';
 import { toast } from '../lib/toast.js';
 
-const PX = 1.1; // pixels per minute (66px per hour)
+const PX = 0.6; // pixels per minute (36px per hour) — the whole day fits without scrolling
 
 /** A day of time blocks. Tap empty space to add a block there; tap a block to edit it. */
 export default function Timeline({ date, blocks, events = [], tasksById, dayStart, dayEnd, onAdd, onEdit }) {
   const start = dayStart * 60;
   const end = dayEnd * 60;
-  const ref = useRef(null);
   useNow(30000);
   const isToday = date === todayISO();
   const now = nowMin();
-
-  // Open scrolled to now (today) or to the first block.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const all = [...blocks, ...events];
-    const first = all.length ? Math.min(...all.map((b) => b.start)) : 9 * 60;
-    const target = isToday ? now - 75 : first - 30;
-    el.scrollTop = Math.max(0, (target - start) * PX);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
 
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
@@ -38,7 +25,7 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
   const visible = [...blocks, ...events].filter((b) => b.end > start && b.start < end);
 
   return (
-    <div className="tl-scroll" ref={ref}>
+    <div className="tl-wrap">
       <div className="tl" style={{ height: (end - start) * PX }}>
         {hours.map((h) => (
           <div key={h} className="tl-hour" style={{ top: (h * 60 - start) * PX }}>
@@ -49,15 +36,16 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
           {layoutBlocks(visible).map(({ b, col, n }) => {
             const s = Math.max(b.start, start);
             const e = Math.min(b.end, end);
-            const h = Math.max(22, (e - s) * PX - 3);
+            const h = Math.max(17, (e - s) * PX - 2);
             const task = b.taskId && tasksById[b.taskId];
-            const short = e - s < 40;
+            const short = h < 32;
+            const tiny = h < 22;
             const past = isToday && b.end <= now;
             if (b.cal) {
               return (
                 <button
                   key={b.id}
-                  className={`blk cal t-cal${short ? ' short' : ''}${past ? ' past' : ''}`}
+                  className={`blk cal t-cal${short ? ' short' : ''}${tiny ? ' tiny' : ''}${past ? ' past' : ''}`}
                   style={{
                     top: (s - start) * PX + 1,
                     height: h,
@@ -82,7 +70,7 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
             return (
               <button
                 key={b.id}
-                className={`blk t-${b.type}${short ? ' short' : ''}${past ? ' past' : ''}${isToday && b.start <= now && now < b.end ? ' live' : ''}`}
+                className={`blk t-${b.type}${short ? ' short' : ''}${tiny ? ' tiny' : ''}${past ? ' past' : ''}${isToday && b.start <= now && now < b.end ? ' live' : ''}`}
                 style={{
                   top: (s - start) * PX + 1,
                   height: h,
@@ -100,7 +88,7 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
                   {minToLabel(b.start)}–{minToLabel(b.end)}
                   {!short && ` · ${fmtDur(b.end - b.start)}`}
                 </span>
-                {task && !short && h > 58 && (
+                {task && !short && h > 50 && (
                   <span className="b-task">
                     {task.status === 'done' ? '✓ ' : '↳ '}
                     {task.title}

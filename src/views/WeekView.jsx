@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { put, useKind, useRecord, useSettings } from '../store.js';
 import { idFor } from '../lib/ids.js';
-import { addDays, fmt, fmtDur, iso, todayISO, weekStart } from '../lib/dates.js';
+import { addDays, fmt, fmtDur, iso, nowMin, todayISO, weekStart } from '../lib/dates.js';
 import { BLOCK_TYPES } from '../lib/model.js';
 import { useCalendarDays, useCalendarStatus } from '../lib/calendar.js';
 import { useSchool, overdue, markPastDone } from '../lib/canvas.js';
 import { toast } from '../lib/toast.js';
 import SchoolList from '../components/SchoolList.jsx';
+import BlockSheet from '../components/BlockSheet.jsx';
+import { Icon } from '../components/ui.jsx';
 
 export default function WeekView({ date, openDay }) {
   const ws = weekStart(date);
@@ -19,6 +21,7 @@ export default function WeekView({ date, openDay }) {
   const today = todayISO();
   const calDays = useCalendarDays();
   const cals = useCalendarStatus().filter((c) => c.events);
+  const [edit, setEdit] = useState(null);
 
   const byDay = useMemo(() => {
     const m = {};
@@ -34,6 +37,15 @@ export default function WeekView({ date, openDay }) {
 
   const s = settings.dayStart * 60;
   const span = (settings.dayEnd - settings.dayStart) * 60;
+
+  // New block on a day: right after that day's last block, else now (today) or 9am.
+  const addBlock = (d) => {
+    const mine = byDay[d];
+    let start = d === today ? Math.ceil((nowMin() + 1) / 15) * 15 : 9 * 60;
+    if (mine.length) start = Math.max(...mine.map((b) => b.end));
+    start = Math.min(1380, Math.max(s, start));
+    setEdit({ date: d, start, end: Math.min(1440, start + 60), type: 'deep', title: '', taskId: '' });
+  };
 
   return (
     <>
@@ -65,7 +77,7 @@ export default function WeekView({ date, openDay }) {
             const list = [...byDay[d], ...((calDays[d] && calDays[d].timed) || [])];
             const total = byDay[d].reduce((a, b) => a + b.end - b.start, 0);
             return (
-              <li key={d}>
+              <li key={d} className="wk-li">
                 <button className={`wk-row${d === today ? ' is-today' : ''}`} onClick={() => openDay(d)}>
                   <span className="wk-day">
                     <b>{fmt(d, { weekday: 'short' })}</b>
@@ -86,6 +98,9 @@ export default function WeekView({ date, openDay }) {
                   </span>
                   <span className="wk-hrs">{total ? fmtDur(total) : 'Plan'}</span>
                 </button>
+                <button className="mini wk-add" onClick={() => addBlock(d)} aria-label={`Add a block on ${fmt(d, { weekday: 'long' })}`}>
+                  <Icon name="plus" size={14} />
+                </button>
               </li>
             );
           })}
@@ -105,6 +120,8 @@ export default function WeekView({ date, openDay }) {
           ))}
         </div>
       </section>
+
+      {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
     </>
   );
 }
