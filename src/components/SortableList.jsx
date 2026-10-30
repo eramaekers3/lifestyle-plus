@@ -32,8 +32,9 @@ export default function SortableList({ items, onReorder, className = 'rows', row
         continue;
       }
       el.style.transform = '';
-      const b = before && before.get(id);
-      if (b === undefined) continue;
+      // Only after a reorder (before is set). On ordinary re-renders (sync, edits) nothing moves.
+      if (!before || !before.has(id)) continue;
+      const b = before.get(id);
       const dy = b - home(el).top;
       if (!dy) continue;
       el.style.transition = 'none';

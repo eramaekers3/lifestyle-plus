@@ -127,7 +127,7 @@ export function Sheet({ title, onClose, children }) {
 
 /* ---------- Split-flap clock ---------- */
 function Flap({ ch }) {
-  const [shown, setShown] = useState(' ');
+  const [shown, setShown] = useState(ch);
   const [from, setFrom] = useState(null);
   useEffect(() => {
     if (ch === shown) return;

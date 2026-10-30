@@ -82,6 +82,15 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  // For a moment after a page appears, things that are already checked or selected don't replay
+  // their check-off animations.
+  const [settling, setSettling] = useState(true);
+  useEffect(() => {
+    setSettling(true);
+    const t = setTimeout(() => setSettling(false), 700);
+    return () => clearTimeout(t);
+  }, [tab]);
+
   const go = (id) => {
     if (id === tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
     window.location.hash = id;
@@ -98,7 +107,7 @@ export default function App() {
   }[sync.state];
 
   return (
-    <div className="app">
+    <div className={`app${settling ? ' settling' : ''}`}>
       <header className="topbar">
         <div className="brand" aria-label="lifestyle+">
           <span aria-hidden="true">lifestyle</span>

@@ -103,8 +103,9 @@ code { font-size: 0.92em; background: var(--raised); padding: 1px 5px; border-ra
   color: var(--muted); font-size: 14px;
 }
 
-.view, .subview { display: flex; flex-direction: column; gap: 18px; animation: stepIn 0.32s var(--ease-out) both; }
-.subview { animation-duration: 0.26s; }
+.view, .subview { display: flex; flex-direction: column; gap: 18px; }
+.view { animation: stepIn 0.32s var(--ease-out) both; }
+.subview.swap { animation: stepIn 0.26s var(--ease-out) both; }
 
 /* ---------- Tab bar + capture button ---------- */
 .tabbar {
@@ -761,6 +762,12 @@ form.inline .num-in { flex: 0 1 92px; }
 @keyframes fade { from { opacity: 0; } }
 @keyframes sheetUp { from { transform: translateY(40px); opacity: 0; } }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* While a page is appearing, state animations (stamps, hops) for things already checked or selected
+   are fast-forwarded to their end, so they don't replay. (A negative delay, not "animation: none":
+   switching an animation off and back on would restart it.) */
+.settling .check, .settling .habit-chip .tick, .settling .day, .settling .slide-check .knob,
+.settling .seg button, .settling .swatch, .settling .test-tag { animation-delay: -10s !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

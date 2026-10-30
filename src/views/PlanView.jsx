@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { addDays, todayISO, weekStart } from '../lib/dates.js';
 import { Icon } from '../components/ui.jsx';
 import DayView from './DayView.jsx';
@@ -9,6 +9,13 @@ export default function PlanView() {
   const [date, setDate] = useState(todayISO());
   const step = (n) => setDate((d) => addDays(d, mode === 'day' ? n : 7 * n));
   const today = todayISO();
+  const first = useRef(true);
+  const viewKey = mode + (mode === 'day' ? date : weekStart(date));
+  const prevKey = useRef(viewKey);
+  if (prevKey.current !== viewKey) {
+    prevKey.current = viewKey;
+    first.current = false;
+  }
   const atToday = mode === 'day' ? date === today : weekStart(date) === weekStart(today);
 
   return (
@@ -30,7 +37,7 @@ export default function PlanView() {
           </button>
         </div>
       </div>
-      <div className="subview" key={mode + (mode === 'day' ? date : weekStart(date))}>
+      <div className={`subview${first.current ? '' : ' swap'}`} key={viewKey}>
         {mode === 'day' ? (
           <DayView date={date} />
         ) : (
