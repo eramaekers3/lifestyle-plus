@@ -16,8 +16,8 @@ import { idFor } from './ids.js';
 import { addDays, todayISO } from './dates.js';
 
 export const CADENCES = [
-  { id: 'weekly', label: 'Weekly', every: 'every week', days: 7, min: 5, max: 9, need: 3 },
-  { id: 'biweekly', label: 'Every 2 weeks', every: 'every 2 weeks', days: 14, min: 12, max: 16, need: 3 },
+  { id: 'weekly', label: 'Weekly', every: 'every week', days: 7, min: 6, max: 8, need: 4, strict: true },
+  { id: 'biweekly', label: 'Every 2 weeks', every: 'every 2 weeks', days: 14, min: 12, max: 16, need: 4, strict: true },
   { id: 'monthly', label: 'Monthly', every: 'every month', days: 30.44, min: 26, max: 35, need: 2 },
   { id: 'quarterly', label: 'Every 3 months', every: 'every 3 months', days: 91.3, min: 80, max: 100, need: 2 },
   { id: 'yearly', label: 'Yearly', every: 'every year', days: 365.25, min: 350, max: 380, need: 2 },
@@ -40,13 +40,15 @@ export function placeKey(t) {
 }
 
 const close = (a, b) => Math.abs(a - b) <= Math.max(0.25, 0.02 * Math.max(a, b));
+// Paychecks move with hours worked, so income from one place groups even when amounts differ a lot.
+const closePay = (a, b) => Math.abs(a - b) <= 0.4 * Math.max(a, b);
 
 /** Groups amounts that are about the same. */
-function amountGroups(txns) {
+function amountGroups(txns, match = close) {
   const groups = [];
   for (const t of [...txns].sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount))) {
     const v = Math.abs(t.amount);
-    const g = groups.find((g) => close(g.avg, v));
+    const g = groups.find((g) => match(g.avg, v));
     if (g) {
       g.txns.push(t);
       g.avg = g.txns.reduce((s, x) => s + Math.abs(x.amount), 0) / g.txns.length;
@@ -63,9 +65,10 @@ function cadenceOf(dates) {
   const mid = median(gaps);
   for (const c of CADENCES) {
     if (mid < c.min || mid > c.max || days.length < c.need) continue;
-    // Most gaps should fit; one skipped period (a gap of about twice the rhythm) is allowed.
-    const fits = gaps.filter((g) => (g >= c.min && g <= c.max) || (g >= c.min * 2 && g <= c.max * 2)).length;
-    if (fits / gaps.length >= 0.75) return c;
+    // Most gaps should fit. Monthly and longer may skip one period (a gap of about twice the rhythm);
+    // weekly and every-2-weeks can't, or the two get mixed up with each other.
+    const fits = gaps.filter((g) => (g >= c.min && g <= c.max) || (!c.strict && g >= c.min * 2 && g <= c.max * 2)).length;
+    if (fits / gaps.length >= (c.strict ? 0.85 : 0.75)) return c;
   }
   return null;
 }
@@ -99,7 +102,8 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
   for (const [pk, list] of places) {
     if (list.length < 2) continue;
     const runs = [];
-    for (const g of amountGroups(list)) {
+    const isPay = pk.startsWith('in:') && list.every((t) => t.kind === 'income');
+    for (const g of amountGroups(list, isPay ? closePay : close)) {
       const c = cadenceOf(g.map((t) => t.date));
       if (c) runs.push({ c, txns: g });
     }
@@ -123,7 +127,9 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
       const key = `${pk}:${c.id}`;
       const state = decided.get(key) || null;
       if (state === 'no') continue;
-      const amount = Math.abs(last.amount);
+      // Pay that varies: use the average of the last three.
+      const recent = ts.slice(-3);
+      const amount = isPay ? Math.round((recent.reduce((a, t) => a + Math.abs(t.amount), 0) / recent.length) * 100) / 100 : Math.abs(last.amount);
       const next = nextDate(last.date, c);
       // Late by more than a quarter of its rhythm (at least 5 days): probably cancelled.
       const grace = Math.max(5, Math.round(c.days * 0.25));
@@ -134,7 +140,8 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
         dir: pk.startsWith('in:') ? 'in' : 'out',
         name: last.merchant || last.name,
         amount,
-        oldAmount: r.oldAmount && !close(r.oldAmount, amount) ? r.oldAmount : null,
+        varies: isPay && ts.some((t) => !close(Math.abs(t.amount), amount)),
+        oldAmount: !isPay && r.oldAmount && !close(r.oldAmount, amount) ? r.oldAmount : null,
         changedOn: r.changedOn || null,
         cadence: c,
         perMonth: Math.round(((amount * 30.44) / c.days) * 100) / 100,

@@ -343,9 +343,9 @@ function Income({ f, onTxn }) {
         </div>
         {rate !== null && (
           <div className="right">
-            <div className="label">Kept, last 3 months</div>
-            <div className={`delta ${rate >= 0 ? 'pos' : 'neg'}`}>{rate}%</div>
-            <div className="label mo-cmp">of income not spent or given</div>
+            <div className="label">Last 3 months</div>
+            <div className={`delta ${rate >= 0 ? 'pos' : 'neg'}`}>{rate >= 0 ? `${rate}% kept` : `${money(out3 - i3)} short`}</div>
+            <div className="label mo-cmp">{rate >= 0 ? 'of income not spent or given' : `spent and gave ${money(out3)} on ${money(i3)} income`}</div>
           </div>
         )}
       </div>
@@ -386,7 +386,7 @@ function Income({ f, onTxn }) {
                   {r.name}
                   <span className="task-meta"><span>{r.cadence.every}</span><span>next {fmt(r.next, { month: 'short', day: 'numeric' })}</span></span>
                 </span>
-                <span className="hold-v"><b className="pos">+{money(r.amount, true)}</b><span>≈ {money(r.perMonth)}/mo</span></span>
+                <span className="hold-v"><b className="pos">{r.varies ? '~' : '+'}{money(r.amount, r.varies ? false : true)}</b><span>≈ {money(r.perMonth)}/mo</span></span>
               </li>
             ))}
           </ul>
@@ -404,9 +404,12 @@ function Income({ f, onTxn }) {
 function Subscriptions({ f, onSub }) {
   const [showOld, setShowOld] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const outs = f.recurring.filter((r) => r.dir === 'out');
+  // Only things you buy count as subscriptions; repeating investing and giving are listed apart.
+  const outs = f.recurring.filter((r) => r.dir === 'out' && r.kind === 'spend');
   const active = outs.filter((r) => r.active);
   const stopped = outs.filter((r) => !r.active);
+  const other = f.recurring.filter((r) => r.dir === 'out' && r.kind !== 'spend' && r.active);
+  const otherMonth = other.reduce((s, r) => s + r.perMonth, 0);
   const perMonth = active.reduce((s, r) => s + r.perMonth, 0);
   const soon = active.filter((r) => r.next <= addDays(todayISO(), 7));
   const soonTotal = soon.reduce((s, r) => s + r.amount, 0);
@@ -433,7 +436,7 @@ function Subscriptions({ f, onSub }) {
         <h2 id="sb-h">Subscriptions</h2>
         <span className="meta">{money(perMonth)}/mo</span>
       </div>
-      {!outs.length ? (
+      {!outs.length && !other.length ? (
         <p className="muted small">Nothing repeating yet. When the same place charges about the same amount on a steady schedule (twice for monthly, three times for weekly), it shows up here.</p>
       ) : (
         <>
@@ -443,12 +446,19 @@ function Subscriptions({ f, onSub }) {
             <div><b>{money(soonTotal)}</b><span>next 7 days</span></div>
           </div>
           <ul className="rows txn-list">{active.map((r) => <Row key={r.id} r={r} />)}</ul>
+          {!active.length && <p className="muted small">No active subscriptions right now.</p>}
           {stopped.length > 0 && (
             <>
               <button className="mini" onClick={() => setShowOld(!showOld)}>{showOld ? 'Hide' : 'Show'} {stopped.length} that stopped</button>
               {showOld && <ul className="rows txn-list muted-rows">{stopped.map((r) => <Row key={r.id} r={r} />)}</ul>}
             </>
           )}
+        </>
+      )}
+      {other.length > 0 && (
+        <>
+          <p className="school-sub">Also repeats · not counted above · {money(otherMonth)}/mo</p>
+          <ul className="rows txn-list">{other.map((r) => <Row key={r.id} r={r} />)}</ul>
         </>
       )}
       {f.hiddenRecurring.length > 0 && (
