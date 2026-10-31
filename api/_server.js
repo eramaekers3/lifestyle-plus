@@ -1,4 +1,5 @@
 // Shared setup for the server routes in api/.
+import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 
@@ -19,6 +20,19 @@ export async function userFor(db, token) {
   if (!token) return null;
   const { data, error } = await db.auth.getUser(token);
   return (!error && data && data.user) || null;
+}
+
+/**
+ * The user for a lifestyle+ key (made in Settings → Apple Health; also used by the Siri Shortcut).
+ * Only a hash of each key is stored. Returns { userId, tokenHash } or { error }.
+ */
+export async function userForKey(db, token) {
+  if (!token) return { error: 'Missing your lifestyle+ key.' };
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const { data, error } = await db.from('health_tokens').select('user_id').eq('token_hash', tokenHash).maybeSingle();
+  if (error) return { error: 'Couldn’t check the key. Is the health_tokens table set up?' };
+  if (!data) return { error: 'That key isn’t valid. Make a new one in lifestyle+ Settings → Apple Health.' };
+  return { userId: data.user_id, tokenHash };
 }
 
 /* ---------- Push notifications ---------- */

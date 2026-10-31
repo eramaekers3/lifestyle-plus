@@ -2,8 +2,7 @@
 // Receives Apple Health numbers from your iPhone Shortcut and saves them to your account.
 //   Header:  Authorization: Bearer <your lifestyle+ health key>
 //   Body:    { "lines": "steps|...\nweight|...\n..." }   (see api/_health-core.js for the line format)
-import { createHash } from 'node:crypto';
-import { bearer, hasDb, serverDb } from './_server.js';
+import { bearer, hasDb, serverDb, userForKey } from './_server.js';
 import { parseHealthLines, toRecords } from './_health-core.js';
 
 
@@ -21,14 +20,10 @@ export default async function handler(req, res) {
   }
 
   const db = serverDb();
-  const tokenHash = createHash('sha256').update(token).digest('hex');
-  const { data: keyRow, error: keyErr } = await db
-    .from('health_tokens')
-    .select('user_id')
-    .eq('token_hash', tokenHash)
-    .maybeSingle();
-  if (keyErr) return res.status(500).json({ error: 'Couldn’t check the key. Is the health_tokens table set up?' });
-  if (!keyRow) return res.status(401).json({ error: 'That health key isn’t valid. Create a new one in lifestyle+ Settings.' });
+  const who = await userForKey(db, token);
+  if (who.error) return res.status(401).json({ error: who.error });
+  const keyRow = { user_id: who.userId };
+  const { tokenHash } = who;
 
   let body = req.body;
   if (typeof body === 'string') {

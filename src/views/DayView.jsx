@@ -8,6 +8,7 @@ import { FlipClock, Icon, Sheet } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';
 import Timeline from '../components/Timeline.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
+import AutoPlanSheet from '../components/AutoPlanSheet.jsx';
 import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
@@ -23,6 +24,7 @@ export default function DayView({ date }) {
   const tasks = useKind('task');
   const hasBanks = useKind('fin_account').length > 0;
   const [edit, setEdit] = useState(null);
+  const [autoPlan, setAutoPlan] = useState(false);
   const calDays = useCalendarDays();
   const cal = calDays[date] || { timed: [], allDay: [] };
   const isToday = date === todayISO();
@@ -79,6 +81,9 @@ export default function DayView({ date }) {
             {total ? `${fmtDur(total)} planned · ${fmtDur(deep)} deep` : 'Nothing planned yet'}
             {cal.timed.length > 0 && ` · ${cal.timed.length} event${cal.timed.length === 1 ? '' : 's'}`}
           </span>
+          <button className="mini add-blk" onClick={() => setAutoPlan(true)} disabled={date < todayISO()}>
+            Auto-plan
+          </button>
           <button className="mini sun add-blk" onClick={newBlock}>
             <Icon name="plus" size={14} /> Block
           </button>
@@ -119,6 +124,7 @@ export default function DayView({ date }) {
       />
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
+      {autoPlan && <AutoPlanSheet date={date} blocks={blocks} events={cal.timed} onClose={() => setAutoPlan(false)} />}
     </>
   );
 }

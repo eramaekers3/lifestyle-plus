@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ACCENTS, FONTS, loadAllFonts } from '../lib/theme.js';
 import { getHealthKeyInfo, createHealthKey, deleteHealthKey } from '../lib/health.js';
 import { parseStreaksExport, streaksToRecords } from '../lib/streaksImport.js';
-import { list, putMany } from '../store.js';
+import { list, putMany, recentlyDeleted } from '../store.js';
 import { Sheet, HeartMark } from './ui.jsx';
 import { useCategories, addCategory, removeCategory } from '../lib/model.js';
 import { HEART_COLORS, DEFAULT_HEART } from '../lib/logo.js';
@@ -15,6 +15,7 @@ import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCal
 import { enablePush, disablePush, sendTestPush, usePushState } from '../lib/push.js';
 import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor, saveCanvasToken, removeCanvasToken, refreshSubmissions } from '../lib/canvas.js';
 import { DEFAULT_NOTIFY } from '../../api/_push-core.js';
+import { settingsVersions, recentChanges, restoreVersion, settingsSummary, kindName, labelOf, exportBackup } from '../lib/history.js';
 
 export default function SettingsSheet({ onClose }) {
   const s = useSettings();
@@ -58,6 +59,8 @@ export default function SettingsSheet({ onClose }) {
 
       <HealthSection signedIn={!!st.email} />
 
+      <SiriSection signedIn={!!st.email} />
+
       <section className="set-sec">
         <h3>Stack</h3>
         <p className="muted small">How many tasks can sit in Now at once. Fewer means more focus.</p>
@@ -89,6 +92,8 @@ export default function SettingsSheet({ onClose }) {
       <CategoriesSection />
 
       <StreaksImport />
+
+      <HistorySection signedIn={!!st.email} />
 
       <section className="set-sec">
         <h3>Data</h3>
@@ -692,6 +697,157 @@ function HealthSection({ signedIn }) {
             )}
           </div>
           {err && <p className="err">{err}</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
+const when = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+function HistorySection({ signedIn }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState(null); // { settings, changes } once loaded
+  const [err, setErr] = useState('');
+  const [confirm, setConfirm] = useState(null); // key of the version waiting for a second tap
+  const [tick, setTick] = useState(0); // bumps after a restore so the deleted list refreshes
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recentlyDeleted reads the store directly
+  const deleted = useMemo(() => (open ? recentlyDeleted() : []), [open, tick]);
+
+  useEffect(() => {
+    if (!open || !signedIn) return;
+    let live = true;
+    setErr('');
+    Promise.all([settingsVersions(), recentChanges()])
+      .then(([settings, changes]) => live && setData({ settings, changes }))
+      .catch((e) => live && setErr(e.message));
+    return () => {
+      live = false;
+    };
+  }, [open, signedIn]);
+
+  // One tap arms it, a second tap restores.
+  const restore = (key, v, msg) => {
+    if (confirm !== key) return setConfirm(key);
+    restoreVersion(v);
+    setConfirm(null);
+    setTick((t) => t + 1);
+    toast(msg);
+  };
+  const btn = (key, v, msg) => (
+    <button className={`mini${confirm === key ? ' sun' : ''}`} onClick={() => restore(key, v, msg)}>
+      {confirm === key ? 'Tap to restore' : 'Restore'}
+    </button>
+  );
+
+  return (
+    <section className="set-sec">
+      <h3>History & backup</h3>
+      <p className="muted small">Put back deleted things or an earlier version of your settings, or save a backup file of everything.</p>
+      <div className="btn-row">
+        <button className="btn ghost" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide history' : 'Show history'}</button>
+        <button className="btn ghost" onClick={() => exportBackup().catch((e) => toast(e.message))}>Save a backup</button>
+      </div>
+      {open && (
+        <div className="history">
+          {signedIn && (
+            <>
+              <h4>Earlier settings</h4>
+              {err ? (
+                <p className="err">{err}</p>
+              ) : !data ? (
+                <p className="muted small">Loading…</p>
+              ) : data.settings.length === 0 ? (
+                <p className="muted small">No earlier versions yet. They’re kept from now on, for 90 days.</p>
+              ) : (
+                <ul className="hist-list">
+                  {data.settings.map((v) => (
+                    <li key={v.hid}>
+                      <span><b>{when(v.updated_at)}</b><span className="muted small">{settingsSummary(v.data)}</span></span>
+                      {btn(`s${v.hid}`, v, 'Settings restored')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+
+          <h4>Recently deleted</h4>
+          {deleted.length === 0 ? (
+            <p className="muted small">Nothing deleted.</p>
+          ) : (
+            <ul className="hist-list">
+              {deleted.map((r) => (
+                <li key={r.id}>
+                  <span><b>{labelOf(r.data)}</b><span className="muted small">{kindName(r.kind)} · deleted {when(r.updated_at)}</span></span>
+                  {btn(`d${r.id}`, r, `${kindName(r.kind)} restored`)}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {signedIn && data && data.changes.length > 0 && (
+            <>
+              <h4>Earlier versions</h4>
+              <ul className="hist-list">
+                {data.changes.map((v) => (
+                  <li key={v.hid}>
+                    <span><b>{labelOf(v.data)}</b><span className="muted small">{kindName(v.kind)}{v.deleted ? ' (deleted)' : ''} · as of {when(v.updated_at)}</span></span>
+                    {btn(`c${v.hid}`, { ...v, deleted: false }, `${kindName(v.kind)} put back`)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SiriSection({ signedIn }) {
+  const endpoint = `${window.location.origin}/api/capture`;
+  const [open, setOpen] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(endpoint);
+      toast('Address copied');
+    } catch {
+      toast('Press and hold the address to copy it');
+    }
+  };
+  return (
+    <section className="set-sec">
+      <h3>Siri</h3>
+      {!signedIn ? (
+        <p className="muted small">Sign in above first. Siri adds to your account, then it shows up here.</p>
+      ) : (
+        <>
+          <p className="muted small">
+            Say “Hey Siri, add to my stack” or “add to groceries” without opening the app. It’s an iPhone Shortcut that uses your
+            lifestyle+ key, the same one as Apple Health above (it’s in your Health Shortcut, or make a new key there).
+          </p>
+          <div className="btn-row">
+            <button className="btn ghost" onClick={copy}>Copy address</button>
+            <button className="btn ghost" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide steps' : 'How to set it up'}</button>
+          </div>
+          <p className="muted small">Address: <code>{endpoint}</code></p>
+          {open && (
+            <ol className="steps small">
+              <li>In the Shortcuts app, tap <b>+</b> and name the shortcut <b>Add to my stack</b>.</li>
+              <li>Add <b>Dictate Text</b>.</li>
+              <li>
+                Add <b>Get Contents of URL</b> with the address above. Tap the arrow: Method <b>POST</b>; under Headers add
+                <code> Authorization</code> = <code>Bearer </code> followed by your key; Request Body <b>JSON</b> with a Text field
+                <code> text</code> set to <b>Dictated Text</b>.
+              </li>
+              <li>Add <b>Speak Text</b> with <b>Contents of URL</b>, so Siri reads back what was added.</li>
+              <li>
+                For groceries, duplicate it, name the copy <b>Add to groceries</b>, and add a second Text field <code>to</code> ={' '}
+                <code>groceries</code>. “Milk, eggs and bread” adds three items.
+              </li>
+            </ol>
+          )}
         </>
       )}
     </section>

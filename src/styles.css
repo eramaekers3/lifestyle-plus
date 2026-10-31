@@ -1303,3 +1303,19 @@ form.inline .num-in { flex: 0 1 92px; }
 .wk-days button.today i { background: var(--coral); }
 .wk-days button.today { color: var(--ink); font-weight: 800; }
 .wk-days button.future i { background: var(--raised); }
+
+/* Settings → History & backup */
+.set-sec h4 { margin: 14px 0 6px; font: 700 13px var(--body); color: var(--ink); }
+.hist-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 280px; overflow-y: auto; }
+.hist-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.hist-list li > span { display: grid; gap: 2px; min-width: 0; }
+.hist-list li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-list .mini { flex: none; }
+
+/* Auto-plan sheet */
+.plan-list { list-style: none; margin: 10px 0 14px; padding: 0; display: grid; gap: 6px; }
+.plan-row { display: grid; grid-template-columns: auto 64px 1fr; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--raised); cursor: pointer; transition: opacity 0.2s; }
+.plan-row.off { opacity: 0.45; }
+.plan-row input { width: 20px; height: 20px; accent-color: var(--sun); }
+.plan-time, .plan-title { display: grid; gap: 2px; font-weight: 700; }
+.plan-time small, .plan-title small { font-weight: 500; font-size: 12px; color: var(--muted); }

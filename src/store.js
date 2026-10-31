@@ -105,6 +105,17 @@ export function useRecord(id) {
   return get(id);
 }
 
+/** Records deleted on any device (their data is kept), newest first. */
+export function recentlyDeleted(limit = 40) {
+  return Object.values(db.records)
+    .filter((r) => r.deleted && r.kind !== 'settings')
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .slice(0, limit);
+}
+
+/** Everything saved on this device, for a backup file. */
+export const allRecords = () => Object.values(db.records);
+
 /* ---------- Writing ---------- */
 
 // Writes one record and adds the kinds whose lists change to `kinds` (two if it changes kind).
