@@ -88,7 +88,7 @@ function nextDate(last, c) {
  * decisions: fin_sub records. Returns series, newest-first within active ones.
  */
 export function detectRecurring(txns, decisions = [], today = todayISO()) {
-  const decided = new Map(decisions.map((d) => [d.key, d.state]));
+  const decided = new Map(decisions.map((d) => [d.key, d]));
   const places = new Map();
   for (const t of txns) {
     if (t.pending || t.kind === 'transfer' || t.kind === 'ignore' || !t.amount) continue;
@@ -125,7 +125,8 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
       const ts = r.txns;
       const last = ts.at(-1);
       const key = `${pk}:${c.id}`;
-      const state = decided.get(key) || null;
+      const mine = decided.get(key) || {};
+      const state = mine.state || null;
       if (state === 'no') continue;
       // Pay that varies: use the average of the last three.
       const recent = ts.slice(-3);
@@ -153,6 +154,9 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
         active,
         sure: state === 'yes' || ts.length >= 3,
         confirmed: state === 'yes',
+        // Counts toward the subscription total: your choice, or by default only things you buy.
+        counted: typeof mine.count === 'boolean' ? mine.count : last.kind === 'spend',
+        countChosen: typeof mine.count === 'boolean',
         kind: last.kind,
         cat: last.cat,
         accountName: last.account && last.account.name,
@@ -163,8 +167,21 @@ export function detectRecurring(txns, decisions = [], today = todayISO()) {
   return out.sort((a, b) => b.active - a.active || a.next.localeCompare(b.next));
 }
 
-/** state: 'yes' (it's a subscription), 'no' (hide it), null (back to automatic). */
-export function decideRecurring(s, state) {
-  if (state) put('fin_sub', { id: s.id, key: s.key, name: s.name, state });
+function save(s, changes) {
+  const cur = { state: s.confirmed ? 'yes' : s.state || null, count: s.countChosen ? s.counted : undefined, ...changes };
+  const rec = { id: s.id, key: s.key, name: s.name };
+  if (cur.state) rec.state = cur.state;
+  if (typeof cur.count === 'boolean') rec.count = cur.count;
+  if (rec.state || 'count' in rec) put('fin_sub', rec);
   else remove(s.id);
+}
+
+/** state: 'yes' (it's a subscription), 'no' (hide it), null (back to automatic). Keeps the count choice. */
+export function decideRecurring(s, state) {
+  save(s, { state });
+}
+
+/** Whether it counts toward the subscription total. null goes back to the default. */
+export function setCounted(s, count) {
+  save(s, { count });
 }

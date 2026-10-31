@@ -8,7 +8,7 @@ import {
 import { toast } from '../lib/toast.js';
 import { Icon, Sheet } from '../components/ui.jsx';
 import CardStack from '../components/CardStack.jsx';
-import { decideRecurring } from '../lib/subscriptions.js';
+import { decideRecurring, setCounted } from '../lib/subscriptions.js';
 
 const thisMonth = () => todayISO().slice(0, 7);
 const monthName = (ym, opts = { month: 'long' }) => fmt(`${ym}-01`, opts);
@@ -404,11 +404,11 @@ function Income({ f, onTxn }) {
 function Subscriptions({ f, onSub }) {
   const [showOld, setShowOld] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  // Only things you buy count as subscriptions; repeating investing and giving are listed apart.
-  const outs = f.recurring.filter((r) => r.dir === 'out' && r.kind === 'spend');
+  // What counts toward the total is your choice (tap one); by default only things you buy.
+  const outs = f.recurring.filter((r) => r.dir === 'out' && r.counted);
   const active = outs.filter((r) => r.active);
   const stopped = outs.filter((r) => !r.active);
-  const other = f.recurring.filter((r) => r.dir === 'out' && r.kind !== 'spend' && r.active);
+  const other = f.recurring.filter((r) => r.dir === 'out' && !r.counted && r.active);
   const otherMonth = other.reduce((s, r) => s + r.perMonth, 0);
   const perMonth = active.reduce((s, r) => s + r.perMonth, 0);
   const soon = active.filter((r) => r.next <= addDays(todayISO(), 7));
@@ -457,7 +457,7 @@ function Subscriptions({ f, onSub }) {
       )}
       {other.length > 0 && (
         <>
-          <p className="school-sub">Also repeats · not counted above · {money(otherMonth)}/mo</p>
+          <p className="school-sub">Not in the total · {money(otherMonth)}/mo</p>
           <ul className="rows txn-list">{other.map((r) => <Row key={r.id} r={r} />)}</ul>
         </>
       )}
@@ -469,7 +469,7 @@ function Subscriptions({ f, onSub }) {
               {f.hiddenRecurring.map((d) => (
                 <li key={d.id} className="row">
                   <span className="row-title">{d.name}</span>
-                  <button className="mini" onClick={() => (decideRecurring(d, null), toast('Back on the list'))}>Undo</button>
+                  <button className="mini" onClick={() => (decideRecurring({ ...d, confirmed: false, state: null, countChosen: typeof d.count === 'boolean', counted: d.count }, null), toast('Back on the list'))}>Undo</button>
                 </li>
               ))}
             </ul>
@@ -502,6 +502,12 @@ function SubSheet({ s, f, onTxn, onClose }) {
         </button>
         <button className="chip" onClick={() => (decideRecurring(s, 'no'), toast('Hidden'), onClose())}>Not a subscription</button>
       </div>
+      {s.dir === 'out' && (
+        <label className="toggle" style={{ marginTop: 12 }}>
+          <input type="checkbox" checked={s.counted} onChange={(e) => (setCounted(s, e.target.checked), toast(e.target.checked ? 'Counted in the subscription total' : 'Left out of the subscription total'))} />
+          <span>Count in subscription total</span>
+        </label>
+      )}
       <p className="cap-label" style={{ marginTop: 14 }}>History</p>
       <TxnList txns={txns} onTxn={onTxn} />
     </Sheet>

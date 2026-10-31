@@ -247,7 +247,7 @@ function WeekSpend({ date }) {
     return { d, v: d > today ? 0 : Math.max(0, sumKind(f.txns, 'spend', d, d)) };
   });
   const max = Math.max(1, ...days.map((x) => x.v));
-  const due = f.recurring.filter((r) => r.dir === 'out' && r.active && r.next > today && r.next <= to);
+  const due = f.recurring.filter((r) => r.dir === 'out' && r.counted && r.active && r.next > today && r.next <= to);
   const dueTotal = due.reduce((s, r) => s + r.amount, 0);
   const diff = spent - last;
   return (
