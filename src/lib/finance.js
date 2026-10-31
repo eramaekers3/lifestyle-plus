@@ -58,6 +58,8 @@ export function defaultKind(t, acct) {
   if (acct && acct.type === 'investment') return 'transfer';
   if (/TRANSFER_OUT_INVESTMENT|TRANSFER_OUT_RETIREMENT|INVESTMENT_AND_RETIREMENT/.test(d)) return t.amount > 0 ? 'invest' : 'transfer';
   if (t.cat === 'INCOME') return 'income';
+  // Money sent to a brokerage counts as investing even when the bank just calls it a transfer.
+  if (t.amount > 0 && /robinhood|fidelity|vanguard|schwab|webull|e\*?trade|acorns|betterment|wealthfront|coinbase|stash|m1 fin|public\.com/i.test(`${t.name} ${t.merchant}`)) return 'invest';
   if (t.cat === 'TRANSFER_IN' || t.cat === 'TRANSFER_OUT') return 'transfer';
   if (/CREDIT_CARD_PAYMENT/.test(d)) return 'transfer';
   return 'spend';

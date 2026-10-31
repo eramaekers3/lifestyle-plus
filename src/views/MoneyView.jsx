@@ -364,8 +364,10 @@ function Investing({ f }) {
                 return (
                   <li key={h.id} className="row">
                     <span className="row-title">
-                      <b>{h.ticker || h.name}</b>
-                      <span className="task-meta"><span>{h.ticker ? h.name : h.secType}</span><span>{+Number(h.qty).toFixed(4)} shares</span></span>
+                      <b>{h.secType === 'cash' || /^CUR:/.test(h.ticker) ? 'Cash' : h.ticker || h.name}</b>
+                      <span className="task-meta">
+                        {h.secType === 'cash' || /^CUR:/.test(h.ticker) ? <span>Not invested yet</span> : <><span>{h.ticker ? h.name : h.secType}</span><span>{+Number(h.qty).toFixed(4)} shares</span></>}
+                      </span>
                     </span>
                     <span className="hold-v">
                       <b>{money(h.value)}</b>

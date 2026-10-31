@@ -42,7 +42,6 @@ export const txnRec = (t) =>
     cat: (t.personal_finance_category && t.personal_finance_category.primary) || 'OTHER',
     catDetail: (t.personal_finance_category && t.personal_finance_category.detailed) || '',
     pending: !!t.pending,
-    logo: t.logo_url || '',
   });
 
 export const removedTxnRec = (txnId) => rec('fin_txn', idFor(`ft:${txnId}`), { txnId }, true);
