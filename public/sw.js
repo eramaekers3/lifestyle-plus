@@ -1,6 +1,6 @@
 // Offline support: the app shell is cached so lifestyle+ opens without a connection.
 // Data never goes through here; it lives in local storage and syncs to Supabase.
-const CACHE = 'lifestyleplus-v5';
+const CACHE = 'lifestyleplus-v6';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
