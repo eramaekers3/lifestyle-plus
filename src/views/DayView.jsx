@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useKind, useSettings, putMany } from '../store.js';
 import { addDays, fmt, fmtDur, nowMin, relDay, todayISO, weekStart } from '../lib/dates.js';
-import { useFinance, total as sumKind, money } from '../lib/finance.js';
+import { useFinance, total as sumKind, money, merchantOf, catLabel, CAT_COLORS } from '../lib/finance.js';
 import { useHabits, toggleHabit } from '../lib/model.js';
 import { toast } from '../lib/toast.js';
-import { FlipClock, Icon } from '../components/ui.jsx';
+import { FlipClock, Icon, Sheet } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';
 import Timeline from '../components/Timeline.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
@@ -250,9 +250,22 @@ function WeekSpend({ date }) {
   const due = f.recurring.filter((r) => r.dir === 'out' && r.counted && r.active && r.next > today && r.next <= to);
   const dueTotal = due.reduce((s, r) => s + r.amount, 0);
   const diff = spent - last;
+  // null = closed, 'all' = the whole week, or one day's date.
+  const [open, setOpen] = useState(null);
+  const openAt = (e, d) => {
+    e.stopPropagation();
+    setOpen(d);
+  };
   return (
     <section className="card" aria-labelledby="ws-h">
-      <a className="wk-spend" href="#money">
+      <div
+        className="wk-spend"
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen('all')}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen('all'))}
+        aria-label="See this week’s purchases"
+      >
         <div className="card-head">
           <h2 id="ws-h">Spending this week</h2>
           <span className="meta">{money(spent)}</span>
@@ -270,18 +283,85 @@ function WeekSpend({ date }) {
             </div>
           )}
         </div>
-        <div className="wk-days" role="img" aria-label="Spending by day this week">
+        <div className="wk-days">
           {days.map((x) => (
-            <span key={x.d} className={x.d === today ? 'today' : x.d > today ? 'future' : ''}>
+            <button
+              key={x.d}
+              className={x.d === today ? 'today' : x.d > today ? 'future' : ''}
+              disabled={x.d > today}
+              onClick={(e) => openAt(e, x.d)}
+              aria-label={`${fmt(x.d, { weekday: 'long' })}: ${money(x.v)}`}
+            >
               <i style={{ height: `${x.d > today ? 4 : Math.max(4, (x.v / max) * 44)}px` }} />
               {fmt(x.d, { weekday: 'narrow' })}
-            </span>
+            </button>
           ))}
         </div>
         {due.length > 0 && (
           <p className="muted small">{money(dueTotal, true)} in subscriptions still due this week: {due.map((r) => r.name).join(', ')}.</p>
         )}
-      </a>
+        <p className="wk-more">See purchases ›</p>
+      </div>
+      {open && <WeekPurchases f={f} from={from} upto={upto} days={days} today={today} pick={open} setPick={setOpen} onClose={() => setOpen(null)} />}
     </section>
+  );
+}
+
+/** The popup: every purchase this week, newest first, grouped by day. Tap a day to see just that one. */
+function WeekPurchases({ f, from, upto, days, today, pick, setPick, onClose }) {
+  const inRange = (d) => (pick === 'all' ? d >= from && d <= upto : d === pick);
+  const list = f.txns.filter((t) => t.kind === 'spend' && inRange(t.date));
+  const sum = Math.round(list.reduce((s, t) => s + t.amount, 0) * 100) / 100;
+  const byDay = [];
+  for (const t of list) {
+    const g = byDay.at(-1);
+    if (g && g.d === t.date) g.txns.push(t);
+    else byDay.push({ d: t.date, txns: [t] });
+  }
+  const dayName = (d) => (d === today ? 'Today' : d === addDays(today, -1) ? 'Yesterday' : fmt(d, { weekday: 'long', month: 'short', day: 'numeric' }));
+  return (
+    <Sheet title={pick === 'all' ? 'This week’s purchases' : dayName(pick)} onClose={onClose}>
+      <div className="rv-stats money-stats">
+        <div><b>{money(sum, true)}</b><span>spent</span></div>
+        <div><b>{list.filter((t) => t.amount > 0).length}</b><span>purchases</span></div>
+        <div><b>{money(pick === 'all' ? sum / Math.max(1, days.filter((x) => x.d <= today).length) : sum)}</b><span>{pick === 'all' ? 'a day' : 'that day'}</span></div>
+      </div>
+      <div className="chips wk-chips">
+        <button className="chip" aria-pressed={pick === 'all'} onClick={() => setPick('all')}>Week</button>
+        {days.filter((x) => x.d <= today).map((x) => (
+          <button key={x.d} className="chip" aria-pressed={pick === x.d} onClick={() => setPick(x.d)}>
+            {fmt(x.d, { weekday: 'short' })}
+          </button>
+        ))}
+      </div>
+      {!list.length && <p className="empty">No purchases {pick === 'all' ? 'yet this week' : 'that day'}.</p>}
+      {byDay.map((g) => (
+        <div key={g.d}>
+          {pick === 'all' && (
+            <p className="school-sub wk-day-head">
+              <span>{dayName(g.d)}</span>
+              <span>{money(g.txns.reduce((s, t) => s + t.amount, 0), true)}</span>
+            </p>
+          )}
+          <ul className="rows txn-list">
+            {g.txns.map((t) => (
+              <li key={t.txnId} className="row">
+                <span className="row-title">
+                  <span className="title-line">
+                    <i className="wk-dot" style={{ background: CAT_COLORS[t.cat] || CAT_COLORS.OTHER }} />
+                    {merchantOf(t)}
+                    {t.pending && <span className="tag">Pending</span>}
+                    {t.repeat && <span className="tag">{t.repeat.cadence.label}</span>}
+                  </span>
+                  <span className="task-meta"><span>{catLabel(t.cat)}</span><span>{t.account.name}</span></span>
+                </span>
+                <b className={`txn-amt${t.amount < 0 ? ' in' : ''}`}>{t.amount < 0 ? '+' : ''}{money(Math.abs(t.amount), true)}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <a className="link-btn" href="#money" onClick={onClose}>Open Money ›</a>
+    </Sheet>
   );
 }
