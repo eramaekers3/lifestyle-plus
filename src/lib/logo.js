@@ -1,9 +1,10 @@
-// The lifestyle+ mark: a solid heart with a white plus cut into its right side, over a dithered
-// drop shadow like the app's cards.
-// One drawing feeds the header logo, the app icons (scripts/make-icons.mjs) and the icon that's
-// regenerated in the browser when you pick a new heart color.
+// The lifestyle+ mark: a glass heart with a white glass plus cut into its right side, each with a
+// soft drop shadow, styled to sit with iOS 26's dark Liquid Glass home-screen icons.
+// One drawing feeds the header logo, the loading screen, the app icons in public/icons and the
+// icon that's regenerated in the browser when you pick a new heart color.
 
 export const HEART_COLORS = [
+  { id: 'glass', name: 'Glass', hex: '#c8c8cc' },
   { id: 'coral', name: 'Coral', hex: '#ff6f61' },
   { id: 'cherry', name: 'Cherry', hex: '#ee4b5a' },
   { id: 'rose', name: 'Rose', hex: '#ff86b8' },
@@ -14,60 +15,62 @@ export const HEART_COLORS = [
   { id: 'mint', name: 'Mint', hex: '#7fdca0' },
 ];
 export const DEFAULT_HEART = HEART_COLORS[0].hex;
-export const BG = '#262624';
 
 const valid = (hex) => (/^#[0-9a-f]{6}$/i.test(hex || '') ? hex : DEFAULT_HEART);
 
-// Heart in a 1024 box.
+// Shapes in a 1024 box.
 const HEART =
-  'M512 836C468 806 168 620 168 384C168 262 258 178 360 178C430 178 484 214 512 270C540 214 594 178 664 178C766 178 856 262 856 384C856 620 556 806 512 836Z';
-// The plus sits on the heart's right side, running right out to its edge.
-const PX = 664;
-const PY = 484;
-const ARM = 180; // half length, to the outside of the rounded corners
-const T = 50; // bar thickness before rounding
-const ROUND = 40; // corner rounding (drawn as a stroke the same color as the fill)
-const GAP = 34; // background showing between the plus and the heart
-const a = ARM - ROUND / 2;
-const plusPath = `M${PX - T / 2} ${PY - a}h${T}v${a - T / 2}h${a - T / 2}v${T}h${-(a - T / 2)}v${a - T / 2}h${-T}v${-(a - T / 2)}h${-(a - T / 2)}v${-T}h${a - T / 2}z`;
+  'M500 846C458 811 178 650 158 440C143 292 244 196 362 196C430 196 478 232 500 280C522 232 570 196 638 196C756 196 857 292 842 440C822 650 542 811 500 846Z';
+// The plus is drawn as a thin cross with a round stroke, which rounds its outer corners.
+const PLUS = 'M720 530h36v102h102v36h-102v102h-36v-102h-102v-36h102z';
 
 /**
- * SVG markup for the mark: a solid heart with a white plus cut into its right side, and a drop shadow.
- *   color:  heart color
- *   bg:     true for app icons (full square slate background); false for the header logo
- *   id:     prefix so several marks on one page don't share ids
+ * SVG markup for the mark.
+ *   color:     heart color (any color; the glass shading is laid over it)
+ *   bg:        true for app icons (full square near-black tile); false for the in-app logo
+ *   id:        prefix so several marks on one page don't share ids
+ *   heartFill: optional raw fill for the heart (the loading screen passes a CSS variable)
  */
-export function heartSVG(color, { bg = false, id = 'lp' } = {}) {
+export function heartSVG(color, { bg = false, id = 'lp', heartFill } = {}) {
   const c = valid(color);
-  const view = bg ? '0 0 1024 1024' : '150 160 740 740';
-  const dy = bg ? 34 : 40;
-  const heart = (fill) => `<path d="${HEART}" fill="${fill}" mask="url(#${id}-cut)"/>`;
-  const plus = (fill) => `<path d="${plusPath}" fill="${fill}" stroke="${fill}" stroke-width="${ROUND}" stroke-linejoin="round"/>`;
-  // Drop shadow: soft dark base plus a dither of black speckles, offset down and right.
-  const shadow = (shape) => `<g transform="translate(26 ${dy})"><g opacity=".55">${shape('#0c0f14')}</g><g filter="url(#${id}-dither)">${shape('#000')}</g></g>`;
+  const fill = heartFill || c;
+  const view = bg ? '0 0 1024 1024' : '120 136 790 790';
+  const heart = (attrs) => `<path d="${HEART}" ${attrs}/>`;
+  const plus = (width, attrs) => `<path d="${PLUS}" stroke-width="${width}" stroke-linejoin="round" ${attrs}/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="100%" height="100%">
   <defs>
+    <linearGradient id="${id}-tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0b0c"/><stop offset="1" stop-color="#000"/></linearGradient>
+    <linearGradient id="${id}-tileRim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".25" stop-color="#fff" stop-opacity=".04"/><stop offset=".8" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#fff" stop-opacity=".08"/></linearGradient>
+    <linearGradient id="${id}-shade" x1=".15" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".45" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="${id}-sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${id}-rim" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".5" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="${id}-plus" x1="0" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#f6f6f8"/><stop offset="1" stop-color="#cdcdd2"/></linearGradient>
     <mask id="${id}-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
       <rect width="1024" height="1024" fill="#fff"/>
-      <path d="${plusPath}" fill="#000" stroke="#000" stroke-width="${ROUND + GAP * 2}" stroke-linejoin="round"/>
+      ${plus(120, 'fill="#000" stroke="#000"')}
     </mask>
-    <filter id="${id}-dither" x="0" y="0" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" result="n"/>
-      <feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 2.2 -0.9" result="dots"/>
-      <feComposite in="dots" in2="SourceGraphic" operator="in"/>
+    <clipPath id="${id}-hc">${heart('')}</clipPath>
+    <filter id="${id}-shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18"/><feOffset dy="16" result="b"/>
+      <feFlood flood-color="#000" flood-opacity=".6"/><feComposite in2="b" operator="in" result="s"/>
+      <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <filter id="${id}-grain" x="0" y="0" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="3" stitchTiles="stitch"/>
-      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.6 0 0 0 -0.7"/>
-      <feComposite in2="SourceGraphic" operator="in"/>
-    </filter>
+    <filter id="${id}-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
   </defs>
-  ${bg ? `<rect width="1024" height="1024" fill="${BG}"/>` : ''}
-  <g mask="url(#${id}-cut)">${shadow(heart)}</g>
-  ${heart(c)}
-  ${shadow(plus)}
-  ${plus('#ffffff')}
-  ${bg ? `<rect width="1024" height="1024" fill="#fff" opacity=".05" filter="url(#${id}-grain)"/>` : ''}
+  ${bg ? `<rect width="1024" height="1024" fill="url(#${id}-tile)"/><rect x="6" y="6" width="1012" height="1012" rx="226" fill="none" stroke="url(#${id}-tileRim)" stroke-width="12"/>` : ''}
+  <g filter="url(#${id}-shadow)"><g mask="url(#${id}-cut)">
+    ${heart(`style="fill:${fill}" opacity=".85"`)}
+    <g clip-path="url(#${id}-hc)">
+      ${heart(`fill="url(#${id}-shade)"`)}
+      ${heart(`fill="url(#${id}-sheen)"`)}
+      ${heart(`fill="none" stroke="#000" stroke-opacity=".3" stroke-width="44" transform="translate(0 20)" filter="url(#${id}-soft)"`)}
+      ${heart(`fill="none" stroke="url(#${id}-rim)" stroke-width="12"`)}
+    </g>
+  </g></g>
+  <g filter="url(#${id}-shadow)">
+    ${plus(60, 'fill="#fff" stroke="#fff"')}
+    ${plus(46, `fill="url(#${id}-plus)" stroke="url(#${id}-plus)" transform="translate(0 4)"`)}
+  </g>
 </svg>`;
 }
 
