@@ -197,6 +197,44 @@ function scheduleSync(delay = 1200) {
   timer = setTimeout(sync, delay);
 }
 
+/**
+ * Pulls rows changed since `since` (everything when null). A remote row replaces the local one
+ * when it's newer and not edited here since, or always when `remoteWins` (first sync).
+ */
+async function pull(since, remoteWins) {
+  let maxSeen = 0;
+  let changed = false;
+  const page = 1000;
+  for (let from = 0; ; from += page) {
+    let q = supabase
+      .from('records')
+      .select('id, kind, data, updated_at, deleted, synced_at')
+      .order('synced_at', { ascending: true })
+      .range(from, from + page - 1);
+    if (since) q = q.gt('synced_at', since);
+    const { data, error } = await q;
+    if (error) throw error;
+    for (const row of data) {
+      const local = db.records[row.id];
+      const remoteT = Date.parse(row.updated_at);
+      if (remoteWins || !local || (!db.dirty.has(row.id) && remoteT > Date.parse(local.updated_at))) {
+        db.records[row.id] = {
+          id: row.id,
+          kind: row.kind,
+          data: row.data,
+          updated_at: new Date(remoteT).toISOString(),
+          deleted: row.deleted,
+        };
+        db.dirty.delete(row.id);
+        changed = true;
+      }
+      maxSeen = Math.max(maxSeen, Date.parse(row.synced_at));
+    }
+    if (data.length < page) break;
+  }
+  return { changed, maxSeen };
+}
+
 export async function sync() {
   if (!supabase || !session) return;
   if (syncing) {
@@ -210,6 +248,18 @@ export async function sync() {
   syncing = true;
   setStatus({ state: 'syncing', error: null });
   try {
+    // 0. First sync of this account on this device: take your account's copy of everything
+    //    before sending anything up. Records this device made before it had ever synced (fresh
+    //    install, re-added to the Home Screen) must never overwrite the real ones.
+    const firstSync = !db.lastPull;
+    let changed = false;
+    let maxSeen = 0;
+    if (firstSync) {
+      const r = await pull(null, true);
+      changed = r.changed;
+      maxSeen = r.maxSeen;
+    }
+
     // 1. Push what changed here.
     const ids = [...db.dirty];
     const rows = ids
@@ -233,36 +283,11 @@ export async function sync() {
     }
 
     // 2. Pull what changed elsewhere since last time.
-    let maxSeen = db.lastPull ? Date.parse(db.lastPull) : 0;
-    const since = db.lastPull ? new Date(Date.parse(db.lastPull) - 5000).toISOString() : null;
-    let changed = false;
-    const page = 1000;
-    for (let from = 0; ; from += page) {
-      let q = supabase
-        .from('records')
-        .select('id, kind, data, updated_at, deleted, synced_at')
-        .order('synced_at', { ascending: true })
-        .range(from, from + page - 1);
-      if (since) q = q.gt('synced_at', since);
-      const { data, error } = await q;
-      if (error) throw error;
-      for (const row of data) {
-        const local = db.records[row.id];
-        const remoteT = Date.parse(row.updated_at);
-        if (!local || (!db.dirty.has(row.id) && remoteT > Date.parse(local.updated_at))) {
-          db.records[row.id] = {
-            id: row.id,
-            kind: row.kind,
-            data: row.data,
-            updated_at: new Date(remoteT).toISOString(),
-            deleted: row.deleted,
-          };
-          changed = true;
-        }
-        maxSeen = Math.max(maxSeen, Date.parse(row.synced_at));
-      }
-      if (data.length < page) break;
-    }
+    const after = maxSeen ? new Date(maxSeen) : db.lastPull ? new Date(Date.parse(db.lastPull)) : null;
+    const since = after ? new Date(after.getTime() - 5000).toISOString() : null;
+    const r = await pull(since, false);
+    changed = changed || r.changed;
+    maxSeen = Math.max(maxSeen, r.maxSeen, db.lastPull ? Date.parse(db.lastPull) : 0);
     if (maxSeen) db.lastPull = new Date(maxSeen).toISOString();
     persist();
     if (changed) emit();
@@ -288,7 +313,13 @@ function onSession(s) {
   setStatus({ email: s.user.email });
   if (s.user.id !== prevUser) {
     // Sample data stays on this device; it never goes into your account.
-    if (get(SETTINGS_ID) && get(SETTINGS_ID).sample) clearSample();
+    if (get(SETTINGS_ID) && get(SETTINGS_ID).sample) {
+      clearSample();
+      // Drop this device's stand-in settings so your account's settings come down untouched.
+      delete db.records[SETTINGS_ID];
+      db.dirty.delete(SETTINGS_ID);
+      emit();
+    }
     if (db.owner && db.owner !== s.user.id) {
       // A different account signed in on this device: start from that account's data.
       db.records = {};
