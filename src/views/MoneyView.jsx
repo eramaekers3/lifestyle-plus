@@ -8,6 +8,7 @@ import {
 import { toast } from '../lib/toast.js';
 import { Icon, Sheet } from '../components/ui.jsx';
 import CardStack from '../components/CardStack.jsx';
+import { decideRecurring } from '../lib/subscriptions.js';
 
 const thisMonth = () => todayISO().slice(0, 7);
 const monthName = (ym, opts = { month: 'long' }) => fmt(`${ym}-01`, opts);
@@ -17,6 +18,7 @@ export default function MoneyView() {
   const bank = useBankSync();
   const sync = useSyncStatus();
   const [txn, setTxn] = useState(null);
+  const [sub, setSub] = useState(null);
   const signedIn = !!sync.email;
 
   useEffect(() => {
@@ -51,14 +53,16 @@ export default function MoneyView() {
         cards={[
           { id: 'net', title: 'Net worth', node: <NetWorth f={f} net={net} /> },
           { id: 'spend', title: 'Spending', node: <Spending f={f} onTxn={setTxn} /> },
-          { id: 'income', title: 'Income', node: <Income f={f} /> },
+          { id: 'subs', title: 'Subscriptions', node: <Subscriptions f={f} onSub={setSub} /> },
+          { id: 'income', title: 'Income', node: <Income f={f} onTxn={setTxn} /> },
           { id: 'invest', title: 'Investing', node: <Investing f={f} /> },
           { id: 'giving', title: 'Giving', node: <Giving f={f} onTxn={setTxn} /> },
           { id: 'txns', title: 'Transactions', node: <Transactions f={f} onTxn={setTxn} /> },
           { id: 'accounts', title: 'Accounts', node: <Accounts f={f} bank={bank} signedIn={signedIn} /> },
         ]}
       />
-      {txn && <TxnSheet t={f.txns.find((x) => x.txnId === txn) || null} onClose={() => setTxn(null)} />}
+      {txn && <TxnSheet t={f.txns.find((x) => x.txnId === txn) || null} onClose={() => setTxn(null)} onSub={(id) => (setTxn(null), setSub(id))} />}
+      {sub && <SubSheet s={f.recurring.find((x) => x.id === sub) || null} f={f} onTxn={(id) => (setSub(null), setTxn(id))} onClose={() => setSub(null)} />}
     </>
   );
 }
@@ -295,25 +299,46 @@ function MonthBars({ txns, kinds, months = 6, colors }) {
   );
 }
 
-function Income({ f }) {
+function Income({ f, onTxn }) {
+  const [ym, setYm] = useState(thisMonth());
+  const [src, setSrc] = useState(null);
   const cur = thisMonth();
-  const [from, to] = monthRange(cur);
+  const [from, to] = monthRange(ym);
   const inc = total(f.txns, 'income', from, to);
-  // Savings rate over the last 3 full months, so one odd month doesn't swing it.
+  // Savings rate and average over the last 3 full months, so one odd month doesn't swing it.
   const rFrom = monthRange(addMonths(cur, -3))[0];
   const rTo = monthRange(addMonths(cur, -1))[1];
   const i3 = total(f.txns, 'income', rFrom, rTo);
   const out3 = total(f.txns, 'spend', rFrom, rTo) + total(f.txns, 'giving', rFrom, rTo);
   const rate = i3 > 0 ? Math.round(((i3 - out3) / i3) * 100) : null;
+  const month = f.txns.filter((t) => t.kind === 'income' && t.date >= from && t.date <= to);
+  const bySource = useMemo(() => {
+    const m = new Map();
+    for (const t of month) {
+      const n = merchantOf(t);
+      const e = m.get(n) || { n, v: 0, count: 0, repeat: null };
+      e.v -= t.amount;
+      e.count += 1;
+      e.repeat = e.repeat || t.repeat || null;
+      m.set(n, e);
+    }
+    return [...m.values()].filter((x) => x.v > 0.5).sort((a, b) => b.v - a.v);
+  }, [month]);
+  const steadyTotal = bySource.filter((x) => x.repeat).reduce((s, x) => s + x.v, 0);
+  const steady = f.recurring.filter((r) => r.dir === 'in' && r.active && r.kind === 'income');
+  const max = Math.max(1, ...bySource.map((x) => x.v));
+  const COLORS = ['#7fdca0', '#7cc4ff', '#ffcf5c', '#bba9ff', '#ff9a4a', '#5fd3c6', '#ff86b8'];
+  const shown = src ? month.filter((t) => merchantOf(t) === src) : null;
   return (
     <section className="card" aria-labelledby="in-h">
       <div className="card-head">
         <h2 id="in-h">Income</h2>
-        <span className="meta">{money(inc)} this month</span>
+        <span className="meta">{money(inc)}</span>
       </div>
+      <MonthNav ym={ym} setYm={(v) => (setYm(v), setSrc(null))} />
       <div className="hero-row">
         <div>
-          <div className="label">This month</div>
+          <div className="label">{ym === cur ? 'So far this month' : 'Earned'}</div>
           <div className="big money-big">{money(inc)}</div>
         </div>
         {rate !== null && (
@@ -324,9 +349,152 @@ function Income({ f }) {
           </div>
         )}
       </div>
+      <div className="rv-stats money-stats">
+        <div><b>{money(i3 / 3)}</b><span>average month</span></div>
+        <div><b>{inc > 0 ? `${Math.round((steadyTotal / inc) * 100)}%` : '—'}</b><span>steady pay</span></div>
+        <div><b>{bySource.length}</b><span>source{bySource.length === 1 ? '' : 's'}</span></div>
+      </div>
+      {bySource.length > 0 ? (
+        <>
+          <p className="school-sub">Where it came from · tap one for its deposits</p>
+          <div className="inc-split" aria-hidden="true">
+            {bySource.map((x, i) => <i key={x.n} style={{ flex: x.v, background: COLORS[i % COLORS.length] }} />)}
+          </div>
+          <ul className="cat-bars">
+            {bySource.map((x, i) => (
+              <li key={x.n}>
+                <button className={src === x.n ? 'on' : ''} onClick={() => setSrc(src === x.n ? null : x.n)}>
+                  <span className="cb-name">{x.n}</span>
+                  <span className="cb-bar"><i style={{ width: `${(x.v / max) * 100}%`, background: COLORS[i % COLORS.length] }} /></span>
+                  <b>{money(x.v)}<small> {Math.round((x.v / inc) * 100)}%</small></b>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="muted small">No income this month yet.</p>
+      )}
+      {shown && <TxnList txns={shown} onTxn={onTxn} />}
+      {!shown && steady.length > 0 && (
+        <>
+          <p className="school-sub">Steady pay</p>
+          <ul className="rows">
+            {steady.map((r) => (
+              <li key={r.id} className="row">
+                <span className="row-title">
+                  {r.name}
+                  <span className="task-meta"><span>{r.cadence.every}</span><span>next {fmt(r.next, { month: 'short', day: 'numeric' })}</span></span>
+                </span>
+                <span className="hold-v"><b className="pos">+{money(r.amount, true)}</b><span>≈ {money(r.perMonth)}/mo</span></span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="school-sub">Last 6 months</p>
       <MonthBars txns={f.txns} kinds={['income', 'spend']} colors={['var(--mint)', 'var(--coral)']} />
       <div className="sl-key"><span><i style={{ background: 'var(--mint)' }} />Income</span><span><i style={{ background: 'var(--coral)' }} />Spending</span></div>
     </section>
+  );
+}
+
+/* ---------- Subscriptions ---------- */
+
+function Subscriptions({ f, onSub }) {
+  const [showOld, setShowOld] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const outs = f.recurring.filter((r) => r.dir === 'out');
+  const active = outs.filter((r) => r.active);
+  const stopped = outs.filter((r) => !r.active);
+  const perMonth = active.reduce((s, r) => s + r.perMonth, 0);
+  const soon = active.filter((r) => r.next <= addDays(todayISO(), 7));
+  const soonTotal = soon.reduce((s, r) => s + r.amount, 0);
+  const Row = ({ r }) => (
+    <li className="row">
+      <button className="row-title task-open" onClick={() => onSub(r.id)}>
+        <span className="title-line">
+          {r.name}
+          {!r.sure && <span className="tag">Maybe</span>}
+          {r.oldAmount && <span className={`tag ${r.amount > r.oldAmount ? 'neg' : 'pos'}`}>{r.amount > r.oldAmount ? '▲' : '▼'} was {money(r.oldAmount, true)}</span>}
+        </span>
+        <span className="task-meta">
+          <span>{r.cadence.label}</span>
+          <span>{r.active ? `next ${fmt(r.next, { month: 'short', day: 'numeric' })}` : `last ${fmt(r.last, { month: 'short', day: 'numeric' })}`}</span>
+          {r.kind !== 'spend' && <span className={`k-${r.kind}`}>{KIND_LABEL[r.kind]}</span>}
+        </span>
+      </button>
+      <span className="hold-v"><b>{money(r.amount, true)}</b>{r.cadence.id !== 'monthly' && <span>≈ {money(r.perMonth, true)}/mo</span>}</span>
+    </li>
+  );
+  return (
+    <section className="card" aria-labelledby="sb-h">
+      <div className="card-head">
+        <h2 id="sb-h">Subscriptions</h2>
+        <span className="meta">{money(perMonth)}/mo</span>
+      </div>
+      {!outs.length ? (
+        <p className="muted small">Nothing repeating yet. When the same place charges about the same amount on a steady schedule (twice for monthly, three times for weekly), it shows up here.</p>
+      ) : (
+        <>
+          <div className="rv-stats money-stats">
+            <div><b>{money(perMonth)}</b><span>a month</span></div>
+            <div><b>{money(perMonth * 12)}</b><span>a year</span></div>
+            <div><b>{money(soonTotal)}</b><span>next 7 days</span></div>
+          </div>
+          <ul className="rows txn-list">{active.map((r) => <Row key={r.id} r={r} />)}</ul>
+          {stopped.length > 0 && (
+            <>
+              <button className="mini" onClick={() => setShowOld(!showOld)}>{showOld ? 'Hide' : 'Show'} {stopped.length} that stopped</button>
+              {showOld && <ul className="rows txn-list muted-rows">{stopped.map((r) => <Row key={r.id} r={r} />)}</ul>}
+            </>
+          )}
+        </>
+      )}
+      {f.hiddenRecurring.length > 0 && (
+        <>
+          <button className="link-btn" onClick={() => setShowHidden(!showHidden)}>{f.hiddenRecurring.length} marked “not a subscription”</button>
+          {showHidden && (
+            <ul className="rows">
+              {f.hiddenRecurring.map((d) => (
+                <li key={d.id} className="row">
+                  <span className="row-title">{d.name}</span>
+                  <button className="mini" onClick={() => (decideRecurring(d, null), toast('Back on the list'))}>Undo</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function SubSheet({ s, f, onTxn, onClose }) {
+  if (!s) return null;
+  const txns = f.txns.filter((t) => s.txnIds.includes(t.txnId));
+  const paid = txns.reduce((a, t) => a + Math.abs(t.amount), 0);
+  return (
+    <Sheet title={s.name} onClose={onClose}>
+      <div className="rv-stats money-stats">
+        <div><b>{money(s.amount, true)}</b><span>{s.cadence.every}</span></div>
+        <div><b>{money(s.perYear)}</b><span>a year</span></div>
+        <div><b>{s.active ? fmt(s.next, { month: 'short', day: 'numeric' }) : 'Stopped?'}</b><span>{s.active ? 'next charge' : `last ${fmt(s.last, { month: 'short', day: 'numeric' })}`}</span></div>
+      </div>
+      <p className="muted small">
+        {s.count} {s.dir === 'in' ? 'deposits' : 'charges'} since {fmt(s.first, { month: 'short', day: 'numeric', year: 'numeric' })}, {money(paid, true)} in all
+        {s.oldAmount && ` · went from ${money(s.oldAmount, true)} to ${money(s.amount, true)} on ${fmt(s.changedOn, { month: 'short', day: 'numeric' })}`}
+        {s.accountName && ` · ${s.accountName}`}
+      </p>
+      <div className="chips" style={{ marginTop: 12 }}>
+        <button className="chip" aria-pressed={s.confirmed} onClick={() => (decideRecurring(s, s.confirmed ? null : 'yes'), toast(s.confirmed ? 'Back to automatic' : 'Marked as a subscription'))}>
+          {s.dir === 'in' ? 'Yes, steady pay' : 'Yes, a subscription'}
+        </button>
+        <button className="chip" onClick={() => (decideRecurring(s, 'no'), toast('Hidden'), onClose())}>Not a subscription</button>
+      </div>
+      <p className="cap-label" style={{ marginTop: 14 }}>History</p>
+      <TxnList txns={txns} onTxn={onTxn} />
+    </Sheet>
   );
 }
 
@@ -425,7 +593,7 @@ function TxnList({ txns, onTxn }) {
       {txns.map((t) => (
         <li key={t.txnId} className="row">
           <button className="row-title task-open" onClick={() => onTxn(t.txnId)}>
-            <span className="title-line">{merchantOf(t)}{t.pending && <span className="tag">Pending</span>}</span>
+            <span className="title-line">{merchantOf(t)}{t.pending && <span className="tag">Pending</span>}{t.repeat && <span className="tag">{t.repeat.cadence.label}</span>}</span>
             <span className="task-meta">
               <span>{fmt(t.date, { month: 'short', day: 'numeric' })}</span>
               <span className={`k-${t.kind}`}>{t.kind === 'spend' ? catLabel(t.cat) : KIND_LABEL[t.kind]}</span>
@@ -457,7 +625,7 @@ function Transactions({ f, onTxn }) {
   );
 }
 
-function TxnSheet({ t, onClose }) {
+function TxnSheet({ t, onClose, onSub }) {
   const [all, setAll] = useState(false);
   if (!t) return null;
   const pick = (kind) => {
@@ -472,6 +640,11 @@ function TxnSheet({ t, onClose }) {
         <div><b>{t.account.name}</b><span>{t.account.institution}</span></div>
       </div>
       <p className="muted small">{t.name} · {catLabel(t.cat)}</p>
+      {t.repeat && (
+        <button className="link-btn" onClick={() => onSub(t.repeat.id)}>
+          Repeats {t.repeat.cadence.every}{t.repeat.active ? ` · next ${fmt(t.repeat.next, { month: 'short', day: 'numeric' })}` : ''} ›
+        </button>
+      )}
       <p className="cap-label" style={{ marginTop: 14 }}>Count it as</p>
       <div className="chips">
         {KINDS.map((k) => (

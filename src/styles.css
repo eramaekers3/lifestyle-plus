@@ -1281,3 +1281,20 @@ form.inline .num-in { flex: 0 1 92px; }
 }
 .cheer-pop b { font: 900 14px/1.1 var(--body); font-variant-numeric: tabular-nums; }
 .cheer-pop span { font-size: 11px; font-weight: 700; opacity: 0.7; }
+
+/* Income split and subscriptions */
+.inc-split { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; margin: 6px 0 8px; }
+.inc-split i { display: block; min-width: 3px; }
+.cat-bars b small { font-size: 11px; font-weight: 700; color: var(--dim); }
+.muted-rows { opacity: 0.6; }
+.tag.pos { color: var(--mint); }
+.tag.neg { color: var(--coral); }
+
+/* Weekly spending on the day page */
+.wk-spend { display: block; color: inherit; text-decoration: none; }
+.wk-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 64px; margin: 10px 0 4px; }
+.wk-days span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; font-size: 11px; color: var(--dim); }
+.wk-days i { display: block; width: 100%; max-width: 22px; border-radius: 5px 5px 2px 2px; background: color-mix(in srgb, var(--coral) 55%, var(--raised)); }
+.wk-days .today i { background: var(--coral); }
+.wk-days .today { color: var(--ink); font-weight: 800; }
+.wk-days .future i { background: var(--raised); }

@@ -12,6 +12,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { put, remove, sync, useKind } from '../store.js';
 import { supabase } from '../supabase.js';
 import { idFor } from './ids.js';
+import { detectRecurring } from './subscriptions.js';
 
 export const KINDS = [
   { id: 'spend', label: 'Spending' },
@@ -74,6 +75,7 @@ export function useFinance() {
   const snapshots = useKind('fin_snapshot');
   const overrides = useKind('fin_override');
   const rules = useKind('fin_rule');
+  const subs = useKind('fin_sub');
   return useMemo(() => {
     const acctById = Object.fromEntries(accounts.map((a) => [a.accountId, a]));
     const byTxn = new Map(overrides.map((o) => [o.txnId, o]));
@@ -88,14 +90,24 @@ export function useFinance() {
         return { ...t, kind, account: acct, overridden: !!o, ruled: !o && !!r };
       })
       .sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+    // Repeating charges and paychecks; each of their transactions gets a `repeat` tag.
+    const recurring = detectRecurring(list, subs);
+    const repeatOf = new Map();
+    for (const r of recurring) for (const id of r.txnIds) repeatOf.set(id, r);
+    for (let i = 0; i < list.length; i++) {
+      const r = repeatOf.get(list[i].txnId);
+      if (r) list[i] = { ...list[i], repeat: r };
+    }
     return {
+      recurring,
+      hiddenRecurring: subs.filter((d) => d.state === 'no'),
       accounts: [...accounts].sort((a, b) => (a.institution || '').localeCompare(b.institution || '') || (a.name || '').localeCompare(b.name || '')),
       items,
       txns: list,
       holdings,
       snapshots: [...snapshots].sort((a, b) => a.date.localeCompare(b.date)),
     };
-  }, [accounts, items, txns, holdings, snapshots, overrides, rules]);
+  }, [accounts, items, txns, holdings, snapshots, overrides, rules, subs]);
 }
 
 /** Change one transaction's kind, or every transaction from its merchant. kind=null resets. */

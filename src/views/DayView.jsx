@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useKind, useSettings, putMany } from '../store.js';
-import { addDays, fmt, fmtDur, nowMin, relDay, todayISO } from '../lib/dates.js';
+import { addDays, fmt, fmtDur, nowMin, relDay, todayISO, weekStart } from '../lib/dates.js';
+import { useFinance, total as sumKind, money } from '../lib/finance.js';
 import { useHabits, toggleHabit } from '../lib/model.js';
 import { toast } from '../lib/toast.js';
 import { FlipClock, Icon } from '../components/ui.jsx';
@@ -20,6 +21,7 @@ export default function DayView({ date }) {
   const settings = useSettings();
   const allBlocks = useKind('block');
   const tasks = useKind('task');
+  const hasBanks = useKind('fin_account').length > 0;
   const [edit, setEdit] = useState(null);
   const calDays = useCalendarDays();
   const cal = calDays[date] || { timed: [], allDay: [] };
@@ -112,6 +114,7 @@ export default function DayView({ date }) {
             ),
           },
           { id: 'habits', title: 'Habits', node: <HabitChips date={date} /> },
+          { id: 'spend', title: 'Spending this week', node: hasBanks ? <WeekSpend date={date} /> : null },
         ]}
       />
 
@@ -225,6 +228,60 @@ function HabitChips({ date }) {
           );
         })}
       </div>
+    </section>
+  );
+}
+
+/** This week's spending (Monday on), against last week by the same day, with what's still due. */
+function WeekSpend({ date }) {
+  const f = useFinance();
+  const today = todayISO();
+  const from = weekStart(date);
+  const to = addDays(from, 6);
+  const upto = date === today || (today >= from && today <= to) ? today : to < today ? to : from;
+  const spent = sumKind(f.txns, 'spend', from, upto);
+  const nDays = Math.round((Date.parse(upto) - Date.parse(from)) / 864e5);
+  const last = sumKind(f.txns, 'spend', addDays(from, -7), addDays(from, -7 + nDays));
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(from, i);
+    return { d, v: d > today ? 0 : Math.max(0, sumKind(f.txns, 'spend', d, d)) };
+  });
+  const max = Math.max(1, ...days.map((x) => x.v));
+  const due = f.recurring.filter((r) => r.dir === 'out' && r.active && r.next > today && r.next <= to);
+  const dueTotal = due.reduce((s, r) => s + r.amount, 0);
+  const diff = spent - last;
+  return (
+    <section className="card" aria-labelledby="ws-h">
+      <a className="wk-spend" href="#money">
+        <div className="card-head">
+          <h2 id="ws-h">Spending this week</h2>
+          <span className="meta">{money(spent)}</span>
+        </div>
+        <div className="hero-row">
+          <div>
+            <div className="label">{fmt(from, { month: 'short', day: 'numeric' })} – {fmt(to, { month: 'short', day: 'numeric' })}</div>
+            <div className="big money-big">{money(spent)}</div>
+          </div>
+          {last > 0 && (
+            <div className="right">
+              <div className="label">Last week by now</div>
+              <div className="delta">{money(last)}</div>
+              <div className={`label mo-cmp ${diff <= 0 ? 'pos' : 'neg'}`}>{diff <= 0 ? '▼' : '▲'} {money(Math.abs(diff))}</div>
+            </div>
+          )}
+        </div>
+        <div className="wk-days" role="img" aria-label="Spending by day this week">
+          {days.map((x) => (
+            <span key={x.d} className={x.d === today ? 'today' : x.d > today ? 'future' : ''}>
+              <i style={{ height: `${x.d > today ? 4 : Math.max(4, (x.v / max) * 44)}px` }} />
+              {fmt(x.d, { weekday: 'narrow' })}
+            </span>
+          ))}
+        </div>
+        {due.length > 0 && (
+          <p className="muted small">{money(dueTotal, true)} in subscriptions still due this week: {due.map((r) => r.name).join(', ')}.</p>
+        )}
+      </a>
     </section>
   );
 }
