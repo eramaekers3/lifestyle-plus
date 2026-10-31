@@ -10,6 +10,8 @@ import { get, list, put, putMany, remove, useKind, useRecord, useSettings, useSy
 import { idFor, newId } from './ids.js';
 import { iso } from './dates.js';
 import { GUIDE_ROUTINES } from './routines.js';
+import { norm } from './text.js';
+import { byOrder } from './model.js';
 
 export const SESSION_ID = idFor('active-session');
 export const KINDS = [
@@ -20,7 +22,6 @@ export const KINDS = [
 
 /* ---------- Routines ---------- */
 
-const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
 const withIds = (exercises) => exercises.map((e) => ({ id: newId(), ...e }));
 
 export function useRoutines() {
@@ -72,7 +73,6 @@ export function reorderRoutines(routines) {
 
 /* ---------- History ---------- */
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 /**
  * The sets you logged for this exercise the last time you did it: [{ wt, reps }].
@@ -177,10 +177,6 @@ export const removeRow = (i, r) =>
 
 export const editSessionExercise = (i, changes) =>
   update((s) => ({ exercises: s.exercises.map((e, j) => (j !== i ? e : { ...e, ...changes })) }));
-
-export function addSessionExercise(name) {
-  addSessionExercises([newExercise(name)]);
-}
 
 /** Adds exercises (e.g. from the library) to the end and jumps to the first one added. */
 export function addSessionExercises(list_) {

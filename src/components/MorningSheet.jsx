@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
 import { get, put, putMany, useKind, useRecord, useSettings } from '../store.js';
 import { idFor } from '../lib/ids.js';
+import { dayId } from '../lib/review.js';
 import { addDays, fmt, fmtDur, minToLabel, todayISO } from '../lib/dates.js';
 import { useStack, pullTask } from '../lib/model.js';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import { toast } from '../lib/toast.js';
-import { Icon, Sheet, FlipClock } from './ui.jsx';
+import { Icon, Sheet, FlipClock, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 
 /* ---------- Started-the-day state ---------- */
 
-export const dayId = (date) => idFor(`day:${date}`);
 
 export function useDayStarted(date = todayISO()) {
   const rec = useRecord(dayId(date));
@@ -78,15 +78,6 @@ export default function MorningSheet({ onClose }) {
         <button className="link-btn mo-later" onClick={onClose}>Not now</button>
       </div>
     </Sheet>
-  );
-}
-
-function Step({ n, title, children }) {
-  return (
-    <section className="mo-step">
-      <h3><span className="n">{n}</span>{title}</h3>
-      {children}
-    </section>
   );
 }
 

@@ -16,6 +16,7 @@ import { buildHabitIndex, habitStats, toggleHabit, completeTask } from './model.
 import { haptic } from './haptics.js';
 import { sessionScore } from './lifting.js';
 import { todayISO, iso, addDays } from './dates.js';
+import { norm } from './text.js';
 
 export const XP = { task: 10, habit: 5, workout: 30, perSet: 2, maxSets: 30, pr: 20 };
 const COMBO_GAP = 15 * 60 * 1000;
@@ -35,7 +36,6 @@ export function levelFor(total) {
   return { level, into, need: levelCost(level), pct: into / levelCost(level) };
 }
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 /** Each workout's exercises as { name, sets: [{wt, reps}] }. */
 function exercisesOf(w) {

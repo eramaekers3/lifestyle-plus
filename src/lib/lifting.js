@@ -2,8 +2,8 @@
 import { useMemo } from 'react';
 import { useKind } from '../store.js';
 import { libraryEntry } from './exercises.js';
+import { norm } from './text.js';
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 /** One entry per workout per exercise: { date, startedAt, name, sets: [{ wt, reps }] } */
 function entries(workouts) {

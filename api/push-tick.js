@@ -2,33 +2,13 @@
 // Called once a minute by a Supabase cron job (see supabase/push.sql). Works out which
 // notifications are due for each person with notifications turned on, and sends them.
 //   Header: Authorization: Bearer <CRON_SECRET>
-import webpush from 'web-push';
-import { createClient } from '@supabase/supabase-js';
-import { dueNotifications, needsSchool } from './_push-core.js';
+import { hasDb, hasPushKeys, serverDb, sendTo } from './_server.js';
+import { dueNotifications, needsSchool, addDays } from './_push-core.js';
 import { readCalendar } from './_calendar-core.js';
 import { toItem, localParts } from '../src/lib/school.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVER_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET } = process.env;
-const SUBJECT = process.env.VAPID_SUBJECT || 'https://lifestyle-plus.vercel.app';
+const { CRON_SECRET } = process.env;
 
-export async function sendTo(db, subs, note) {
-  webpush.setVapidDetails(SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-  const payload = JSON.stringify({ title: note.title, body: note.body, url: note.url || '/', tag: note.key });
-  let sent = 0;
-  for (const s of subs) {
-    try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 600, urgency: 'high' });
-      sent++;
-    } catch (e) {
-      // 404/410: the phone dropped this subscription (app deleted or notifications turned off).
-      if (e.statusCode === 404 || e.statusCode === 410) await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint);
-      else console.log('push failed', e.statusCode || e.message);
-    }
-  }
-  return sent;
-}
 
 async function forUser(db, userId, subs, now) {
   const tz = subs[0].tz || 'America/Chicago';
@@ -88,19 +68,14 @@ async function forUser(db, userId, subs, now) {
   return sent;
 }
 
-function addDays(s, n) {
-  const d = new Date(`${s}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (!CRON_SECRET || req.headers.authorization !== `Bearer ${CRON_SECRET}`) return res.status(401).json({ error: 'Not allowed.' });
-  if (!SUPABASE_URL || !SERVER_KEY || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  if (!hasDb() || !hasPushKeys()) {
     return res.status(500).json({ error: 'The server is missing its Supabase or push keys.' });
   }
-  const db = createClient(SUPABASE_URL, SERVER_KEY, { auth: { persistSession: false } });
+  const db = serverDb();
   const now = new Date();
 
   const { data: subs, error } = await db.from('push_subscriptions').select('user_id, endpoint, p256dh, auth, tz, updated_at').order('updated_at', { ascending: false });

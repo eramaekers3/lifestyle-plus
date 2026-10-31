@@ -1,6 +1,7 @@
 // Decides which notifications are due right now for one person. No database or network here,
 // so it can be tested on its own; api/push-tick.js gathers the data and does the sending.
 import { localParts } from '../src/lib/school.js';
+import { plural } from '../src/lib/text.js';
 
 export const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 8 * 60, school: true, schoolAt: 20 * 60, shutdown: true, shutdownAt: 21 * 60 };
 // The tick runs every minute; a few minutes of grace covers a late or skipped run.
@@ -15,13 +16,12 @@ export const minLabel = (m) => {
   h = h % 12 || 12;
   return mm ? `${h}:${pad(mm)}${ap}` : `${h}${ap}`;
 };
-const addDays = (s, n) => {
+export const addDays = (s, n) => {
   const d = new Date(`${s}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
 const isDue = (nowMin, target) => nowMin - target >= 0 && nowMin - target < GRACE;
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const listOf = (items) => {
   const names = items.slice(0, 3).map((i) => i.title + (i.course ? ` (${i.course.split(/\s+/).slice(0, 2).join(' ')})` : ''));
   return names.join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '');

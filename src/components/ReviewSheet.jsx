@@ -6,7 +6,7 @@ import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool } from '../lib/canvas.js';
 import { reviewWeek, saveWeek, weekId, weekDays, inRange, shortDay } from '../lib/review.js';
 import { toast } from '../lib/toast.js';
-import { Icon, Sheet } from './ui.jsx';
+import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 
 /** The weekly review: look back at last week, clear the backlog, decide what next week is for. */
@@ -57,15 +57,6 @@ export default function ReviewSheet({ onClose }) {
         <button className="link-btn mo-later" onClick={onClose}>Finish later</button>
       </div>
     </Sheet>
-  );
-}
-
-function Step({ n, title, children }) {
-  return (
-    <section className="mo-step">
-      <h3><span className="n">{n}</span>{title}</h3>
-      {children}
-    </section>
   );
 }
 

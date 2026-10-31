@@ -14,6 +14,16 @@ export function useNow(ms = 30000) {
   return now;
 }
 
+/* ---------- Numbered step (morning page, shutdown, weekly review) ---------- */
+export function Step({ n, title, children }) {
+  return (
+    <section className="mo-step">
+      <h3><span className="n">{n}</span>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 /* ---------- Logo ---------- */
 export function HeartMark({ color, size = 30, className = 'heart-mark' }) {
   const html = useMemo(() => heartSVG(color, { id: `hm${String(color).replace(/\W/g, '')}` }), [color]);

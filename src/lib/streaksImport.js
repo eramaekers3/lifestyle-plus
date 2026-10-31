@@ -57,7 +57,7 @@ const toISO = (yyyymmdd) => `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${y
  * Each habit: { taskId, name, icon, mode, paused, first, last, days: Map(date -> code), counts }
  */
 export function parseStreaksExport(text) {
-  const rows = parseCSV(String(text || '').replace(/^﻿/, ''));
+  const rows = parseCSV(String(text || '').replace(/^\uFEFF/, ''));
   if (!rows.length) throw new Error('That file is empty.');
   const head = rows[0].map((h) => h.trim().toLowerCase());
   const col = (name) => head.indexOf(name);

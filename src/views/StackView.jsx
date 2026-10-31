@@ -6,7 +6,6 @@ import TaskSheet from '../components/TaskSheet.jsx';
 import TaskMeta, { PriorityBadge } from '../components/TaskMeta.jsx';
 import CaptureSheet from '../components/CaptureSheet.jsx';
 import { fmt, iso } from '../lib/dates.js';
-import { toast } from '../lib/toast.js';
 import NowStack from '../components/NowStack.jsx';
 import { Icon } from '../components/ui.jsx';
 import RecurSheet from '../components/RecurSheet.jsx';

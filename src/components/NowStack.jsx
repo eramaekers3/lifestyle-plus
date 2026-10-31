@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useSettings } from '../store.js';
-import { useStack, pullTask, completeTask, sendBack, reorderTasks } from '../lib/model.js';
+import { useStack, pullTask, sendBack, reorderTasks } from '../lib/model.js';
 import SortableList from './SortableList.jsx';
 import TaskSheet from './TaskSheet.jsx';
-import { toast } from '../lib/toast.js';
 import { Icon } from './ui.jsx';
 import { completeTaskLater } from '../lib/game.js';
 import TaskMeta, { PriorityBadge } from './TaskMeta.jsx';

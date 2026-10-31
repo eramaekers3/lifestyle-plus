@@ -1,3 +1,4 @@
+import { norm } from './text.js';
 // The built-in exercise library: 4–6 options per muscle group, each with what it specifically targets.
 // Picking one copies it into a workout, where every field stays editable.
 //   focus:   the part of the muscle it hits hardest
@@ -107,7 +108,6 @@ export const LIBRARY = [
   x('core', 'Pallof press', 'Obliques · resisting rotation', { Core: 1 }, 3, '10 each', '45 sec', 'Stand side-on to the cable, press out and hold without twisting.'),
 ];
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 const byName = new Map(LIBRARY.map((e) => [norm(e.name), e]));
 
 /** The library entry for an exercise name, if it's one of ours. */

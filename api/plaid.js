@@ -6,14 +6,12 @@
 //
 // Bank access tokens live only in the plaid_items table, which has no policies for signed-in users:
 // only this server (with the service key) can read it. The app only ever sees the records below.
-import { createClient } from '@supabase/supabase-js';
+import { bearer, serverDb, userFor } from './_server.js';
 import { PLAID_HOSTS, syncItem, itemRec, snapshotRec } from './_plaid-core.js';
 import { idFor } from '../src/lib/ids.js';
 
 export const config = { maxDuration: 60 };
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVER_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 const PLAID_ENV = process.env.PLAID_ENV || 'production';
 const HOST = PLAID_HOSTS[PLAID_ENV] || PLAID_HOSTS.production;
 
@@ -70,11 +68,10 @@ export default async function handler(req, res) {
   if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
     return res.status(500).json({ error: 'Plaid isn’t set up yet: add PLAID_CLIENT_ID and PLAID_SECRET in Vercel.' });
   }
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  const token = bearer(req);
   if (!token) return res.status(401).json({ error: 'Sign in first.' });
-  const db = createClient(SUPABASE_URL, SERVER_KEY, { auth: { persistSession: false } });
-  const { data: who } = await db.auth.getUser(token);
-  const user = who && who.user;
+  const db = serverDb();
+  const user = await userFor(db, token);
   if (!user) return res.status(401).json({ error: 'Sign in again, then try.' });
 
   let body = req.body;

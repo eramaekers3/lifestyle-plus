@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { putMany } from '../store.js';
 import { Icon } from '../components/ui.jsx';
-import { useHabits, toggleHabit, habitStats, addHabit, resumeHabit, dayClass } from '../lib/model.js';
+import { useHabits, habitStats, addHabit, resumeHabit, dayClass } from '../lib/model.js';
 import { addDays, fmt, parse, todayISO } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import HabitHistorySheet from '../components/HabitHistorySheet.jsx';

@@ -3,26 +3,24 @@
 //   Header:  Authorization: Bearer <your lifestyle+ health key>
 //   Body:    { "lines": "steps|...\nweight|...\n..." }   (see api/_health-core.js for the line format)
 import { createHash } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
+import { bearer, hasDb, serverDb } from './_server.js';
 import { parseHealthLines, toRecords } from './_health-core.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVER_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  if (!SUPABASE_URL || !SERVER_KEY) {
+  if (!hasDb()) {
     return res.status(500).json({ error: 'The server is missing its Supabase keys.' });
   }
 
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  const token = bearer(req);
   if (!token) {
     console.log('health upload rejected: no key');
     return res.status(401).json({ error: 'Missing your lifestyle+ health key.' });
   }
 
-  const db = createClient(SUPABASE_URL, SERVER_KEY, { auth: { persistSession: false } });
+  const db = serverDb();
   const tokenHash = createHash('sha256').update(token).digest('hex');
   const { data: keyRow, error: keyErr } = await db
     .from('health_tokens')

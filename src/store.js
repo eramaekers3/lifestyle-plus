@@ -35,7 +35,17 @@ let version = 0;
 const listeners = new Set();
 const cache = new Map();
 
+// Saving to localStorage means writing out every record, so changes made close together
+// (a burst of edits, a sync) are saved once. Anything pending is saved right away when the
+// app goes to the background or closes.
+let persistTimer = null;
 function persist() {
+  if (persistTimer) return;
+  persistTimer = setTimeout(flushPersist, 250);
+}
+function flushPersist() {
+  clearTimeout(persistTimer);
+  persistTimer = null;
   try {
     localStorage.setItem(
       KEY,
@@ -46,9 +56,16 @@ function persist() {
   }
 }
 
-function emit() {
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushPersist);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && flushPersist());
+}
+
+/** Tells the app something changed. Pass the kinds that changed so other lists keep their cache. */
+function emit(kinds) {
   version++;
-  cache.clear();
+  if (kinds) kinds.forEach((k) => cache.delete(k));
+  else cache.clear();
   listeners.forEach((l) => l());
 }
 
@@ -90,25 +107,31 @@ export function useRecord(id) {
 
 /* ---------- Writing ---------- */
 
-function write(kind, data) {
+// Writes one record and adds the kinds whose lists change to `kinds` (two if it changes kind).
+function write(kind, data, kinds) {
   const id = data.id || newId();
+  const prev = db.records[id];
+  kinds.add(kind);
+  if (prev) kinds.add(prev.kind);
   db.records[id] = { id, kind, data: { ...data, id }, updated_at: new Date().toISOString(), deleted: false };
   db.dirty.add(id);
   return db.records[id].data;
 }
 
 export function put(kind, data) {
-  const out = write(kind, data);
+  const kinds = new Set();
+  const out = write(kind, data, kinds);
   persist();
-  emit();
+  emit(kinds);
   scheduleSync();
   return out;
 }
 
 export function putMany(items) {
-  items.forEach(([kind, data]) => write(kind, data));
+  const kinds = new Set();
+  items.forEach(([kind, data]) => write(kind, data, kinds));
   persist();
-  emit();
+  emit(kinds);
   scheduleSync();
 }
 
@@ -124,7 +147,7 @@ export function remove(id) {
   db.records[id] = { ...r, deleted: true, updated_at: new Date().toISOString() };
   db.dirty.add(id);
   persist();
-  emit();
+  emit([r.kind]);
   scheduleSync();
 }
 
@@ -134,9 +157,16 @@ export const SETTINGS_ID = idFor('settings');
 const NO_CALENDARS = [];
 export const DEFAULT_SETTINGS = { stackLimit: 3, dayStart: 7, dayEnd: 23, sample: false, calendars: NO_CALENDARS, accent: '#ffcf5c', headingFont: 'bricolage' };
 
+// The same settings object is handed out until settings change, so it's safe in effect deps.
+let settingsFrom;
+let settingsOut = DEFAULT_SETTINGS;
 export function useSettings() {
   const s = useRecord(SETTINGS_ID);
-  return { ...DEFAULT_SETTINGS, ...(s || {}) };
+  if (s !== settingsFrom) {
+    settingsFrom = s;
+    settingsOut = { ...DEFAULT_SETTINGS, ...(s || {}) };
+  }
+  return settingsOut;
 }
 
 export function saveSettings(changes) {
@@ -151,6 +181,7 @@ export function clearSample() {
       db.dirty.delete(id);
     }
   }
+  emit();
   saveSettings({ sample: false });
 }
 
@@ -163,6 +194,7 @@ export function eraseAll() {
       db.dirty.add(id);
     }
   }
+  emit();
   saveSettings({ sample: false });
 }
 
@@ -203,7 +235,7 @@ function scheduleSync(delay = 1200) {
  */
 async function pull(since, remoteWins) {
   let maxSeen = 0;
-  let changed = false;
+  const changed = new Set(); // kinds that changed
   const page = 1000;
   for (let from = 0; ; from += page) {
     let q = supabase
@@ -226,7 +258,8 @@ async function pull(since, remoteWins) {
           deleted: row.deleted,
         };
         db.dirty.delete(row.id);
-        changed = true;
+        changed.add(row.kind);
+        if (local && local.kind !== row.kind) changed.add(local.kind);
       }
       maxSeen = Math.max(maxSeen, Date.parse(row.synced_at));
     }
@@ -252,11 +285,11 @@ export async function sync() {
     //    before sending anything up. Records this device made before it had ever synced (fresh
     //    install, re-added to the Home Screen) must never overwrite the real ones.
     const firstSync = !db.lastPull;
-    let changed = false;
+    const changed = new Set();
     let maxSeen = 0;
     if (firstSync) {
       const r = await pull(null, true);
-      changed = r.changed;
+      r.changed.forEach((k) => changed.add(k));
       maxSeen = r.maxSeen;
     }
 
@@ -286,11 +319,11 @@ export async function sync() {
     const after = maxSeen ? new Date(maxSeen) : db.lastPull ? new Date(Date.parse(db.lastPull)) : null;
     const since = after ? new Date(after.getTime() - 5000).toISOString() : null;
     const r = await pull(since, false);
-    changed = changed || r.changed;
+    r.changed.forEach((k) => changed.add(k));
     maxSeen = Math.max(maxSeen, r.maxSeen, db.lastPull ? Date.parse(db.lastPull) : 0);
     if (maxSeen) db.lastPull = new Date(maxSeen).toISOString();
     persist();
-    if (changed) emit();
+    if (changed.size) emit(changed);
     setStatus({ state: 'synced', lastSynced: new Date().toISOString() });
   } catch (e) {
     setStatus({ state: 'error', error: e.message || String(e) });

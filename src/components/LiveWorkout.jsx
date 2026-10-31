@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   useSession, totalMs, exerciseMs, clock, goToExercise, pauseSession, resumeSession, resetExerciseClock,
-  updateRow, addRow, removeRow, editSessionExercise, addSessionExercise, removeSessionExercise, summarize,
+  updateRow, addRow, removeRow, editSessionExercise, removeSessionExercise, summarize,
   finishSession, discardSession, addSessionExercises, sessionChanged, saveSessionAsRoutine,
 } from '../lib/workouts.js';
 import { libraryEntry, groupOf, GROUPS } from '../lib/exercises.js';
@@ -43,6 +43,7 @@ export default function LiveWorkout({ onMinimize }) {
   const [picking, setPicking] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null); // exercise id waiting for a second tap
   const chips = useRef(null);
+  const cur = s && s.cur;
   // Pull the workout screen down (from the top) to tuck it away into the pill; the workout keeps running.
   const liveRef = useRef(null);
   useDragDismiss(liveRef, () => onMinimize(), { key: `${!!s}:${finishing}` });
@@ -51,7 +52,7 @@ export default function LiveWorkout({ onMinimize }) {
   useEffect(() => {
     const el = chips.current && chips.current.querySelector('[aria-current="step"]');
     if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  }, [s && s.cur]);
+  }, [cur]);
 
   // The page behind stays put while this screen is open.
   useEffect(() => {

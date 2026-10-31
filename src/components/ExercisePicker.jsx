@@ -4,8 +4,8 @@ import { GROUPS, LIBRARY, groupOf, libraryEntry, toExercise } from '../lib/exerc
 import { musclesFor } from '../lib/lifting.js';
 import { Icon, Sheet } from './ui.jsx';
 import MuscleIcon from './MuscleIcon.jsx';
+import { norm } from '../lib/text.js';
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 
 /**
  * Pick exercises by muscle group (or search), several at once.

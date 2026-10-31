@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
 import { Icon, Toaster, HeartMark } from './components/ui.jsx';
 import { DEFAULT_HEART } from './lib/logo.js';
@@ -7,9 +7,6 @@ import { useCanvasSync } from './lib/canvas.js';
 import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
 import LevelBadge from './components/LevelBadge.jsx';
-import ShutdownSheet from './components/ShutdownSheet.jsx';
-import ReviewSheet from './components/ReviewSheet.jsx';
-import SettingsSheet from './components/SettingsSheet.jsx';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
 import { toast } from './lib/toast.js';
@@ -26,6 +23,16 @@ import BodyView from './views/BodyView.jsx';
 import MoneyView from './views/MoneyView.jsx';
 import ListsView from './views/ListsView.jsx';
 import { resumeBankSignIn } from './lib/finance.js';
+
+// Sheets opened now and then load separately, so the first screen comes up faster. They're
+// fetched in the background right after start-up, so they open instantly (and work offline).
+const loadSettings = () => import('./components/SettingsSheet.jsx');
+const loadShutdown = () => import('./components/ShutdownSheet.jsx');
+const loadReview = () => import('./components/ReviewSheet.jsx');
+const SettingsSheet = lazy(loadSettings);
+const ShutdownSheet = lazy(loadShutdown);
+const ReviewSheet = lazy(loadReview);
+const prefetchSheets = () => [loadSettings, loadShutdown, loadReview].forEach((load) => load().catch(() => {}));
 
 const TABS = [
   { id: 'plan', label: 'Plan', View: PlanView },
@@ -84,6 +91,10 @@ export default function App() {
     p.then((name) => name && toast(`${name} connected`)).catch((e) => toast(e.message));
   }, []);
   usePushKeepAlive(!!sync.email);
+  useEffect(() => {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    idle(prefetchSheets);
+  }, []);
   useSeedRoutines();
   useRecurring();
 
@@ -216,7 +227,11 @@ export default function App() {
       </nav>
 
       {capture && <CaptureSheet onClose={() => setCapture(false)} />}
-      {settings && <SettingsSheet onClose={() => setSettings(false)} />}
+      <Suspense fallback={null}>
+        {settings && <SettingsSheet onClose={() => setSettings(false)} />}
+        {ritual === 'shutdown' && <ShutdownSheet onClose={closeRitual} />}
+        {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
+      </Suspense>
       {session && !liveOpen && <WorkoutPill onOpen={() => setLiveOpen(true)} />}
       {session && liveOpen && <LiveWorkout onMinimize={() => setLiveOpen(false)} />}
       {morning && (
@@ -228,8 +243,6 @@ export default function App() {
           }}
         />
       )}
-      {ritual === 'shutdown' && <ShutdownSheet onClose={closeRitual} />}
-      {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
       <Toaster />
     </div>
   );

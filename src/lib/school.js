@@ -1,8 +1,7 @@
 // Turning Canvas calendar-feed events into homework and tests.
-// Plain JavaScript with no app imports, so the notification server (api/push-tick.js) can use it too.
+// Plain JavaScript (only the date helpers), so the notification server (api/push-tick.js) can use it too.
 
-const pad = (n) => String(n).padStart(2, '0');
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+import { iso } from './dates.js';
 
 const TEST_RE = /\b(exams?|midterms?|finals?|tests?|quiz(zes)?)\b/i;
 // Canvas puts the course at the end of each title: "Homework 6 [CSCE 310-001 Data Structures]".

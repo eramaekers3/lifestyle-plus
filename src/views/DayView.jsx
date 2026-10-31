@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useKind, useSettings, putMany } from '../store.js';
 import { addDays, fmt, fmtDur, nowMin, relDay, todayISO, weekStart } from '../lib/dates.js';
 import { useFinance, total as sumKind, money, merchantOf, catLabel, CAT_COLORS } from '../lib/finance.js';
-import { useHabits, toggleHabit } from '../lib/model.js';
+import { useHabits } from '../lib/model.js';
 import { toast } from '../lib/toast.js';
 import { FlipClock, Icon, Sheet } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';

@@ -56,8 +56,6 @@ export function addItem(listId, text, items) {
 export const toggleItem = (item) =>
   patch(item.id, item.done ? { done: false, doneAt: null } : { done: true, doneAt: new Date().toISOString() });
 
-export const renameItem = (item, text) => norm(text) && patch(item.id, { text: norm(text) });
-
 export const removeItem = (item) => remove(item.id);
 
 /** Brings back items removed by clearItems (for Undo). */
@@ -77,11 +75,6 @@ export function clearItems(list, items) {
   }
   items.forEach((i) => remove(i.id));
   return before;
-}
-
-export function forgetRecent(name) {
-  const l = ensureGroceries();
-  put('list', { ...l, recent: (l.recent || []).filter((r) => !same(r, name)) });
 }
 
 /** Unchecks everything on a list (packing lists, ready for the next trip). */

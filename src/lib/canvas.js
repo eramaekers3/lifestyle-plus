@@ -4,7 +4,7 @@
 // device so they still show offline. Checking an item off is saved as a 'schooldone' record, so it
 // syncs too. Canvas itself is never changed.
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useSettings, saveSettings, put, putMany, remove, useKind, useRecord, list, get, SETTINGS_ID } from '../store.js';
+import { useSettings, saveSettings, put, putMany, remove, useKind, list, get, SETTINGS_ID } from '../store.js';
 import { idFor } from './ids.js';
 import { addDays, todayISO } from './dates.js';
 
@@ -182,7 +182,6 @@ const assignmentIdOf = (uid) => (/^event-assignment-(\d+)$/.exec(uid || '') || [
 
 const TOKEN_ID = idFor('canvas-token');
 export const getToken = () => (get(TOKEN_ID) || {}).token || '';
-export const useHasToken = () => !!(useRecord(TOKEN_ID) || {}).token;
 const hostOf = (feedUrl) => {
   try {
     return new URL(String(feedUrl).replace(/^webcals?:\/\//i, 'https://')).host;

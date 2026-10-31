@@ -72,8 +72,6 @@ export function sendBack(t) {
   patch(t.id, { status: 'backlog', order: (orders.length ? Math.min(...orders) : 1) - 1 });
 }
 
-export const moveToTop = sendBack;
-
 /** Saves a dragged order. field is 'order' for the backlog, 'nowOrder' for Now. */
 export function reorderTasks(tasks, field) {
   const changed = tasks.filter((t, i) => t[field] !== i + 1).map((t) => ['task', { ...t, [field]: tasks.indexOf(t) + 1 }]);
@@ -94,7 +92,6 @@ export const BLOCK_TYPES = [
   { id: 'fixed', label: 'Class / fixed' },
   { id: 'personal', label: 'Personal' },
 ];
-export const typeLabel = (id) => (BLOCK_TYPES.find((t) => t.id === id) || BLOCK_TYPES[0]).label;
 
 /** Side-by-side columns for overlapping blocks. */
 export function layoutBlocks(blocks) {

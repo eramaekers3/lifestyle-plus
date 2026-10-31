@@ -10,7 +10,7 @@ import { idFor } from '../src/lib/ids.js';
 
 const MAX_LINES = 60000; // a week of ungrouped step readings from two devices can run to thousands
 const num = (v) => {
-  const n = parseFloat(String(v || '').replace(/[^\d.\-]/g, ''));
+  const n = parseFloat(String(v || '').replace(/[^\d.-]/g, ''));
   return Number.isFinite(n) ? n : null;
 };
 const pad = (n) => String(n).padStart(2, '0');

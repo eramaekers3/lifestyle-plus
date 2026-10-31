@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { putMany, useKind, useSettings } from '../store.js';
 import { addDays, fmt, fmtDur, minToLabel, nowMin, todayISO } from '../lib/dates.js';
-import { useStack, completeTask, sendBack, useHabits, toggleHabit } from '../lib/model.js';
+import { useStack, sendBack, useHabits } from '../lib/model.js';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn } from '../lib/canvas.js';
 import { shutDown, useShutDown } from '../lib/review.js';
 import { toast } from '../lib/toast.js';
-import { Icon, Sheet } from './ui.jsx';
+import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 import BlockSheet from './BlockSheet.jsx';
 import { haptic } from '../lib/haptics.js';
@@ -65,15 +65,6 @@ export default function ShutdownSheet({ onClose }) {
         <button className="link-btn mo-later" onClick={onClose}>Not yet</button>
       </div>
     </Sheet>
-  );
-}
-
-function Step({ n, title, children }) {
-  return (
-    <section className="mo-step">
-      <h3><span className="n">{n}</span>{title}</h3>
-      {children}
-    </section>
   );
 }
 

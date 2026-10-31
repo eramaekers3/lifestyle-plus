@@ -14,6 +14,7 @@ import { toast } from '../lib/toast.js';
 import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCalendarColor } from '../lib/calendar.js';
 import { enablePush, disablePush, sendTestPush, usePushState } from '../lib/push.js';
 import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor, saveCanvasToken, removeCanvasToken, refreshSubmissions } from '../lib/canvas.js';
+import { DEFAULT_NOTIFY } from '../../api/_push-core.js';
 
 export default function SettingsSheet({ onClose }) {
   const s = useSettings();
@@ -259,7 +260,6 @@ function CalendarSection() {
   );
 }
 
-const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 480, school: true, schoolAt: 1200, shutdown: true, shutdownAt: 1260 };
 const timeOptions = (from, to) => Array.from({ length: (to - from) * 2 + 1 }, (_, i) => from * 60 + i * 30);
 
 function CategoriesSection() {

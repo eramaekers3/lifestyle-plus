@@ -13,6 +13,7 @@ import { put, remove, sync, useKind } from '../store.js';
 import { supabase } from '../supabase.js';
 import { idFor } from './ids.js';
 import { detectRecurring } from './subscriptions.js';
+import { norm } from './text.js';
 
 export const KINDS = [
   { id: 'spend', label: 'Spending' },
@@ -49,7 +50,6 @@ export const CAT_COLORS = {
   HOME_IMPROVEMENT: '#c9d36a', GENERAL_SERVICES: '#9fb4ff', GOVERNMENT_AND_NON_PROFIT: '#7fdca0', BANK_FEES: '#ff5a6e', OTHER: '#8f97b9',
 };
 
-const norm = (s) => String(s || '').trim().toLowerCase();
 export const merchantOf = (t) => t.merchant || t.name;
 
 /** Plaid's best guess at a transaction's kind. */

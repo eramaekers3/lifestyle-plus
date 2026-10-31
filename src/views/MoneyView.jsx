@@ -23,7 +23,6 @@ export default function MoneyView() {
 
   useEffect(() => {
     if (signedIn && f.items.length) syncBanks(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn, f.items.length]);
 
   if (!f.accounts.length) {
