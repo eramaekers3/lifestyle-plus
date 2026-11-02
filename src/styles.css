@@ -83,14 +83,8 @@ code { font-size: 0.92em; background: var(--raised); padding: 1px 5px; border-ra
   gap: 12px;
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   padding-bottom: 12px;
-  background: var(--bg);
+  background: linear-gradient(var(--bg) 78%, transparent);
 }
-/* The fade under the top bar only shows once the page is scrolled, so at the top nothing sits in it. */
-.topbar::after {
-  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 22px; pointer-events: none;
-  background: linear-gradient(var(--bg), transparent); opacity: 0; transition: opacity 0.25s var(--ease-out);
-}
-.topbar.scrolled::after { opacity: 1; }
 .brand { display: flex; align-items: center; gap: 3px; font: var(--display-weight) 25px/1 var(--display); letter-spacing: -0.04em; }
 .heart-mark { display: inline-block; flex: none; }
 .heart-mark svg { display: block; }
@@ -1536,7 +1530,6 @@ body.deep-on::before {
 }
 body.deep-on .app { position: relative; z-index: 1; }
 body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
-body.deep-on .brand, body.deep-on .top-right { opacity: 0.45; transition: opacity 0.4s; }
 
 .deep-dim { display: flex; flex-direction: column; gap: 18px; opacity: 0.3; filter: saturate(0.3); transition: opacity 0.35s var(--ease-out), filter 0.35s; }
 .deep-dim:hover, .deep-dim:focus-within { opacity: 0.85; filter: none; }
