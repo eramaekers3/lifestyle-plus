@@ -13,6 +13,7 @@ import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import SchoolList from '../components/SchoolList.jsx';
+import { WeatherChip } from '../components/Weather.jsx';
 import CardStack from '../components/CardStack.jsx';
 import { PastDoneButton } from './WeekView.jsx';
 import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
@@ -61,6 +62,7 @@ export default function DayView({ date }) {
         {isToday && <FlipClock />}
       </header>
 
+      <WeatherChip date={date} />
       {isToday && <StartBanner date={date} />}
       {isToday && <ReviewBanner />}
       {isToday && <ShutdownBanner date={date} />}
