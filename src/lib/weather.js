@@ -97,6 +97,11 @@ function shape(j) {
     gust: d.wind_gusts_10m_max[i],
     uv: d.uv_index_max[i],
   }));
+  // Next few hours in 15-minute steps, for the rain graph (not every place has these).
+  const m = j.minutely_15;
+  const mins = m && m.time
+    ? m.time.map((t, i) => ({ time: t, precip: m.precipitation[i] || 0, snow: (m.snowfall && m.snowfall[i]) || 0 }))
+    : [];
   const c = j.current;
   return {
     now: {
@@ -112,6 +117,7 @@ function shape(j) {
     },
     hours,
     days,
+    mins,
   };
 }
 
@@ -132,6 +138,8 @@ export function refreshWeather(place, { force = false } = {}) {
     wind_speed_unit: 'mph',
     precipitation_unit: 'inch',
     timezone: 'auto',
+    minutely_15: 'precipitation,snowfall',
+    forecast_minutely_15: '16',
     forecast_days: '10',
   });
   set({ loading: true });
@@ -215,3 +223,63 @@ export const clockLabel = (t) => {
   return `${h % 12 || 12}:${m} ${h < 12 ? 'am' : 'pm'}`;
 };
 export const inches = (n) => (!n ? '0"' : n < 0.01 ? '<0.01"' : `${n.toFixed(2)}"`);
+
+/* ---------- Rain in the next few hours ----------
+   Built from the 15-minute forecast when there is one, otherwise from the hourly one.
+   Returns null unless it's raining now or starting within two hours. */
+const WET = 0.01; // inches per hour; anything under this is a sprinkle we ignore
+// Bands, by their top edge: light under 0.1"/hr, moderate to 0.3"/hr, heavy above.
+export const RAIN_LEVELS = [
+  { at: 0.1, label: 'Light' },
+  { at: 0.3, label: 'Moderate' },
+  { at: 0.6, label: 'Heavy' },
+];
+const SNOW_CODES = [71, 73, 75, 77, 85, 86];
+const shortClock = (t) => {
+  const h = Number(t.slice(11, 13));
+  return `${h % 12 || 12}:${t.slice(14, 16)}`;
+};
+
+export function rainOutlook(data) {
+  if (!data) return null;
+  const nowT = data.now.time;
+  let steps; // [{ time, rate (in/hr), snow }]
+  let stepMin;
+  const from15 = (data.mins || []).findIndex((m) => m.time >= nowT.slice(0, 16));
+  if (data.mins && data.mins.length && from15 !== -1) {
+    // The step we're in now is the one that started at or before now.
+    const i = Math.max(0, data.mins[from15].time === nowT.slice(0, 16) ? from15 : from15 - 1);
+    steps = data.mins.slice(i, i + 12).map((m) => ({ time: m.time, rate: m.precip * 4, snow: m.snow > 0 }));
+    stepMin = 15;
+  } else {
+    const i = Math.max(0, data.hours.findIndex((h) => h.time.slice(0, 13) >= nowT.slice(0, 13)));
+    steps = data.hours.slice(i, i + 6).map((h) => ({ time: h.time, rate: h.precip, snow: SNOW_CODES.includes(Number(h.code)) }));
+    stepMin = 60;
+  }
+  if (steps.length < 2) return null;
+  const nowWet = steps[0].rate >= WET || data.now.precip > 0;
+  const soon = Math.ceil(120 / stepMin); // steps in two hours
+  const startAt = nowWet ? 0 : steps.findIndex((s, k) => k <= soon && s.rate >= WET);
+  if (!nowWet && startAt === -1) return null;
+
+  const snow = steps.some((s) => s.rate >= WET && s.snow) || SNOW_CODES.includes(Number(data.now.code));
+  const kind = snow ? 'Snow' : 'Rain';
+  const level = (r) => (r >= 0.3 ? 'Heavy' : r >= 0.1 ? 'Moderate' : 'Light');
+  let headline;
+  let sub;
+  let short;
+  if (nowWet) {
+    // Stops at the first step that stays dry for the next half hour (or the next hour step).
+    const need = stepMin === 15 ? 2 : 1;
+    const stop = steps.findIndex((s, k) => k > 0 && steps.slice(k, k + need).every((x) => x.rate < WET));
+    headline = stop === -1 ? `${kind} for at least the next ${Math.round((steps.length * stepMin) / 60)} hours` : `${kind} stopping around ${shortClock(steps[stop].time)}`;
+    sub = `${level(Math.max(steps[0].rate, data.now.precip))} ${kind.toLowerCase()} now`;
+    short = stop === -1 ? `${kind} for hours` : `${kind} stops ~${shortClock(steps[stop].time)}`;
+  } else {
+    headline = `${kind} starting around ${shortClock(steps[startAt].time)}`;
+    const peak = Math.max(...steps.slice(startAt).map((s) => s.rate));
+    sub = `${level(peak)} at its heaviest`;
+    short = `${kind} at ~${shortClock(steps[startAt].time)}`;
+  }
+  return { steps, stepMin, kind, headline, sub, short };
+}

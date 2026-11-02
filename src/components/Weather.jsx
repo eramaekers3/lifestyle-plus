@@ -5,7 +5,7 @@ import { useSettings, saveSettings } from '../store.js';
 import { toast } from '../lib/toast.js';
 import {
   useWeather, refreshWeather, setWeatherPlace, searchPlaces, locateMe,
-  condition, compass, deg, hourLabel, clockLabel, inches,
+  condition, compass, deg, hourLabel, clockLabel, inches, rainOutlook, RAIN_LEVELS,
 } from '../lib/weather.js';
 
 // Icon colors by look, so the chip reads at a glance.
@@ -63,15 +63,20 @@ export function WeatherChip({ date }) {
     const temp = isToday ? data.now.temp : day.hi;
     const code = isToday ? data.now.code : day.code;
     const { label } = condition(code, isToday ? data.now.isDay : true);
+    const rain = isToday && rainOutlook(data);
     body = (
       <>
         <WxIcon code={code} isDay={isToday ? data.now.isDay : true} size={28} />
         <span className="wx-temp">{deg(temp)}</span>
         <span className="wx-mid">
           <b>{label}</b>
-          <span>H {deg(day.hi)} · L {deg(day.lo)}{isToday && day.pop < 10 ? ` · Feels ${deg(data.now.feels)}` : ''}</span>
+          {rain ? (
+            <span className="wx-alert">{rain.short}</span>
+          ) : (
+            <span>H {deg(day.hi)} · L {deg(day.lo)}{isToday && day.pop < 10 ? ` · Feels ${deg(data.now.feels)}` : ''}</span>
+          )}
         </span>
-        {day.pop >= 10 && (
+        {day.pop >= 10 && !rain && (
           <span className="wx-pop" aria-label={`${day.pop}% chance of precipitation`}>
             <Icon name="drop" size={14} />{day.pop}%
           </span>
@@ -138,6 +143,7 @@ function DayGlance({ data, day, isToday, onMore }) {
   ].filter(Boolean);
   return (
     <div className="wx-glance">
+      {isToday && <RainGraph data={data} />}
       <HourStrip rows={rows} nowFirst={isToday} />
       <ul className="wx-facts">
         {facts.map((f) => (
@@ -189,6 +195,7 @@ export function WeatherSheet({ start, onClose }) {
       ) : (
         <>
           <WxHero data={data} day={day} isToday={isToday} />
+          {isToday && <RainGraph data={data} />}
           <Hourly data={data} day={day} isToday={isToday} />
           <Daily data={data} sel={day.date} onPick={setSel} />
           <Details data={data} day={day} isToday={isToday} />
@@ -277,7 +284,7 @@ function HourStrip({ rows, nowFirst, startAt = 0 }) {
   const showPop = rows.some((h) => h.pop >= 10);
 
   return (
-    <div className="wx-hours" ref={strip}>
+    <div className="wx-hours" ref={strip} data-noswipe>
       <div className="wx-hours-in" style={{ width: W }}>
         <svg className="wx-graph" width={W} height={GH} aria-hidden="true">
           <defs>
@@ -435,5 +442,79 @@ function PlacePicker({ current, onPicked, onCancel }) {
       )}
       {onCancel && <button className="link" onClick={onCancel} style={{ border: 0, background: 'none', padding: 0 }}>Keep {current.name}</button>}
     </div>
+  );
+}
+
+/* ---------- Rain graph ----------
+   Like the Weather app's next-hour chart: how hard it's coming down over the next few hours,
+   against Light / Moderate / Heavy lines. Only shown while it's raining or about to. */
+export function RainGraph({ data }) {
+  const r = rainOutlook(data);
+  if (!r) return null;
+  const W = 340, H = 96, L = 4, R = 4, T = 6, B = 2;
+  const n = r.steps.length;
+  const x = (i) => L + ((W - L - R) * i) / (n - 1);
+  // Intensity on a bent scale so a drizzle still shows and a downpour doesn't flatten the rest.
+  const lift = (rate) => {
+    const pts = [[0, 0], ...RAIN_LEVELS.map((l, k) => [l.at, (k + 1) / (RAIN_LEVELS.length + 0.3)])];
+    if (rate >= pts.at(-1)[0]) return Math.min(1, pts.at(-1)[1] + (rate - pts.at(-1)[0]) * 0.4);
+    const k = pts.findIndex(([a]) => a > rate);
+    const [a0, y0] = pts[k - 1];
+    const [a1, y1] = pts[k];
+    return y0 + ((rate - a0) / (a1 - a0)) * (y1 - y0);
+  };
+  const y = (rate) => H - B - lift(rate) * (H - T - B);
+  const pts = r.steps.map((s, i) => [x(i), y(s.rate)]);
+  const line = pts.reduce((d, [px, py], i) => {
+    if (!i) return `M${px} ${py}`;
+    const [qx, qy] = pts[i - 1];
+    const mx = (qx + px) / 2;
+    return `${d} C${mx} ${qy} ${mx} ${py} ${px} ${py}`;
+  }, '');
+  const area = `${line} L${x(n - 1)} ${H - B} L${x(0)} ${H - B} Z`;
+  // Axis: now, then each hour (or every other step for hourly data).
+  const ticks = r.steps
+    .map((s, i) => ({ i, t: s.time }))
+    .filter(({ i, t }) => i === 0 || (i >= (r.stepMin === 15 ? 3 : 1) && (r.stepMin === 15 ? t.slice(14, 16) === '00' : true)));
+
+  return (
+    <section className="wx-rain" aria-label={`${r.headline}. ${r.sub}.`}>
+      <div className="wx-rain-head">
+        <Icon name={r.kind === 'Snow' ? 'w-snow' : 'w-rain'} size={18} />
+        <b>{r.headline}</b>
+      </div>
+      <p className="wx-rain-sub">{r.sub}</p>
+      <div className="wx-rain-plot">
+      <svg className="wx-rain-g" viewBox={`0 0 ${W} ${H}`} aria-hidden="true" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="wx-rain-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--sky)" stopOpacity="0.85" />
+            <stop offset="1" stopColor="var(--sky)" stopOpacity="0.25" />
+          </linearGradient>
+        </defs>
+        {RAIN_LEVELS.slice(0, -1).map((l) => (
+          <g key={l.label} className="lvl">
+            <line x1={L} x2={W - R} y1={y(l.at)} y2={y(l.at)} />
+          </g>
+        ))}
+        <line className="base" x1={L} x2={W - R} y1={H - B} y2={H - B} />
+        <path className="area" d={area} />
+        <path className="edge" d={line} />
+      </svg>
+      <div className="wx-rain-lv" aria-hidden="true">
+        {RAIN_LEVELS.map((l, k) => (
+          // Each label sits in the middle of its band.
+          <span key={l.label} style={{ top: `${(y(((k ? RAIN_LEVELS[k - 1].at : 0) + l.at) / 2) / H) * 100}%` }}>{l.label}</span>
+        ))}
+      </div>
+      <div className="wx-rain-x" aria-hidden="true">
+        {ticks.map(({ i, t }) => (
+          <span key={t} style={{ left: `${(x(i) / W) * 100}%` }} className={i === 0 ? 'first' : i === n - 1 ? 'last' : ''}>
+            {i === 0 ? 'Now' : clockLabel(t).replace(':00', '').replace(' ', '')}
+          </span>
+        ))}
+      </div>
+      </div>
+    </section>
   );
 }

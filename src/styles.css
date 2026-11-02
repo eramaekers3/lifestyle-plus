@@ -1413,6 +1413,8 @@ button.wx-fold .icon { transform: rotate(-90deg); }
   margin: 0 -4px; padding: 4px; border-radius: 14px; background: var(--raised); border: 1px solid var(--line);
 }
 .wx-hours::-webkit-scrollbar { display: none; }
+.wx-hours { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+.wx-hour { scroll-snap-align: start; }
 .wx-hours-in { display: flex; flex-direction: column; }
 .wx-graph { display: block; overflow: visible; }
 .wx-area { fill: url(#wx-fill); }
@@ -1455,4 +1457,26 @@ button.wx-fold .icon { transform: rotate(-90deg); }
 .wx-results { list-style: none; margin: 10px 0 0; padding: 0; }
 .wx-results button { display: flex; flex-direction: column; width: 100%; text-align: left; border: 0; background: none; padding: 10px 4px; border-top: 1px solid var(--line); }
 .wx-results li:first-child button { border-top: 0; }
+/* Rain in the next few hours */
+.wx-alert { color: var(--sky) !important; font-weight: 700; }
+.wx-rain {
+  margin: 0 0 10px; padding: 10px 12px 8px; border-radius: 14px;
+  background: color-mix(in srgb, var(--sky) 10%, var(--raised)); border: 1px solid color-mix(in srgb, var(--sky) 35%, var(--line));
+}
+.wx-sec + .wx-rain, .wx-hero + .wx-rain { margin-top: 14px; }
+.wx-rain-head { display: flex; align-items: center; gap: 7px; }
+.wx-rain-head .icon { color: var(--sky); }
+.wx-rain-sub { margin: 2px 0 6px; font-size: 13px; color: var(--muted); }
+.wx-rain-plot { position: relative; padding-bottom: 20px; }
+.wx-rain-g { display: block; width: 100%; height: 96px; }
+.wx-rain-g .lvl line { stroke: color-mix(in srgb, var(--muted) 45%, transparent); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.wx-rain-g .base { stroke: var(--dim); vector-effect: non-scaling-stroke; }
+.wx-rain-g .area { fill: url(#wx-rain-fill); }
+.wx-rain-g .edge { fill: none; stroke: var(--sky); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.wx-rain-lv { position: absolute; left: 0; right: 0; top: 0; height: 96px; pointer-events: none; }
+.wx-rain-lv span { position: absolute; right: 0; transform: translateY(-50%); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.wx-rain-x { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; }
+.wx-rain-x span { position: absolute; transform: translateX(-50%); font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.wx-rain-x span.first { transform: none; color: var(--ink); }
+.wx-rain-x span.last { transform: translateX(-100%); }
 @media (prefers-reduced-motion: reduce) { .wx-chip, .wx-hero, .wx-glance { animation: none; } }
