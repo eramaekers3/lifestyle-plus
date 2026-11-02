@@ -5,6 +5,7 @@ import { useHabits, habitStats, addHabit, resumeHabit, dayClass } from '../lib/m
 import { addDays, fmt, parse, todayISO } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
 import HabitHistorySheet from '../components/HabitHistorySheet.jsx';
+import CardStack from '../components/CardStack.jsx';
 import { haptic } from '../lib/haptics.js';
 import { toggleHabitFx } from '../lib/game.js';
 
@@ -287,6 +288,19 @@ export default function HabitsView() {
         </p>
       </header>
 
+      <CardStack
+        page="habits"
+        cards={[
+          {
+            id: 'today',
+            title: 'Your habits',
+            node: (
+              <section className="card bare" aria-labelledby="yh-h">
+                <div className="card-head">
+                  <h2 id="yh-h">Your habits</h2>
+                  <span className="meta">{habits.filter((h) => lookup(h, today).code === 'd').length} of {habits.length} today</span>
+                </div>
+                {habits.length ? (
       <HabitGrid habits={habits} paused={paused}>
         {(h, grip) => {
         const s = stats[h.id];
@@ -329,9 +343,16 @@ export default function HabitsView() {
         );
         }}
       </HabitGrid>
-
-      {!habits.length && <p className="empty card">No habits yet. Add one below, or import your history from Streaks in Settings.</p>}
-
+                ) : (
+                  <p className="empty card">No habits yet. Add one below, or import your history from Streaks in Settings.</p>
+                )}
+              </section>
+            ),
+          },
+          {
+            id: 'new',
+            title: 'New habit',
+            node: (
       <section className="card">
         <div className="card-head"><h2>New habit</h2></div>
         <div className="seg" role="group" aria-label="Habit type" style={{ marginBottom: 10 }}>
@@ -353,8 +374,12 @@ export default function HabitsView() {
           {mode === 'build' ? 'Check it off each day you do it.' : 'Every day counts as clean until you mark a slip.'}
         </p>
       </section>
-
-      {paused.length > 0 && (
+            ),
+          },
+          {
+            id: 'paused',
+            title: 'Paused',
+            node: paused.length > 0 ? (
         <section className="card" aria-labelledby="paused-h">
           <div className="card-head">
             <h2 id="paused-h">Paused</h2>
@@ -372,7 +397,10 @@ export default function HabitsView() {
             ))}
           </ul>
         </section>
-      )}
+            ) : null,
+          },
+        ]}
+      />
 
       {openHabit && <HabitHistorySheet habit={openHabit} idx={idx} onClose={() => setOpen(null)} />}
     </>

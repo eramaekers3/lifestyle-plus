@@ -36,6 +36,7 @@ export default function BodyView() {
   const avgPrev = avgOver(addDays(today, -13), addDays(today, -7));
   const delta = avgNow !== null && avgPrev !== null ? avgNow - avgPrev : null;
   const thisWeek = workouts.filter((w) => w.date > addDays(today, -7)).length;
+  const sinceMon = workouts.filter((w) => w.date >= weekStart(today) && w.date <= today).length;
   const recent = [...workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
   const exercises = [...new Set(workouts.flatMap((w) => w.sets.map((s) => s.ex)))];
 
@@ -67,10 +68,10 @@ export default function BodyView() {
             id: 'weight',
             title: 'Weight',
             node: (
-              <section className="card" aria-labelledby="wt-h">
+              <section className="card wt-card" aria-labelledby="wt-h">
         <div className="card-head"><h2 id="wt-h">Weight</h2>{last && <span className="meta">{last.lbs.toFixed(1)} lb</span>}</div>
         <button className="sl-open wt-open" onClick={() => setWeightOpen(true)} aria-label="Open weight in detail">
-        <div className="hero-row">
+        <div className="hero-row compact">
           <div>
             <div className="label">Latest</div>
             <div className="big">
@@ -83,15 +84,15 @@ export default function BodyView() {
               <div className="label">7-day average</div>
               <div className="delta">{avgNow.toFixed(1)} lb</div>
               {delta !== null && (
-                <div className="label wt-change">{delta > 0 ? '▲ ' : delta < 0 ? '▼ ' : ''}{Math.abs(delta).toFixed(1)} lb vs. the week before</div>
+                <div className="label wt-change">{delta > 0 ? '▲ ' : delta < 0 ? '▼ ' : ''}{Math.abs(delta).toFixed(1)} lb vs. last week</div>
               )}
             </div>
           )}
         </div>
         <WeightChart all={ws} today={today} />
         <p className="card-sub wt-legend">
-          <span><i className="lg-dot" aria-hidden="true" /> a day’s weigh-in</span>
-          <span><i className="lg-line" aria-hidden="true" /> 7-day average (evens out water swings)</span>
+          <span><i className="lg-dot" aria-hidden="true" /> weigh-in</span>
+          <span><i className="lg-line" aria-hidden="true" /> 7-day average</span>
         </p>
         </button>
         {weightOpen && <WeightSheet onClose={() => setWeightOpen(false)} />}
@@ -109,7 +110,7 @@ export default function BodyView() {
             title: 'Recent workouts',
             node: (
               <section className="card" aria-labelledby="rw-h">
-        <div className="card-head"><h2 id="rw-h">Recent workouts</h2><span className="meta">{thisWeek} this week</span></div>
+        <div className="card-head"><h2 id="rw-h">Recent workouts</h2><span className="meta">{sinceMon} this week</span></div>
         {recent.length ? (
           <ul className="rows">
             {recent.map((w) => {
@@ -322,7 +323,7 @@ function WeightChart({ all, today }) {
   const lo = Math.floor(Math.min(...vals) - 0.5);
   const hi = Math.ceil(Math.max(...vals) + 0.5);
   const start = points[0].date < addDays(today, -6) ? points[0].date : addDays(today, -6);
-  const W = 340, H = 170, L = 34, R = 14, T = 12, B = 22;
+  const W = 340, H = 112, L = 34, R = 14, T = 8, B = 20;
   const x0 = parse(start).getTime();
   const span = Math.max(1, parse(today).getTime() - x0);
   const x = (d) => L + (W - L - R) * ((parse(d).getTime() - x0) / span);
@@ -423,18 +424,21 @@ function MuscleWeek({ workouts, today }) {
   const LOW = 10, HIGH = 20, MAX = 24;
   const fmtN = (v) => (Number.isInteger(v) ? v : v.toFixed(1));
   const total = MUSCLES.reduce((a, m) => a + now[m], 0);
+  const [all, setAll] = useState(false);
+  const active = MUSCLES.filter((m) => now[m] || prev[m]);
+  const shown = all ? MUSCLES : active;
   return (
     <section className="card" aria-labelledby="mw-h">
       <div className="card-head">
         <h2 id="mw-h">Sets this week</h2>
-        <span className="meta">by muscle · since Monday</span>
+        <span className="meta">{fmtN(total)} sets · since Monday</span>
       </div>
       {!any ? (
         <p className="empty">Finish a workout and the sets you checked off show up here, grouped by muscle.</p>
       ) : (
         <>
           <ul className="muscles">
-            {MUSCLES.map((m) => {
+            {shown.map((m) => {
               const v = now[m];
               const state = v >= HIGH ? 'over' : v >= LOW ? 'in' : v > 0 ? 'some' : '';
               return (
@@ -450,9 +454,12 @@ function MuscleWeek({ workouts, today }) {
               );
             })}
           </ul>
-          <p className="card-sub">
-            {fmtN(total)} sets so far. The shaded band is 10–20 sets a week, a common target for growth; the tick is last week. A muscle that only helps (like triceps on bench) gets half a set.
-          </p>
+          <p className="mu-foot">Band: 10–20 sets a week · tick: last week · helper muscles count half.</p>
+          {active.length < MUSCLES.length && (
+            <button className="mini mu-more" onClick={() => setAll(!all)}>
+              {all ? 'Only worked muscles' : `Show all ${MUSCLES.length}`}
+            </button>
+          )}
         </>
       )}
     </section>
@@ -465,7 +472,7 @@ function Exercises() {
   const [open, setOpen] = useState(null);
   const [all, setAll] = useState(false);
   if (!list.length) return null;
-  const shown = all ? list : list.slice(0, 6);
+  const shown = all ? list : list.slice(0, 4);
   const ex = open && list.find((x) => x.key === open);
   return (
     <section className="card" aria-labelledby="ex-h">

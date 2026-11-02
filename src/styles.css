@@ -804,8 +804,8 @@ form.inline .num-in { flex: 0 1 92px; }
 /* Foldable, reorderable cards */
 .fold { position: relative; display: flex; flex-direction: column; }
 .fold:not(:has(.card)) { display: none; }
-.fold > .card > .card-head { padding-right: 34px; cursor: pointer; }
-.fold:not(:has(> .card > .card-head)) > .fold-btn { display: none; }
+.fold > .card .card-head { padding-right: 34px; cursor: pointer; }
+.fold:not(:has(.card-head)) > .fold-btn { display: none; }
 .fold-btn {
   position: absolute; top: 9px; right: 8px; z-index: 2; width: 32px; height: 32px; padding: 0;
   display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--dim);
@@ -813,10 +813,18 @@ form.inline .num-in { flex: 0 1 92px; }
 }
 .fold-btn:active { background: var(--raised); }
 .fold.folded > .fold-btn { transform: rotate(-90deg); color: var(--muted); }
-.fold.folded > .card > :not(.card-head) { display: none; }
-.fold.folded > .card > .card-head { margin-bottom: 0; }
+/* Folded: keep only the header line, wherever it sits inside the card. */
+.fold.folded > .card > :not(.card-head):not(:has(.card-head)),
+.fold.folded > .card .card-head ~ * { display: none; }
+.fold.folded > .card .card-head { margin-bottom: 0; }
 .fold.folded > .card { padding-block: 13px; }
-.fold.folded > .card > .card-head .add-blk, .fold.folded > .card > .card-head .wk-actions { display: none; }
+.fold.folded > .card .card-head .add-blk, .fold.folded > .card .card-head .wk-actions, .fold.folded > .card .card-head .mini { display: none; }
+/* A card that's only a header and a group of other cards (Habits) */
+.card.bare { background: none; border: 0; padding: 0; }
+.card.bare::before { display: none; }
+.card.bare > .card-head { padding: 4px 38px 0 4px; }
+.fold.folded > .card.bare { padding: 0; }
+.fold > .card.bare + .fold-btn { top: -5px; right: 0; }
 .arrange-btn { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--dim); font-size: 13px; font-weight: 700; }
 .arrange-list .row-title { font-weight: 700; }
 .arrange-list .mini[aria-pressed='true'] { color: var(--muted); }
@@ -894,11 +902,11 @@ form.inline .num-in { flex: 0 1 92px; }
 .wk-card .routine-row .grip { width: 28px; height: 28px; }
 
 /* Workouts: sets per muscle, exercise history */
-.muscles { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.muscles { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .muscles li { display: grid; grid-template-columns: 84px 1fr 30px; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 700; }
 .mu-name { color: var(--muted); }
 .muscles li.in .mu-name, .muscles li.over .mu-name { color: var(--ink); }
-.mu-bar { position: relative; height: 12px; border-radius: 6px; background: var(--raised); overflow: visible; }
+.mu-bar { position: relative; height: 10px; border-radius: 6px; background: var(--raised); overflow: visible; }
 .mu-zone { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--mint) 16%, transparent); border-inline: 1px dashed color-mix(in srgb, var(--mint) 45%, transparent); }
 .mu-bar i { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 4px; background: var(--sky); transition: width 0.5s var(--ease-out); }
 .muscles li.in .mu-bar i { background: var(--mint); }
@@ -1319,3 +1327,17 @@ form.inline .num-in { flex: 0 1 92px; }
 .plan-row input { width: 20px; height: 20px; accent-color: var(--sun); }
 .plan-time, .plan-title { display: grid; gap: 2px; font-weight: 700; }
 .plan-time small, .plan-title small { font-weight: 500; font-size: 12px; color: var(--muted); }
+
+/* Compact cards */
+.hero-row.compact { margin-bottom: 6px; align-items: center; flex-wrap: nowrap; }
+.hero-row.compact .big { font-size: 34px; }
+.hero-row.compact .big span { font-size: 15px; }
+.wt-open .wt-legend { margin-top: 2px; font-size: 12px; }
+.wt-card .inline { margin-top: 6px; }
+.mu-foot { margin: 0; font-size: 12.5px; color: var(--muted); }
+.mu-more { margin-top: 8px; }
+.wk-spend .hero-row { margin-bottom: 4px; }
+.wk-spend .big { font-size: 36px; }
+.wk-days { height: 52px; margin: 8px 0 2px; }
+.wk-reset { color: var(--dim); }
+.hero-row.compact .label { white-space: nowrap; }

@@ -32,7 +32,7 @@ export default function MoneyView() {
           <h1>Money</h1>
           <p>Connect your banks to see net worth, spending, income, investing and giving in one place.</p>
         </header>
-        <Accounts f={f} bank={bank} signedIn={signedIn} />
+        <CardStack page="money-setup" cards={[{ id: 'accounts', title: 'Accounts', node: <Accounts f={f} bank={bank} signedIn={signedIn} /> }]} />
       </>
     );
   }

@@ -262,8 +262,17 @@ function WeekSpend({ date }) {
     e.stopPropagation();
     setOpen(d);
   };
+  // The week runs Monday to Sunday and starts over each Monday.
+  const resetIn = Math.round((Date.parse(addDays(to, 1)) - Date.parse(today)) / 864e5);
+  const isCurWeek = today >= from && today <= to;
   return (
     <section className="card" aria-labelledby="ws-h">
+      <div className="card-head">
+        <h2 id="ws-h">Spending this week</h2>
+        <span className="meta">
+          Mon {fmt(from, { month: 'short', day: 'numeric' })} – Sun {fmt(to, { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
       <div
         className="wk-spend"
         role="button"
@@ -272,13 +281,12 @@ function WeekSpend({ date }) {
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen('all'))}
         aria-label="See this week’s purchases"
       >
-        <div className="card-head">
-          <h2 id="ws-h">Spending this week</h2>
-          <span className="meta">{money(spent)}</span>
-        </div>
-        <div className="hero-row">
+        <div className="hero-row compact">
           <div>
-            <div className="label">{fmt(from, { month: 'short', day: 'numeric' })} – {fmt(to, { month: 'short', day: 'numeric' })}</div>
+            <div className="label">
+              {isCurWeek ? 'Since Mon' : 'Mon – Sun'}
+              {isCurWeek && <span className="wk-reset"> · resets {resetIn === 1 ? 'tomorrow' : `in ${resetIn} days`}</span>}
+            </div>
             <div className="big money-big">{money(spent)}</div>
           </div>
           {last > 0 && (
@@ -299,7 +307,7 @@ function WeekSpend({ date }) {
               aria-label={`${fmt(x.d, { weekday: 'long' })}: ${money(x.v)}`}
             >
               <i style={{ height: `${x.d > today ? 4 : Math.max(4, (x.v / max) * 44)}px` }} />
-              {fmt(x.d, { weekday: 'narrow' })}
+              {fmt(x.d, { weekday: 'short' }).slice(0, 2)}
             </button>
           ))}
         </div>
