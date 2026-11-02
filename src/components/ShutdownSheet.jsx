@@ -9,6 +9,7 @@ import { toast } from '../lib/toast.js';
 import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 import BlockSheet from './BlockSheet.jsx';
+import JournalEntry from './JournalEntry.jsx';
 import { haptic } from '../lib/haptics.js';
 import { completeTaskFx, toggleHabitFx } from '../lib/game.js';
 
@@ -51,11 +52,15 @@ export default function ShutdownSheet({ onClose }) {
           <HabitCheck today={today} />
         </Step>
 
-        <Step n={4} title={`What’s fixed ${fmt(tomorrow, { weekday: 'long' })}`}>
+        <Step n={4} title="Journal today">
+          <JournalEntry date={today} compact />
+        </Step>
+
+        <Step n={5} title={`What’s fixed ${fmt(tomorrow, { weekday: 'long' })}`}>
           <Tomorrow date={tomorrow} />
         </Step>
 
-        <Step n={5} title="Block out tomorrow">
+        <Step n={6} title="Block out tomorrow">
           <BlockTomorrow today={today} tomorrow={tomorrow} />
         </Step>
 

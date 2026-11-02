@@ -66,6 +66,7 @@ const skipToday = () => {
 
 const tabFromHash = () => {
   const h = window.location.hash.slice(1);
+  if (h === 'journal') return 'habits'; // the journal lives on the Habits tab
   return TABS.some((t) => t.id === h) ? h : 'plan';
 };
 

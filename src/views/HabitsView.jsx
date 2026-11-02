@@ -8,6 +8,7 @@ import HabitHistorySheet from '../components/HabitHistorySheet.jsx';
 import CardStack from '../components/CardStack.jsx';
 import { haptic } from '../lib/haptics.js';
 import { toggleHabitFx } from '../lib/game.js';
+import JournalView from './JournalView.jsx';
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -253,7 +254,42 @@ function HabitGrid({ habits, paused, children }) {
   );
 }
 
+/**
+ * The Habits tab holds two pages: your habits, and the journal. #journal opens straight to the journal
+ * (the shutdown and notifications link there).
+ */
 export default function HabitsView() {
+  const [page, setPage] = useState(() => (window.location.hash === '#journal' ? 'journal' : 'habits'));
+  const [enter, setEnter] = useState(0);
+  const go = (p) => {
+    if (p === page) return;
+    setEnter(p === 'journal' ? 1 : -1);
+    setPage(p);
+    history.replaceState(null, '', p === 'journal' ? '#journal' : '#habits');
+  };
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash === '#journal') setPage('journal');
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  return (
+    <>
+      <div className="plan-bar">
+        <div className="seg" role="group" aria-label="Habits or journal">
+          <button aria-pressed={page === 'habits'} onClick={() => go('habits')}>Habits</button>
+          <button aria-pressed={page === 'journal'} onClick={() => go('journal')}>Journal</button>
+        </div>
+      </div>
+      <div className={`subview${enter ? (enter > 0 ? ' enter-next' : ' enter-prev') : ''}`} key={page}>
+        {page === 'journal' ? <JournalView /> : <HabitsPage />}
+      </div>
+    </>
+  );
+}
+
+function HabitsPage() {
   const idx = useHabits();
   const { habits, paused, all, lookup } = idx;
   const [name, setName] = useState('');

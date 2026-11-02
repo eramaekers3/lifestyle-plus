@@ -27,7 +27,7 @@ export const restoreVersion = (v) => put(v.kind, { ...v.data, id: v.record_id ||
 
 const KIND_NAMES = {
   task: 'Task', block: 'Time block', habit: 'Habit', habitlog: 'Habit check', listitem: 'List item', list: 'List',
-  category: 'Category', recur: 'Repeating task', workout: 'Workout', routine: 'Routine', weight: 'Weigh-in', week: 'Week plan',
+  category: 'Category', recur: 'Repeating task', workout: 'Workout', routine: 'Routine', weight: 'Weigh-in', week: 'Week plan', journal: 'Journal entry',
 };
 export const kindName = (k) => KIND_NAMES[k] || k.replace(/[_-]/g, ' ').replace(/^./, (c) => c.toUpperCase());
 export const labelOf = (d = {}) => d.title || d.name || d.text || (d.date ? d.date : '') || 'Untitled';
