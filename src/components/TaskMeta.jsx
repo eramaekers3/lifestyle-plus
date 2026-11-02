@@ -13,19 +13,27 @@ export function dueLabel(t, today = todayISO()) {
 }
 
 /**
- * Priority from the due date: 3 (!!!, high) due today or overdue, 2 (!!) due tomorrow,
- * 1 (!) due in 2–3 days, 0 otherwise.
+ * Auto priority, from the due date and how big the task is (its time estimate):
+ *   overdue                            !!!
+ *   due today:     1h or more !!!,  smaller !
+ *   due tomorrow:  2h or more !!,   smaller !
+ *   due in 2–3 days: 2h or more !,  smaller none
+ * Repeating tasks never get an auto priority, and a task with no estimate counts as small.
  */
+export const BIG_TODAY = 60;
+export const BIG_SOON = 120;
 export function priority(t, today = todayISO()) {
   if (t.status === 'done') return 0;
   if (t.priority !== undefined && t.priority !== null) return t.priority; // set by you
-  if (!t.due) return 0;
-  if (t.due <= today) return 3;
-  if (t.due === addDays(today, 1)) return 2;
-  if (t.due <= addDays(today, 3)) return 1;
+  if (!t.due || t.recurId) return 0;
+  const est = t.estimate || 0;
+  if (t.due < today) return 3;
+  if (t.due === today) return est >= BIG_TODAY ? 3 : 1;
+  if (t.due === addDays(today, 1)) return est >= BIG_SOON ? 2 : 1;
+  if (t.due <= addDays(today, 3)) return est >= BIG_SOON ? 1 : 0;
   return 0;
 }
-const PRIORITY_LABEL = ['', 'Due soon', 'Due tomorrow', 'High priority'];
+const PRIORITY_LABEL = ['', 'Low priority', 'Medium priority', 'High priority'];
 
 export function PriorityBadge({ t }) {
   const p = priority(t);

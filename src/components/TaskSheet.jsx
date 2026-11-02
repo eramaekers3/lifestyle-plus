@@ -59,9 +59,11 @@ export default function TaskSheet({ id, onClose }) {
       <p className="hint-quiet">
         {manual
           ? `${NAMES[t.priority]}, set by you. Auto would be ${NAMES[auto].toLowerCase()}.`
-          : t.due
-            ? `Auto: ${NAMES[auto].toLowerCase()} — !!! due today, !! tomorrow, ! in 2–3 days.`
-            : 'Auto goes by the due date, and this task has none. Pick a level to set one yourself.'}
+          : t.recurId
+            ? 'Auto doesn’t flag repeating tasks. Pick a level to set one yourself.'
+            : t.due
+              ? `Auto: ${NAMES[auto].toLowerCase()}. It goes by the due date and size: !!! if overdue or due today and 1h+, otherwise ! for today; !! for 2h+ due tomorrow.${t.estimate ? '' : ' With no time needed set, it counts as small.'}`
+              : 'Auto goes by the due date, and this task has none. Pick a level to set one yourself.'}
       </p>
 
       <div className="edit-sec">
