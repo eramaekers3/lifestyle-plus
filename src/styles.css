@@ -109,8 +109,8 @@ code { font-size: 0.92em; background: var(--raised); padding: 1px 5px; border-ra
 }
 
 .view, .subview { display: flex; flex-direction: column; gap: 18px; }
-.view { animation: stepIn 0.32s var(--ease-out) both; }
-.subview.swap { animation: stepIn 0.26s var(--ease-out) both; }
+.view { animation: stepIn 0.32s var(--ease-out) backwards; }
+.subview.swap { animation: stepIn 0.26s var(--ease-out) backwards; }
 /* Paging (swipes, arrows, tab taps): the new page slides in from the side it came from. */
 /* Fills the rest of the screen, so the empty space under a short page swipes too. */
 .pager { display: flex; flex-direction: column; touch-action: pan-y pinch-zoom; }
@@ -272,7 +272,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .steps-dots li.past { background: color-mix(in srgb, var(--sun) 45%, var(--raised)); }
 .steps-dots li.on { background: var(--sun); }
 .task-so-far { margin: 0 0 12px; font: var(--display-weight) 22px/1.15 var(--display); letter-spacing: -0.02em; overflow-wrap: anywhere; }
-.cap-step { animation: stepIn 0.26s var(--ease-out) both; }
+.cap-step { animation: stepIn 0.26s var(--ease-out) backwards; }
 .cap-q { display: flex; flex-direction: column; gap: 6px; }
 .cap-q.f { font-size: 15px; font-weight: 800; color: var(--ink); text-transform: none; letter-spacing: 0; }
 .cap-label { margin: 0 0 4px; font-weight: 800; font-size: 15px; }
@@ -668,7 +668,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .blk.tiny .b-time { display: none; }
 .blk.short .b-title { flex: 0 1 auto; }
 .blk.past { background: color-mix(in srgb, var(--c) 10%, var(--surface)); border-color: color-mix(in srgb, var(--c) 40%, transparent); color: var(--muted); }
-.blk.live { border-color: var(--c); background: color-mix(in srgb, var(--c) 34%, var(--surface)); }
+.blk.blk-now { border-color: var(--c); background: color-mix(in srgb, var(--c) 34%, var(--surface)); }
 .nowline { position: absolute; left: -8px; right: 0; height: 2px; background: var(--sun); z-index: 3; pointer-events: none; }
 .nowline::before {
   content: ''; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%;
@@ -1631,7 +1631,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 }
 
 /* ---- Page entrance: the page's pieces cascade in, each card dropping onto its shadow ---- */
-.view > *, .view .fold, .subview > * { animation: riseIn 0.5s calc(var(--n, 0) * 45ms) var(--spring-soft) both; }
+.view > *, .view .fold, .subview > * { animation: riseIn 0.5s calc(var(--n, 0) * 45ms) var(--spring-soft) backwards; }
 .view > :nth-child(2), .view .fold:nth-child(2), .subview > :nth-child(2) { --n: 1; }
 .view > :nth-child(3), .view .fold:nth-child(3), .subview > :nth-child(3) { --n: 2; }
 .view > :nth-child(4), .view .fold:nth-child(4), .subview > :nth-child(4) { --n: 3; }
@@ -1641,14 +1641,18 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .view > :nth-child(n + 8), .view .fold:nth-child(n + 8), .subview > :nth-child(n + 8) { --n: 7; }
 .view .day-cards, .view .deep-dim { animation: none; }
 @keyframes riseIn { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
-/* The shadow starts tucked under the card and slides out as the card lands: a little lift. */
-.card::before { animation: shadowLand 0.55s calc(var(--n, 0) * 45ms + 0.1s) var(--spring-soft) both; }
-@keyframes shadowLand { from { transform: translate(0, 0); opacity: 0.4; } }
+/* The shadow only appears once its card has landed, sliding out from under it: a little lift.
+   Waiting matters: while a card is still animating it's drawn as its own layer, and a shadow
+   showing then would be painted over the card's background. Entrances use fill "backwards"
+   so a finished animation lets go of the element and the shadow goes back underneath. */
+.card::before, .wx-chip::before { animation: shadowLand 0.4s calc(var(--n, 0) * 45ms + 0.5s) var(--spring-soft) backwards; }
+@keyframes shadowLand { from { transform: translate(0, 0); opacity: 0; } }
 
 /* Paging sideways: a touch of scale so it feels like a card being slid over, not a jump cut. */
-.view.enter-next, .subview.enter-next { animation: pageInRight 0.34s var(--spring-soft) both; }
-.view.enter-prev, .subview.enter-prev { animation: pageInLeft 0.34s var(--spring-soft) both; }
+.view.enter-next, .subview.enter-next { animation: pageInRight 0.34s var(--spring-soft) backwards; }
+.view.enter-prev, .subview.enter-prev { animation: pageInLeft 0.34s var(--spring-soft) backwards; }
 .view.enter-next > *, .view.enter-prev > *, .subview.enter-next > *, .subview.enter-prev > * { animation-duration: 0.36s; }
+.view.enter-next .card::before, .view.enter-prev .card::before, .subview.enter-next .card::before, .subview.enter-prev .card::before { animation-delay: calc(var(--n, 0) * 45ms + 0.36s); }
 @keyframes pageInRight { from { opacity: 0.2; transform: translateX(24%) scale(0.97); } }
 @keyframes pageInLeft { from { opacity: 0.2; transform: translateX(-24%) scale(0.97); } }
 
@@ -1662,7 +1666,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .check:active { transform: scale(0.86); transition-duration: 0.08s; }
 
 /* Picking a chip or a segment: a little pop instead of a plain swap. */
-.chip[aria-pressed='true'], .seg button[aria-pressed='true'] { animation: chipPop 0.4s var(--pop) both; }
+.chip[aria-pressed='true'], .seg button[aria-pressed='true'] { animation: chipPop 0.4s var(--pop) backwards; }
 @keyframes chipPop { 0% { transform: scale(0.9); } 55% { transform: scale(1.06); } 100% { transform: none; } }
 
 /* ---- Tab bar: the active pill grows into place and a dot lights under the label ---- */
@@ -1679,7 +1683,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
   background: var(--sun); box-shadow: 0 0 6px var(--sun); transform: scale(0); transition: transform 0.4s 0.06s var(--pop);
 }
 .tab[aria-current='page']::after { transform: none; }
-.tab[aria-current='page'] .icon { animation: iconBounce 0.5s var(--pop) both; }
+.tab[aria-current='page'] .icon { animation: iconBounce 0.5s var(--pop) backwards; }
 .tab:active { transform: scale(0.92); transition: transform 0.08s; }
 @keyframes iconBounce { 0% { transform: translateY(0) scale(1); } 30% { transform: translateY(-5px) scale(1.12, 0.9); } 60% { transform: translateY(1px) scale(0.95, 1.06); } 100% { transform: none; } }
 
@@ -1710,7 +1714,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .row:has(> .task-body.leaving), .row:has(> * > .task-body.leaving) { overflow: hidden; animation: collapseRow 0.2s 0.34s var(--ease-in) forwards; }
 @keyframes collapseRow { from { max-height: 140px; } to { max-height: 0; padding-block: 0; border-color: transparent; opacity: 0; } }
 /* Something new arriving in a list drops in and glows for a moment. */
-.task-body.fresh, .li-row.fresh, .captured li { animation: freshIn 0.55s var(--spring-soft) both; }
+.task-body.fresh, .li-row.fresh, .captured li { animation: freshIn 0.55s var(--spring-soft) backwards; }
 @keyframes freshIn {
   0% { opacity: 0; transform: translateY(-16px) scale(0.96); }
   60% { opacity: 1; }
@@ -1720,7 +1724,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 /* ---- Folding cards: the chevron springs, and the card's contents rise back in when opened ---- */
 .fold-btn { transition: transform 0.45s var(--pop), color 0.2s; }
 .fold:not(.folded) > .card .card-head ~ *, .fold:not(.folded) > .card > :not(.card-head):not(:has(.card-head)) {
-  animation: foldOpen 0.36s var(--ease-out) both;
+  animation: foldOpen 0.36s var(--ease-out) backwards;
 }
 @keyframes foldOpen { from { opacity: 0; transform: translateY(-6px); } }
 
@@ -1728,7 +1732,8 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .scrim { -webkit-backdrop-filter: blur(4px) saturate(0.85); backdrop-filter: blur(4px) saturate(0.85); animation: fade 0.28s var(--ease-out) both; }
 .sheet { animation: sheetSpring 0.55s var(--spring-soft) both; }
 @keyframes sheetSpring { from { transform: translateY(min(60%, 420px)) scale(0.97); opacity: 0.5; } }
-.sheet > :not(.grab-bar) { animation: stepIn 0.4s calc(0.08s + var(--n, 0) * 35ms) var(--ease-out) both; }
+.sheet > :not(.grab-bar) { animation: stepIn 0.4s calc(0.08s + var(--n, 0) * 35ms) var(--ease-out) backwards; }
+.sheet .card::before { animation-delay: calc(var(--n, 0) * 35ms + 0.5s); }
 .sheet > :nth-child(3) { --n: 1; } .sheet > :nth-child(4) { --n: 2; } .sheet > :nth-child(5) { --n: 3; }
 .sheet > :nth-child(6) { --n: 4; } .sheet > :nth-child(7) { --n: 5; } .sheet > :nth-child(n + 8) { --n: 6; }
 .grab-bar { transition: width 0.3s var(--pop), background-color 0.2s; }
@@ -1751,7 +1756,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
   border-radius: 1px;
   clip-path: polygon(36% 0, 64% 0, 64% 36%, 100% 36%, 100% 64%, 64% 64%, 64% 100%, 36% 100%, 36% 64%, 0 64%, 0 36%, 36% 36%);
 }
-.coin-badge b { display: inline-block; animation: numTick 0.45s var(--pop) both; }
+.coin-badge b { display: inline-block; animation: numTick 0.45s var(--pop) backwards; }
 @keyframes numTick { 0% { transform: translateY(-60%); opacity: 0; } 100% { transform: none; opacity: 1; } }
 .coin-badge .icon { transition: transform 0.6s var(--pop); }
 .coin-badge:hover .icon, .coin-badge:active .icon { transform: rotateY(180deg); }
@@ -1782,7 +1787,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .rv-pt:active { transform: scale(0.9); transition-duration: 0.08s; }
 .rv-pt[aria-checked='true'] {
   border-color: var(--c); color: var(--ink); background: color-mix(in srgb, var(--c) 26%, var(--raised));
-  box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 45%, #000); animation: chipPop 0.4s var(--pop) both;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 45%, #000); animation: chipPop 0.4s var(--pop) backwards;
 }
 .rv-word { margin: 7px 0 0; text-align: center; font-weight: 800; font-size: 14px; color: var(--c); transition: color 0.2s; }
 .rv-note { margin-top: 16px; }

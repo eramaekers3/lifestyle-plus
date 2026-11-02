@@ -70,7 +70,7 @@ export default function Timeline({ date, blocks, events = [], tasksById, dayStar
             return (
               <button
                 key={b.id}
-                className={`blk t-${b.type}${short ? ' short' : ''}${tiny ? ' tiny' : ''}${past ? ' past' : ''}${isToday && b.start <= now && now < b.end ? ' live' : ''}`}
+                className={`blk t-${b.type}${short ? ' short' : ''}${tiny ? ' tiny' : ''}${past ? ' past' : ''}${isToday && b.start <= now && now < b.end ? ' blk-now' : ''}`}
                 style={{
                   top: (s - start) * PX + 1,
                   height: h,
