@@ -366,6 +366,13 @@ form.inline .num-in { flex: 0 1 92px; }
   border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted);
   font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ex-chip { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform 0.2s var(--ease-out); }
+.ex-chips.sorting { overflow-x: auto; touch-action: none; }
+.ex-chips.settling .ex-chip { transition: none; }
+.ex-chips.sorting .ex-chip.lifted {
+  position: relative; z-index: 2; transition: none; border-color: var(--sun); color: var(--ink);
+  background: var(--raised); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+}
 .ex-chip .n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); color: var(--ink); font-size: 12px; }
 .ex-chip[aria-current='step'] { border-color: var(--sun); color: var(--ink); background: color-mix(in srgb, var(--sun) 12%, var(--surface)); }
 .ex-chip.started .n { background: color-mix(in srgb, var(--mint) 35%, var(--raised)); }

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
   useSession, totalMs, exerciseMs, clock, goToExercise, pauseSession, resumeSession, resetExerciseClock,
   updateRow, addRow, removeRow, editSessionExercise, removeSessionExercise, summarize,
-  finishSession, discardSession, addSessionExercises, sessionChanged, saveSessionAsRoutine,
+  finishSession, discardSession, addSessionExercises, sessionChanged, saveSessionAsRoutine, moveSessionExercise,
 } from '../lib/workouts.js';
 import { libraryEntry, groupOf, GROUPS } from '../lib/exercises.js';
 import { musclesFor } from '../lib/lifting.js';
@@ -140,26 +140,17 @@ export default function LiveWorkout({ onMinimize }) {
       </section>
 
       {s.exercises.length > 0 && (
-        <nav className="ex-chips" ref={chips} aria-label="Exercises">
-          {s.exercises.map((x, j) => {
-            const d = doneCount(x);
-            return (
-              <button
-                key={x.id}
-                className={`ex-chip${d && d >= x.rows.length ? ' complete' : d ? ' started' : ''}`}
-                aria-current={j === i ? 'step' : undefined}
-                onClick={() => {
-                  goToExercise(j);
-                  setEditing(false);
-                  setShowNotes(false);
-                }}
-              >
-                <span className="n">{d && d >= x.rows.length ? <Icon name="check" size={12} /> : j + 1}</span>
-                {x.name}
-              </button>
-            );
-          })}
-        </nav>
+        <ExerciseChips
+          ref={chips}
+          exercises={s.exercises}
+          current={i}
+          doneCount={doneCount}
+          onPick={(j) => {
+            goToExercise(j);
+            setEditing(false);
+            setShowNotes(false);
+          }}
+        />
       )}
 
       {e ? (
@@ -381,3 +372,195 @@ function ExFocus({ e }) {
     </p>
   );
 }
+
+/* ---------- Exercise strip ----------
+   Tap a chip to go to that exercise. Press and hold one, then drag it sideways to reorder;
+   the strip scrolls by itself near the edges. A quick swipe still just scrolls the strip. */
+const HOLD_MS = 280;
+const ExerciseChips = forwardRef(function ExerciseChips({ exercises, current, doneCount, onPick }, ref) {
+  const strip = useRef(null);
+  const chipEls = useRef([]);
+  const g = useRef(null); // the press or drag in progress
+  const [drag, setDrag] = useState(null); // { from, to, dx }
+  const [settling, setSettling] = useState(false); // the frame after a drop: chips snap, no slide
+  const setRefs = (el) => {
+    strip.current = el;
+    if (typeof ref === 'function') ref(el);
+    else if (ref) ref.current = el;
+  };
+
+  // Where each chip sits when the drag starts (in the strip's own scroll coordinates).
+  const measure = () => chipEls.current.map((el) => (el ? { left: el.offsetLeft, w: el.offsetWidth } : { left: 0, w: 0 }));
+
+  const begin = () => {
+    const p = g.current;
+    if (!p) return;
+    p.slots = measure();
+    p.scroll0 = strip.current.scrollLeft;
+    p.dragging = true;
+    p.to = p.from;
+    haptic('tick');
+    setDrag({ from: p.from, to: p.from, dx: 0 });
+  };
+
+  const track = (clientX) => {
+    const p = g.current;
+    if (!p || !p.dragging) return;
+    p.lastX = clientX;
+    const el = strip.current;
+    const box = el.getBoundingClientRect();
+    const dx = clientX - p.x + (el.scrollLeft - p.scroll0);
+    const me = p.slots[p.from];
+    const center = me.left + me.w / 2 + dx;
+    let to = 0;
+    p.slots.forEach((s, k) => {
+      if (k !== p.from && s.left + s.w / 2 < center) to += 1;
+    });
+    if (p.to !== to) haptic('tick');
+    p.to = to;
+    setDrag({ from: p.from, to, dx });
+    // Near an edge: keep scrolling while the finger rests there.
+    const edge = clientX < box.left + 44 ? -1 : clientX > box.right - 44 ? 1 : 0;
+    if (edge && !p.raf) {
+      const step = () => {
+        const q = g.current;
+        if (!q || !q.dragging) return;
+        const b = strip.current.getBoundingClientRect();
+        const e2 = q.lastX < b.left + 44 ? -1 : q.lastX > b.right - 44 ? 1 : 0;
+        if (!e2) {
+          q.raf = 0;
+          return;
+        }
+        strip.current.scrollLeft += e2 * 7;
+        track(q.lastX);
+        q.raf = requestAnimationFrame(step);
+      };
+      p.raf = requestAnimationFrame(step);
+    }
+  };
+
+  const end = (commit) => {
+    const p = g.current;
+    g.current = null;
+    if (!p) return;
+    clearTimeout(p.timer);
+    cancelAnimationFrame(p.raf);
+    if (!p.dragging) return;
+    setDrag(null);
+    setSettling(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setSettling(false)));
+    if (commit && p.to !== p.from) {
+      moveSessionExercise(p.from, p.to);
+      haptic('success');
+    }
+    // The tap that ends a drag shouldn't also pick that exercise.
+    const swallow = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    strip.current && strip.current.addEventListener('click', swallow, true);
+    setTimeout(() => strip.current && strip.current.removeEventListener('click', swallow, true), 350);
+  };
+  // Touch: hold to pick up. While dragging, the page and the strip must not scroll.
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const start = (e) => {
+      const chip = e.target.closest('.ex-chip');
+      if (!chip || e.touches.length !== 1) return;
+      const from = chipEls.current.indexOf(chip);
+      const t = e.touches[0];
+      g.current = { from, x: t.clientX, y: t.clientY, timer: setTimeout(begin, HOLD_MS) };
+    };
+    const move = (e) => {
+      const p = g.current;
+      if (!p) return;
+      const t = e.touches[0];
+      if (!p.dragging) {
+        // Moved before the hold finished: that's a scroll, not a drag.
+        if (Math.abs(t.clientX - p.x) > 8 || Math.abs(t.clientY - p.y) > 8) {
+          clearTimeout(p.timer);
+          g.current = null;
+        }
+        return;
+      }
+      e.preventDefault();
+      track(t.clientX);
+    };
+    const stop = () => end(true);
+    const cancel = () => end(false);
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', stop);
+    el.addEventListener('touchcancel', cancel);
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', stop);
+      el.removeEventListener('touchcancel', cancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mouse (on a computer): press and drag.
+  const mouseDown = (from) => (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    g.current = { from, x: e.clientX, y: e.clientY, mouse: true };
+    const mv = (ev) => {
+      const p = g.current;
+      if (!p) return;
+      if (!p.dragging && Math.abs(ev.clientX - p.x) > 5) begin();
+      track(ev.clientX);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      end(true);
+    };
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  };
+
+  // While dragging, the other chips slide aside to show where it will land.
+  const shiftFor = (k) => {
+    if (!drag || !g.current || !g.current.slots) return 0;
+    const { from, to } = drag;
+    const gap = 8;
+    const w = g.current.slots[from].w + gap;
+    if (k === from) return drag.dx;
+    if (from < to && k > from && k <= to) return -w;
+    if (from > to && k >= to && k < from) return w;
+    return 0;
+  };
+
+  return (
+    <nav className={`ex-chips${drag ? ' sorting' : ''}${settling ? ' settling' : ''}`} ref={setRefs} aria-label="Exercises. Press and hold one to reorder." data-nodrag>
+      {exercises.map((x, j) => {
+        const d = doneCount(x);
+        const lifted = drag && drag.from === j;
+        return (
+          <button
+            key={x.id}
+            ref={(el) => (chipEls.current[j] = el)}
+            className={`ex-chip${d && d >= x.rows.length ? ' complete' : d ? ' started' : ''}${lifted ? ' lifted' : ''}`}
+            style={drag ? { transform: `translateX(${shiftFor(j)}px)${lifted ? ' scale(1.06)' : ''}` } : undefined}
+            aria-current={j === current ? 'step' : undefined}
+            onPointerDown={mouseDown(j)}
+            onClick={() => onPick(j)}
+            onKeyDown={(e) => {
+              // Alt + arrow keys move the chip.
+              const step = e.altKey ? { ArrowLeft: -1, ArrowRight: 1 }[e.key] : 0;
+              if (!step) return;
+              e.preventDefault();
+              moveSessionExercise(j, Math.max(0, Math.min(exercises.length - 1, j + step)));
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <span className="n">{d && d >= x.rows.length ? <Icon name="check" size={12} /> : j + 1}</span>
+            {x.name}
+          </button>
+        );
+      })}
+    </nav>
+  );
+});

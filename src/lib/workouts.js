@@ -238,6 +238,18 @@ export function duplicateRoutine(r, name) {
   });
 }
 
+/** Moves an exercise in the running workout; you stay on the one you were on. */
+export function moveSessionExercise(from, to) {
+  update((s) => {
+    if (from === to || from < 0 || to < 0 || from >= s.exercises.length || to >= s.exercises.length) return {};
+    const exercises = [...s.exercises];
+    const [x] = exercises.splice(from, 1);
+    exercises.splice(to, 0, x);
+    const curId = s.exercises[s.cur] && s.exercises[s.cur].id;
+    return { exercises, cur: Math.max(0, exercises.findIndex((e) => e.id === curId)) };
+  });
+}
+
 export function removeSessionExercise(i) {
   update((s, now) => {
     const exercises = banked(s, now).filter((_, j) => j !== i);
