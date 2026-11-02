@@ -16,6 +16,8 @@ import { useRecurring } from './lib/recurring.js';
 import { useCanvasTasks } from './lib/canvasStack.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
+import { DeepPill } from './components/DeepWork.jsx';
+import { useDeep, useWakeLock } from './lib/deep.js';
 import PlanView from './views/PlanView.jsx';
 import StackView from './views/StackView.jsx';
 import HabitsView from './views/HabitsView.jsx';
@@ -107,6 +109,13 @@ export default function App() {
     if (!sessionStart) setLiveOpen(false);
   }, [sessionStart]);
   useTheme();
+  // Deep work changes the look of the whole app, and keeps the screen awake for the clock.
+  const deep = !!useDeep();
+  useEffect(() => {
+    document.body.classList.toggle('deep-on', deep);
+    return () => document.body.classList.remove('deep-on');
+  }, [deep]);
+  useWakeLock(deep);
   useHeartIcon();
 
   // Open the morning page by itself on the first open of a morning, until the day is started.
@@ -232,6 +241,7 @@ export default function App() {
         {ritual === 'shutdown' && <ShutdownSheet onClose={closeRitual} />}
         {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
       </Suspense>
+      {deep && tab !== 'plan' && !session && <DeepPill />}
       {session && !liveOpen && <WorkoutPill onOpen={() => setLiveOpen(true)} />}
       {session && liveOpen && <LiveWorkout onMinimize={() => setLiveOpen(false)} />}
       {morning && (

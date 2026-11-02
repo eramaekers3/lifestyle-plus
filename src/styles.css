@@ -1491,3 +1491,101 @@ button.wx-fold .icon { transform: rotate(-90deg); }
 .wx-rain-x span.first { transform: none; color: var(--ink); }
 .wx-rain-x span.last { transform: translateX(-100%); }
 @media (prefers-reduced-motion: reduce) { .wx-chip, .wx-hero, .wx-glance { animation: none; } }
+
+/* ---------- Deep work ----------
+   The small tab on the home screen, and deep mode: the whole app goes darker and cooler, the grain
+   gets heavier, everything that isn't the session fades back, and the few things worth knowing
+   (the clock, the task, what's next, what's due) get the accent. */
+.day-cards { display: contents; }
+
+.deep-tab {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; border-radius: 16px;
+  background: color-mix(in srgb, #8f9cff 10%, var(--surface)); border: 1px solid color-mix(in srgb, #8f9cff 35%, var(--line));
+}
+.dt-mark { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: color-mix(in srgb, #8f9cff 22%, transparent); color: #b3bcff; }
+.dt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; border: 0; background: none; padding: 0; text-align: left; }
+.dt-text b { font-size: 14.5px; font-weight: 800; }
+.dt-text b small { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.dt-text > span { max-width: 100%; font-size: 13px; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dt-go {
+  flex: none; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 11px; padding: 8px 13px;
+  background: #8f9cff; color: #10132e; font-weight: 800; font-size: 14px; box-shadow: 0 3px 0 #4e58b8;
+}
+.dt-go:active { transform: translateY(2px); box-shadow: 0 1px 0 #4e58b8; }
+.btn.deep-btn { background: #8f9cff; color: #10132e; box-shadow: 0 3px 0 #4e58b8; }
+
+/* Deep mode: retint the whole app. Overriding the accent on body wins over the one set on :root. */
+body.deep-on {
+  --bg: #121318; --surface: #1a1b23; --raised: #242632; --line: #313446;
+  --muted: #9b9fb4; --dim: #6d7087;
+  --sun: #9aa6ff; --sun-ink: #10132e; --sun-edge: #4e58b8;
+  background: var(--bg);
+  transition: background 0.6s var(--ease-out);
+}
+html:has(body.deep-on) { background: #121318; }
+body.deep-on::after { opacity: 0.11; }
+body.deep-on::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(120% 70% at 50% 0%, rgba(120, 132, 255, 0.13), transparent 60%), radial-gradient(140% 90% at 50% 120%, rgba(0, 0, 0, 0.55), transparent 60%);
+  animation: fade 0.8s both;
+}
+body.deep-on .app { position: relative; z-index: 1; }
+body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
+body.deep-on .brand, body.deep-on .top-right { opacity: 0.45; transition: opacity 0.4s; }
+
+.deep-dim { display: flex; flex-direction: column; gap: 18px; opacity: 0.3; filter: saturate(0.3); transition: opacity 0.35s var(--ease-out), filter 0.35s; }
+.deep-dim:hover, .deep-dim:focus-within { opacity: 0.85; filter: none; }
+
+.deep-focus {
+  position: relative; display: flex; flex-direction: column; gap: 14px; padding: 18px 16px 16px; border-radius: 22px;
+  background: linear-gradient(180deg, rgba(154, 166, 255, 0.09), transparent 55%), var(--surface);
+  border: 1.5px solid color-mix(in srgb, var(--sun) 45%, transparent);
+  box-shadow: 0 0 0 6px rgba(154, 166, 255, 0.05), 0 20px 50px rgba(0, 0, 0, 0.45);
+  animation: deepIn 0.5s var(--spring) both;
+}
+@keyframes deepIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+.df-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.df-live { display: inline-flex; align-items: center; gap: 7px; font: 800 12px/1 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--sun); }
+.df-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--sun); box-shadow: 0 0 10px var(--sun); animation: blink 2s ease-in-out infinite; }
+.df-since { font-size: 12.5px; color: var(--dim); font-weight: 700; }
+.df-clock {
+  font: var(--display-weight) clamp(64px, 22vw, 104px)/0.95 var(--display); letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums; text-align: center; color: var(--ink);
+  text-shadow: 0 0 40px rgba(154, 166, 255, 0.25);
+}
+.df-goal { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); font-weight: 700; }
+.df-bar { width: 100%; height: 6px; border-radius: 99px; background: var(--raised); overflow: hidden; }
+.df-bar i { display: block; height: 100%; border-radius: inherit; background: var(--sun); transition: width 1s linear; }
+.deep-focus.over { border-color: color-mix(in srgb, var(--mint) 55%, transparent); }
+.deep-focus.over .df-bar i { background: var(--mint); }
+.deep-focus.over .df-goal span { color: var(--mint); }
+
+.df-task { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: var(--raised); }
+.df-task .check { flex: none; }
+.df-task-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; border: 0; background: none; padding: 0; text-align: left; font: var(--display-weight) 21px/1.15 var(--display); letter-spacing: -0.02em; }
+.df-task-title small { margin-top: 3px; font: 600 12.5px/1.3 var(--body); letter-spacing: 0; color: var(--dim); }
+.df-task.done .df-task-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
+.df-task.done .df-task-title small { text-decoration: none; }
+
+.df-know { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.df-know li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; color: var(--muted); }
+.df-know li .icon { margin-top: 2px; color: var(--sun); }
+.df-know li b { color: var(--ink); font-weight: 800; }
+.df-know li em { font-style: normal; font-weight: 800; color: var(--sun); margin-left: 6px; }
+.df-know li.urgent .icon, .df-know li.urgent em { color: var(--coral); }
+.df-know li.urgent b { color: var(--coral); }
+.df-know li.more { padding-left: 25px; font-size: 13px; color: var(--dim); }
+.df-actions { display: flex; }
+.df-actions .btn { flex: 1; }
+
+.deep-pill {
+  position: fixed; z-index: 21; left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 8px; max-width: calc(100% - 120px); padding: 11px 16px 11px 13px;
+  border: 1.5px solid var(--sun); border-radius: 999px; background: color-mix(in srgb, var(--sun) 16%, #0d0e12); color: var(--ink);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); font-size: 14px; text-decoration: none;
+}
+.deep-pill b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deep-pill .t { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--sun); }
+.deep-pill .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--sun); animation: blink 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .deep-focus, body.deep-on::before { animation: none; } }

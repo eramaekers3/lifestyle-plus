@@ -18,6 +18,8 @@ import CardStack from '../components/CardStack.jsx';
 import { PastDoneButton } from './WeekView.jsx';
 import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
 import { toggleHabitFx } from '../lib/game.js';
+import { DeepFocus, DeepTab } from '../components/DeepWork.jsx';
+import { useDeep } from '../lib/deep.js';
 
 export default function DayView({ date }) {
   const settings = useSettings();
@@ -29,6 +31,8 @@ export default function DayView({ date }) {
   const calDays = useCalendarDays();
   const cal = calDays[date] || { timed: [], allDay: [] };
   const isToday = date === todayISO();
+  const deepSession = useDeep();
+  const deepMode = isToday && !!deepSession;
 
   const blocks = useMemo(() => allBlocks.filter((b) => b.date === date), [allBlocks, date]);
   const prevDate = addDays(date, -1);
@@ -62,11 +66,19 @@ export default function DayView({ date }) {
         {isToday && <FlipClock />}
       </header>
 
-      <WeatherChip date={date} />
-      {isToday && <StartBanner date={date} />}
-      {isToday && <ReviewBanner />}
-      {isToday && <ShutdownBanner date={date} />}
+      {deepMode ? (
+        <DeepFocus s={deepSession} />
+      ) : (
+        <>
+          <WeatherChip date={date} />
+          {isToday && <StartBanner date={date} />}
+          {isToday && <ReviewBanner />}
+          {isToday && <ShutdownBanner date={date} />}
+          {isToday && <DeepTab />}
+        </>
+      )}
 
+      <div className={deepMode ? 'deep-dim' : 'day-cards'}>
       <CardStack
         page="day"
         cards={[
@@ -124,6 +136,7 @@ export default function DayView({ date }) {
           { id: 'spend', title: 'Spending this week', node: hasBanks ? <WeekSpend date={date} /> : null },
         ]}
       />
+      </div>
 
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
       {autoPlan && <AutoPlanSheet date={date} blocks={blocks} events={cal.timed} onClose={() => setAutoPlan(false)} />}
