@@ -1733,9 +1733,9 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
 .sheet > :nth-child(6) { --n: 4; } .sheet > :nth-child(7) { --n: 5; } .sheet > :nth-child(n + 8) { --n: 6; }
 .grab-bar { transition: width 0.3s var(--pop), background-color 0.2s; }
 .sheet:active .grab-bar { width: 54px; background: var(--muted); }
-.ghost, .ghost * { pointer-events: none !important; }
-.ghost .sheet, .ghost .sheet > * { animation: none !important; }
-.ghost.scrim { animation: none; }
+.motion-ghost, .motion-ghost * { pointer-events: none !important; }
+.motion-ghost .sheet, .motion-ghost .sheet > * { animation: none !important; }
+.motion-ghost.scrim { animation: none; }
 
 /* ---- Toasts: spring up from the bottom with a slight tilt ---- */
 .toast { animation: toastSpring 0.5s var(--spring-soft) both; }
@@ -1744,7 +1744,7 @@ body.deep-on .tabbar { background: var(--grain-dark), #0d0e12; }
   60% { opacity: 1; }
   100% { transform: translate(-50%, 0); }
 }
-.ghost.toast { animation: none; }
+.motion-ghost.toast { animation: none; }
 
 /* ---- Celebrations: plus-shaped confetti to match the logo, and numbers that tick ---- */
 .cheer-spark.plus {

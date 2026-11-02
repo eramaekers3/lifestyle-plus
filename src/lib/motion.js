@@ -14,7 +14,7 @@ export function ghostOut(node, parts) {
   ghost.setAttribute('aria-hidden', 'true');
   ghost.removeAttribute('id');
   ghost.style.pointerEvents = 'none';
-  ghost.classList.add('ghost');
+  ghost.classList.add('motion-ghost');
   document.body.appendChild(ghost);
   // Keep the copy scrolled where the real one was.
   const scrolled = node.querySelectorAll ? [...node.querySelectorAll('.sheet')] : [];
