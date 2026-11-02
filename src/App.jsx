@@ -19,6 +19,7 @@ import { useCanvasTasks } from './lib/canvasStack.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import { DeepPill } from './components/DeepWork.jsx';
+import DeepReview from './components/DeepReview.jsx';
 import { useDeep, useWakeLock } from './lib/deep.js';
 import PlanView from './views/PlanView.jsx';
 import StackView from './views/StackView.jsx';
@@ -246,6 +247,7 @@ export default function App() {
         {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
       </Suspense>
       {deep && tab !== 'plan' && !session && <DeepPill />}
+      <DeepReview />
       {session && !liveOpen && <WorkoutPill onOpen={() => setLiveOpen(true)} />}
       {session && liveOpen && <LiveWorkout onMinimize={() => setLiveOpen(false)} />}
       {morning && (

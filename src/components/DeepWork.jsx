@@ -9,6 +9,7 @@ import { cheerGain } from '../lib/game.js';
 import { haptic } from '../lib/haptics.js';
 import { toast } from '../lib/toast.js';
 import { Icon, Sheet, useNow } from './ui.jsx';
+import { DeepLogSheet } from './DeepReview.jsx';
 
 const LENGTHS = [25, 50, 90];
 const SOON = 15; // minutes: when the next thing on the calendar turns urgent
@@ -29,6 +30,7 @@ export function DeepTab() {
   useNow(60000); // the suggestion follows your blocks through the day
   const doneToday = useDeepMinutes(date);
   const [picking, setPicking] = useState(false);
+  const [log, setLog] = useState(false);
   const s = suggestDeep(blocks, stack.active, tasksById);
   const what = s.title ? `${s.title}${s.plannedMin ? ` · ${fmtDur(s.plannedMin)}` : ''}` : 'Open session · no task picked';
 
@@ -44,10 +46,14 @@ export function DeepTab() {
         <b>Deep work{doneToday > 0 && <small> · {fmtDur(doneToday)} today</small>}</b>
         <span>{what}</span>
       </button>
+      <button className="dt-log" onClick={() => setLog(true)} aria-label="Deep work log">
+        <Icon name="review" size={17} />
+      </button>
       <button className="dt-go" onClick={go}>
         <Icon name="play" size={15} /> Enter
       </button>
       {picking && <DeepSetupSheet initial={s} onClose={() => setPicking(false)} />}
+      {log && <DeepLogSheet onClose={() => setLog(false)} />}
     </section>
   );
 }
@@ -156,8 +162,7 @@ export function DeepFocus({ s }) {
     if (!confirmEnd) return setConfirmEnd(true);
     const mins = endDeep(s);
     haptic('success');
-    const coins = Math.floor(mins / 10);
-    toast(mins >= 1 ? `${fmtDur(mins)} of deep work logged${coins ? ` · +${coins} coin${coins === 1 ? '' : 's'}` : ''}` : 'Session ended');
+    if (mins < 1) toast('Session ended'); // anything longer opens the review
   };
   const finishTask = (e) => {
     if (!task || taskDone) return;

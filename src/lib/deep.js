@@ -1,6 +1,6 @@
 // Deep work sessions: one running session at a time (synced, so it shows on every device),
 // and a log of finished sessions for "deep today" totals.
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { put, remove, useKind, useRecord } from '../store.js';
 import { idFor } from './ids.js';
 import { nowMin, todayISO } from './dates.js';
@@ -18,15 +18,56 @@ export function updateDeep(s, changes) {
   put('deep', { ...s, ...changes });
 }
 
-/** End the session and log it (sessions under a minute aren't worth keeping). Returns minutes. */
+/**
+ * End the session and log it (sessions under a minute aren't worth keeping), then ask for a
+ * review of it on this device. Returns minutes.
+ */
 export function endDeep(s) {
   const endedAt = Date.now();
   const minutes = Math.round((endedAt - s.startedAt) / 60000);
   if (minutes >= 1) {
-    put('deep_log', { date: s.date || todayISO(), startedAt: s.startedAt, endedAt, minutes, taskId: s.taskId || '', title: s.title || '' });
+    const log = put('deep_log', { date: s.date || todayISO(), startedAt: s.startedAt, endedAt, minutes, taskId: s.taskId || '', title: s.title || '' });
+    askReview(log.id);
   }
   remove(DEEP_ID);
   return minutes;
+}
+
+/* ---------- Session review: rate focus and quality, saved onto the session's log ---------- */
+
+export const FOCUS = ['Scattered', 'Distracted', 'Steady', 'Focused', 'Locked in'];
+export const QUALITY = ['Rough', 'Meh', 'Solid', 'Good', 'My best'];
+
+// Which just-ended session is waiting for its review. Kept on this device only, so the review
+// pops up where you ended the session and not on your other devices.
+let reviewId = null;
+const reviewSubs = new Set();
+const askReview = (id) => {
+  reviewId = id;
+  reviewSubs.forEach((f) => f());
+};
+export const closeReview = () => askReview(null);
+export const usePendingReview = () =>
+  useSyncExternalStore(
+    (f) => (reviewSubs.add(f), () => reviewSubs.delete(f)),
+    () => reviewId
+  );
+
+export function saveReview(log, { focus, quality, note }) {
+  put('deep_log', { ...log, focus, quality, note: (note || '').trim(), reviewedAt: new Date().toISOString() });
+}
+
+/** Sessions, newest first, plus averages over the last 7 days for the reviewed ones. */
+export function useDeepLogs() {
+  const logs = useKind('deep_log');
+  return useMemo(() => {
+    const all = [...logs].sort((a, b) => b.startedAt - a.startedAt);
+    const from = Date.now() - 7 * 86400000;
+    const week = all.filter((l) => l.startedAt >= from);
+    const rated = week.filter((l) => l.focus && l.quality);
+    const avg = (k) => (rated.length ? rated.reduce((a, l) => a + l[k], 0) / rated.length : null);
+    return { all, weekMinutes: week.reduce((a, l) => a + (l.minutes || 0), 0), weekCount: week.length, focus: avg('focus'), quality: avg('quality'), rated: rated.length };
+  }, [logs]);
 }
 
 /** Minutes of deep work logged on a day. */
