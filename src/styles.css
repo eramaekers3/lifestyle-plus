@@ -1341,3 +1341,21 @@ form.inline .num-in { flex: 0 1 92px; }
 .wk-days { height: 52px; margin: 8px 0 2px; }
 .wk-reset { color: var(--dim); }
 .hero-row.compact .label { white-space: nowrap; }
+
+/* Workouts: three square tiles a row */
+.routine-grid { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.routine-tile {
+  aspect-ratio: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; padding: 8px 8px 7px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--raised);
+}
+.rt-open {
+  flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;
+  gap: 4px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;
+}
+.rt-name {
+  font: 700 13px/1.15 var(--body); display: -webkit-box; flex: none; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rt-foot { flex: none; margin-top: auto; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px; }
+.rt-foot .routine-n { font-size: 11.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.routine-tile .rt-start { flex: none; width: 100%; justify-content: center; padding: 3px 0; font-size: 13px; }
+.rt-reorder { display: block; margin: 8px auto 0; font-size: 13px; }
