@@ -1362,10 +1362,13 @@ form.inline .num-in { flex: 0 1 92px; }
 /* ---------- Weather ---------- */
 .wx-ic { display: inline-flex; flex: none; }
 .wx-chip {
-  border-radius: 16px; color: var(--ink);
-  background: color-mix(in srgb, var(--sky) 12%, var(--surface));
-  border: 1.5px solid color-mix(in srgb, var(--sky) 40%, transparent);
-  animation: wx-in 0.45s var(--spring) both;
+  position: relative; border-radius: var(--r); color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line);
+}
+/* Same grainy offset shadow as the other cards. */
+.wx-chip::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; transform: translate(6px, 7px);
+  background: var(--grain-dark), var(--shade); z-index: -1; pointer-events: none;
 }
 .wx-top { display: flex; align-items: center; }
 .wx-main {
@@ -1390,7 +1393,7 @@ button.wx-fold .icon { transform: rotate(-90deg); }
 .wx-facts li .icon { color: var(--dim); }
 .wx-facts li.wet { color: var(--ink); border-color: color-mix(in srgb, var(--sky) 50%, transparent); }
 .wx-facts li.wet .icon { color: var(--sky); }
-.wx-more { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; border: 0; background: none; padding: 2px 0; color: var(--sky); font-weight: 800; font-size: 14px; }
+.wx-more { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; border: 0; background: none; padding: 2px 0; color: var(--muted); font-weight: 800; font-size: 14px; }
 .wx-temp { font: var(--display-weight) 30px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .wx-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .wx-mid b { font-size: 15px; }
@@ -1461,7 +1464,7 @@ button.wx-fold .icon { transform: rotate(-90deg); }
 .wx-alert { color: var(--sky) !important; font-weight: 700; }
 .wx-rain {
   margin: 0 0 10px; padding: 10px 12px 8px; border-radius: 14px;
-  background: color-mix(in srgb, var(--sky) 10%, var(--raised)); border: 1px solid color-mix(in srgb, var(--sky) 35%, var(--line));
+  background: var(--raised); border: 1px solid var(--line);
 }
 .wx-sec + .wx-rain, .wx-hero + .wx-rain { margin-top: 14px; }
 .wx-rain-head { display: flex; align-items: center; gap: 7px; }
