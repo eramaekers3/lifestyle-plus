@@ -254,8 +254,8 @@ function HabitGrid({ habits, paused, children }) {
   );
 }
 
-// Which page the Me tab was last on, so it comes back to the same one (this device only).
-const PAGE_KEY = 'lifestyleplus.mePage';
+// Which page the Self tab was last on, so it comes back to the same one (this device only).
+const PAGE_KEY = 'lifestyleplus.selfPage';
 const lastPage = () => {
   try {
     return localStorage.getItem(PAGE_KEY) === 'journal' ? 'journal' : 'habits';
@@ -272,7 +272,7 @@ const rememberPage = (p) => {
 };
 
 /**
- * The Me tab holds two pages: your habits, and the journal. It reopens on whichever you left it on.
+ * The Self tab holds two pages: your habits, and the journal. It reopens on whichever you left it on.
  * #journal opens straight to the journal (the shutdown and notifications link there).
  */
 export default function HabitsView() {
