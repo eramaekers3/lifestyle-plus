@@ -955,6 +955,7 @@ form.inline .num-in { flex: 0 1 92px; }
 .task-chip { max-width: 100%; padding: 6px 12px; font-size: 13.5px; }
 .task-chip .tc-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 .task-chip .tick { color: var(--sun); font-weight: 900; }
+.task-chip .tc-est { color: var(--muted); font-weight: 700; font-size: 12px; margin-left: 6px; flex: none; }
 .more-chip { color: var(--muted); border-style: dashed; }
 
 /* Week rows with a quick add-block button */

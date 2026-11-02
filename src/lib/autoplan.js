@@ -6,7 +6,7 @@ const STEP = 15; // blocks start on the quarter hour
 const BUFFER = 10; // breathing room before and after events and between suggestions
 const MIN_BLOCK = 30; // shorter gaps aren't worth a deep work block
 const DEFAULT_LEN = 60;
-const MAX_LEN = 120; // Newport-style deep sessions; longer tasks get the first two hours
+const MAX_LEN = 120; // without an estimate, sessions top out at Newport-style two hours
 const EXTRA_BACKLOG = 2; // after Now, suggest this many from the top of the backlog
 
 const up = (m) => Math.ceil(m / STEP) * STEP;
@@ -41,7 +41,8 @@ export function planDay({ active, backlog }, blocks, events, from, to) {
   const out = [];
 
   for (const t of queue) {
-    const want = Math.min(MAX_LEN, t.estimate || DEFAULT_LEN);
+    // A task's own time estimate is used as-is; otherwise a default hour.
+    const want = t.estimate ? Math.max(STEP, t.estimate) : Math.min(MAX_LEN, DEFAULT_LEN);
     const g = gaps.find(([s, e]) => e - s >= Math.min(want, MIN_BLOCK + STEP));
     if (!g) continue;
     const len = Math.min(want, Math.floor((g[1] - g[0]) / STEP) * STEP);

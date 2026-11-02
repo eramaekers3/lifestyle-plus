@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { remove, useRecord } from '../store.js';
 import { setTaskPriority, renameTask } from '../lib/model.js';
 import { patch } from '../store.js';
-import { CategoryStep, DateStep, TimeStep } from './CaptureSheet.jsx';
+import { CategoryStep, DateStep, EstimateStep, TimeStep } from './CaptureSheet.jsx';
 import { toast } from '../lib/toast.js';
 import { Sheet } from './ui.jsx';
 import { priority } from './TaskMeta.jsx';
 import RecurSheet from './RecurSheet.jsx';
 import { Icon } from './ui.jsx';
 import { scheduleLabel } from '../lib/recurring.js';
+
 
 const LEVELS = [
   { p: null, label: 'Auto', hint: 'from the due date' },
@@ -62,6 +63,10 @@ export default function TaskSheet({ id, onClose }) {
             ? `Auto: ${NAMES[auto].toLowerCase()} — !!! due today, !! tomorrow, ! in 2–3 days.`
             : 'Auto goes by the due date, and this task has none. Pick a level to set one yourself.'}
       </p>
+
+      <div className="edit-sec">
+        <EstimateStep label="Time needed" estimate={t.estimate || null} setEstimate={(m) => patch(t.id, { estimate: m })} />
+      </div>
 
       <div className="edit-sec">
         <CategoryStep autoAdd={false} category={t.category || null} setCategory={(c) => patch(t.id, { category: c })} />

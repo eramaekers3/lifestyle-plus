@@ -8,6 +8,7 @@ import { toast } from '../lib/toast.js';
 const TIMES = Array.from({ length: 24 * 4 + 1 }, (_, i) => i * 15);
 const DURATIONS = [30, 60, 90, 120];
 
+
 export default function BlockSheet({ block, onClose }) {
   const { active, backlog } = useStack();
   const [f, setF] = useState({ title: '', type: 'deep', taskId: '', ...block });
@@ -33,7 +34,9 @@ export default function BlockSheet({ block, onClose }) {
       }
       const prev = linkable.find((p) => p.id === x.taskId);
       const keepTitle = x.title.trim() && !(prev && x.title === prev.title) && !t.title.toLowerCase().includes(x.title.trim().toLowerCase());
-      return { ...x, taskId: t.id, title: keepTitle ? x.title : t.title };
+      // A task with a time estimate sets the block's length, starting from the same time.
+      const end = t.estimate ? Math.min(1440, x.start + t.estimate) : x.end;
+      return { ...x, taskId: t.id, title: keepTitle ? x.title : t.title, end };
     });
 
   const taskChip = (t) => (
@@ -46,6 +49,7 @@ export default function BlockSheet({ block, onClose }) {
     >
       {f.taskId === t.id && <span className="tick" aria-hidden="true">✓</span>}
       <span className="tc-title">{t.title}</span>
+      {t.estimate > 0 && <span className="tc-est">{fmtDur(t.estimate)}</span>}
     </button>
   );
 
@@ -148,7 +152,7 @@ export default function BlockSheet({ block, onClose }) {
         </label>
 
         <div className="f full">
-          <span className="f-label">Length {bad ? <span className="err">End time must be after the start</span> : <span className="muted-n">{fmtDur(f.end - f.start)}</span>}</span>
+          <span className="f-label">Length {bad ? <span className="err">End time must be after the start</span> : <span className="muted-n">{fmtDur(f.end - f.start)}{picked && picked.estimate && f.end - f.start !== picked.estimate ? ` · task needs ${fmtDur(picked.estimate)}` : ''}</span>}</span>
           <div className="chips">
             {DURATIONS.map((d) => (
               <button

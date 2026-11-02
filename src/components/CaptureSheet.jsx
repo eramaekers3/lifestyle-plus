@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sheet, Icon } from './ui.jsx';
 import { addTask, addCategory, useCategories } from '../lib/model.js';
-import { addDays, fmt, minToLabel, todayISO } from '../lib/dates.js';
+import { addDays, fmt, fmtDur, minToLabel, todayISO } from '../lib/dates.js';
 import { haptic } from '../lib/haptics.js';
 
-const STEPS = ['Name', 'Category', 'Due date', 'Due time'];
+const STEPS = ['Name', 'Time needed', 'Category', 'Due date', 'Due time'];
+const LAST = STEPS.length - 1;
+
+/** Quick picks for how long a task should take, in minutes. */
+export const ESTIMATES = [15, 30, 45, 60, 90, 120, 180];
 
 /**
- * Adding a task, one question at a time: name → category → due date → due time.
- * Category, date and time can all be skipped; skipping the date skips the time too.
+ * Adding a task, one question at a time: name → time needed → category → due date → due time.
+ * Everything after the name can be skipped; skipping the date skips the time too.
  * Everything lands in the backlog.
  */
 export default function CaptureSheet({ onClose }) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState('');
+  const [estimate, setEstimate] = useState(null);
   const [category, setCategory] = useState(null);
   const [due, setDue] = useState(null);
   const [time, setTime] = useState('');
@@ -21,7 +26,7 @@ export default function CaptureSheet({ onClose }) {
 
   const save = (t = time) => {
     const [hh, mm] = t ? t.split(':').map(Number) : [];
-    addTask(title, { category, due, dueTime: due && t ? hh * 60 + mm : null });
+    addTask(title, { estimate, category, due, dueTime: due && t ? hh * 60 + mm : null });
     setSaved(title.trim());
     haptic('success');
     setTimeout(onClose, 1100); // let the check play, then leave
@@ -44,14 +49,14 @@ export default function CaptureSheet({ onClose }) {
 
   const next = () => {
     if (step === 0 && !title.trim()) return;
-    if (step === 2 && !due) return save(''); // no date, so no time either
-    if (step === 3) return save();
+    if (step === 3 && !due) return save(''); // no date, so no time either
+    if (step === LAST) return save();
     setStep(step + 1);
   };
 
   return (
     <Sheet title="New task" onClose={onClose}>
-      <ol className="steps-dots" aria-label={`Step ${step + 1} of 4: ${STEPS[step]}`}>
+      <ol className="steps-dots" aria-label={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}>
         {STEPS.map((s, i) => (
           <li key={s} className={i === step ? 'on' : i < step ? 'past' : ''} aria-hidden="true" />
         ))}
@@ -68,9 +73,10 @@ export default function CaptureSheet({ onClose }) {
         }}
       >
         {step === 0 && <NameStep title={title} setTitle={setTitle} />}
-        {step === 1 && <CategoryStep category={category} setCategory={setCategory} />}
-        {step === 2 && <DateStep due={due} setDue={setDue} />}
-        {step === 3 && <TimeStep due={due} time={time} setTime={setTime} />}
+        {step === 1 && <EstimateStep estimate={estimate} setEstimate={setEstimate} />}
+        {step === 2 && <CategoryStep category={category} setCategory={setCategory} />}
+        {step === 3 && <DateStep due={due} setDue={setDue} />}
+        {step === 4 && <TimeStep due={due} time={time} setTime={setTime} />}
 
         <div className="cap-nav">
           {step > 0 && (
@@ -79,13 +85,32 @@ export default function CaptureSheet({ onClose }) {
             </button>
           )}
           <button className="btn cap-next" disabled={step === 0 && !title.trim()}>
-            {step === 3 ? (time ? 'Add task' : 'Skip and add') : step === 2 && !due ? 'Skip' : 'Next'}
-            {step < 3 && <Icon name="right" size={18} />}
+            {step === LAST ? (time ? 'Add task' : 'Skip and add') : (step === 1 && !estimate) || (step === 3 && !due) ? 'Skip' : 'Next'}
+            {step < LAST && <Icon name="right" size={18} />}
           </button>
         </div>
       </form>
 
     </Sheet>
+  );
+}
+
+/** How long the task will take. Blocks made for it later start at this length. */
+export function EstimateStep({ estimate, setEstimate, label = 'How long will it take?' }) {
+  return (
+    <div className="cap-q">
+      <p className="cap-label">{label}</p>
+      <div className="chips">
+        {ESTIMATES.map((m) => (
+          <button type="button" key={m} className="chip" aria-pressed={estimate === m} onClick={() => setEstimate(estimate === m ? null : m)}>
+            {fmtDur(m)}
+          </button>
+        ))}
+      </div>
+      <p className="hint-quiet">
+        {estimate ? `Blocks you make for this task start at ${fmtDur(estimate)}. Tap again to clear it.` : 'Optional. Blocks you make for this task will start at this length.'}
+      </p>
+    </div>
   );
 }
 
