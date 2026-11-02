@@ -83,10 +83,16 @@ code { font-size: 0.92em; background: var(--raised); padding: 1px 5px; border-ra
   gap: 12px;
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   padding-bottom: 12px;
-  background: linear-gradient(var(--bg) 78%, transparent);
+  background: var(--bg);
 }
+/* The fade under the top bar only shows once the page is scrolled, so at the top nothing sits in it. */
+.topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 22px; pointer-events: none;
+  background: linear-gradient(var(--bg), transparent); opacity: 0; transition: opacity 0.25s var(--ease-out);
+}
+.topbar.scrolled::after { opacity: 1; }
 .brand { display: flex; align-items: center; gap: 3px; font: var(--display-weight) 25px/1 var(--display); letter-spacing: -0.04em; }
-.heart-mark { display: inline-block; flex: none; transform-origin: 50% 70%; animation: wobble 5s ease-in-out infinite; }
+.heart-mark { display: inline-block; flex: none; }
 .heart-mark svg { display: block; }
 .heart-swatch { --c: transparent; padding: 0; border: 0; background: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
 .heart-swatch[aria-pressed='true'] { background: var(--raised); box-shadow: inset 0 0 0 2px var(--ink); }
@@ -1201,7 +1207,6 @@ form.inline .num-in { flex: 0 1 92px; }
 @keyframes stamp { 0% { transform: scale(0.85); } 40% { transform: scale(1.22) rotate(-7deg); } 70% { transform: scale(0.96) rotate(2deg); } 100% { transform: none; } }
 @keyframes hop { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
 @keyframes blink { 50% { opacity: 0.3; } }
-@keyframes wobble { 0%, 88%, 100% { transform: none; } 91% { transform: rotate(-10deg); } 94% { transform: rotate(8deg); } 97% { transform: rotate(-3deg); } }
 @keyframes flipTop { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
 @keyframes flipBot { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
 @keyframes fade { from { opacity: 0; } }

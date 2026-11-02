@@ -112,6 +112,14 @@ export default function App() {
     if (!sessionStart) setLiveOpen(false);
   }, [sessionStart]);
   useTheme();
+  // The top bar's fade only appears once you've scrolled down.
+  const topbar = useRef(null);
+  useEffect(() => {
+    const on = () => topbar.current && topbar.current.classList.toggle('scrolled', window.scrollY > 2);
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, []);
   // Deep work changes the look of the whole app, and keeps the screen awake for the clock.
   const deep = !!useDeep();
   useEffect(() => {
@@ -197,7 +205,7 @@ export default function App() {
 
   return (
     <div className={`app${settling ? ' settling' : ''}`}>
-      <header className="topbar">
+      <header className="topbar" ref={topbar}>
         <div className="brand" aria-label="lifestyle+">
           <span aria-hidden="true">lifestyle</span>
           <HeartMark color={settingsData.heartColor || DEFAULT_HEART} />
