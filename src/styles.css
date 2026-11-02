@@ -1620,3 +1620,147 @@ body.deep-on .brand, body.deep-on .top-right { opacity: 0.45; transition: opacit
 .rw-go:disabled { background: var(--raised); color: var(--muted); box-shadow: none; }
 .coin-log .row { padding-block: 7px; font-size: 14px; }
 .coin-plus { flex: none; min-width: 34px; font-weight: 800; color: var(--sun); font-variant-numeric: tabular-nums; }
+
+/* =====================================================================================
+   Motion, part two. One language for the whole app, built on the same retro pieces:
+   things land on their grainy shadows, springs overshoot a little, presses squish, and
+   what's finished gets stamped. Durations: quick 0.08–0.2s, base 0.3–0.45s, entrances
+   cascade 45ms apart. Everything here is switched off by prefers-reduced-motion above.
+   ===================================================================================== */
+:root {
+  --spring-soft: cubic-bezier(0.22, 1.25, 0.36, 1); /* settles with a small overshoot */
+  --pop: cubic-bezier(0.34, 1.8, 0.64, 1);          /* snappy, for presses and stamps */
+}
+
+/* ---- Page entrance: the page's pieces cascade in, each card dropping onto its shadow ---- */
+.view > *, .view .fold, .subview > * { animation: riseIn 0.5s calc(var(--n, 0) * 45ms) var(--spring-soft) both; }
+.view > :nth-child(2), .view .fold:nth-child(2), .subview > :nth-child(2) { --n: 1; }
+.view > :nth-child(3), .view .fold:nth-child(3), .subview > :nth-child(3) { --n: 2; }
+.view > :nth-child(4), .view .fold:nth-child(4), .subview > :nth-child(4) { --n: 3; }
+.view > :nth-child(5), .view .fold:nth-child(5), .subview > :nth-child(5) { --n: 4; }
+.view > :nth-child(6), .view .fold:nth-child(6), .subview > :nth-child(6) { --n: 5; }
+.view > :nth-child(7), .view .fold:nth-child(7), .subview > :nth-child(7) { --n: 6; }
+.view > :nth-child(n + 8), .view .fold:nth-child(n + 8), .subview > :nth-child(n + 8) { --n: 7; }
+.view .day-cards, .view .deep-dim { animation: none; }
+@keyframes riseIn { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
+/* The shadow starts tucked under the card and slides out as the card lands: a little lift. */
+.card::before { animation: shadowLand 0.55s calc(var(--n, 0) * 45ms + 0.1s) var(--spring-soft) both; }
+@keyframes shadowLand { from { transform: translate(0, 0); opacity: 0.4; } }
+
+/* Paging sideways: a touch of scale so it feels like a card being slid over, not a jump cut. */
+.view.enter-next, .subview.enter-next { animation: pageInRight 0.34s var(--spring-soft) both; }
+.view.enter-prev, .subview.enter-prev { animation: pageInLeft 0.34s var(--spring-soft) both; }
+.view.enter-next > *, .view.enter-prev > *, .subview.enter-next > *, .subview.enter-prev > * { animation-duration: 0.36s; }
+@keyframes pageInRight { from { opacity: 0.2; transform: translateX(24%) scale(0.97); } }
+@keyframes pageInLeft { from { opacity: 0.2; transform: translateX(-24%) scale(0.97); } }
+
+/* ---- Presses: everything you tap squishes down fast and springs back ---- */
+.btn, .mini, .chip, .icon-btn, .seg button, .pull-btn, .rw-go, .dt-go, .coin-badge, .lvl-badge, .habit-chip, .fold-btn, .link-btn, .toast-action, .check {
+  transition: transform 0.38s var(--pop), box-shadow 0.15s var(--ease-out), background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+.mini:active:not(:disabled), .chip:active, .icon-btn:active, .seg button:active, .habit-chip:active, .fold-btn:active,
+.coin-badge:active, .lvl-badge:active, .link-btn:active, .toast-action:active { transform: scale(0.93); transition-duration: 0.08s; }
+.btn:active:not(:disabled), .rw-go:active:not(:disabled), .dt-go:active, .pull-btn:active { transition-duration: 0.06s; }
+.check:active { transform: scale(0.86); transition-duration: 0.08s; }
+
+/* Picking a chip or a segment: a little pop instead of a plain swap. */
+.chip[aria-pressed='true'], .seg button[aria-pressed='true'] { animation: chipPop 0.4s var(--pop) both; }
+@keyframes chipPop { 0% { transform: scale(0.9); } 55% { transform: scale(1.06); } 100% { transform: none; } }
+
+/* ---- Tab bar: the active pill grows into place and a dot lights under the label ---- */
+.tab { position: relative; isolation: isolate; transition: color 0.25s; }
+.tab[aria-current='page'] { background: none; }
+.tab::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 18px;
+  background: var(--raised); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 0 rgba(0, 0, 0, 0.35);
+  opacity: 0; transform: scale(0.55, 0.7); transition: transform 0.42s var(--pop), opacity 0.2s;
+}
+.tab[aria-current='page']::before { opacity: 1; transform: none; }
+.tab::after {
+  content: ''; position: absolute; left: 50%; bottom: 2px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%;
+  background: var(--sun); box-shadow: 0 0 6px var(--sun); transform: scale(0); transition: transform 0.4s 0.06s var(--pop);
+}
+.tab[aria-current='page']::after { transform: none; }
+.tab[aria-current='page'] .icon { animation: iconBounce 0.5s var(--pop) both; }
+.tab:active { transform: scale(0.92); transition: transform 0.08s; }
+@keyframes iconBounce { 0% { transform: translateY(0) scale(1); } 30% { transform: translateY(-5px) scale(1.12, 0.9); } 60% { transform: translateY(1px) scale(0.95, 1.06); } 100% { transform: none; } }
+
+/* ---- The + button: the plus turns as you press, and springs back ---- */
+.fab .icon { transition: transform 0.45s var(--pop); }
+.fab:active .icon { transform: rotate(90deg) scale(0.85); transition-duration: 0.12s; }
+
+/* ---- Checking things off: stamp, ring burst, the tick draws itself ---- */
+.check { position: relative; }
+.check.on::after, .habit-chip.on .tick::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 12px; border: 2px solid var(--sun);
+  pointer-events: none; opacity: 0; animation: checkRing 0.55s var(--ease-out) both;
+}
+.habit-chip .tick { position: relative; }
+.habit-chip.on .tick::after { border-radius: 50%; border-color: var(--mint); }
+@keyframes checkRing { 0% { opacity: 0.9; transform: scale(0.7); } 100% { opacity: 0; transform: scale(1.9); } }
+.check.on .icon path, .habit-chip.on .tick .icon path { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 0.28s 0.1s var(--ease-out) forwards; }
+
+/* A finished task: the strike draws across, the row slides off, then the gap closes. */
+.task-body.leaving .row-title { text-decoration: none; }
+.task-body.leaving .title-line {
+  background: linear-gradient(currentColor, currentColor) 0 58% / 0% 2px no-repeat;
+  animation: strike 0.22s var(--ease-out) forwards;
+}
+@keyframes strike { to { background-size: 100% 2px; } }
+.task-body.leaving { animation: leaveRight 0.32s var(--ease-in) 0.18s forwards; }
+@keyframes leaveRight { to { opacity: 0; transform: translateX(46px) rotate(1.5deg); } }
+.row:has(> .task-body.leaving), .row:has(> * > .task-body.leaving) { overflow: hidden; animation: collapseRow 0.2s 0.34s var(--ease-in) forwards; }
+@keyframes collapseRow { from { max-height: 140px; } to { max-height: 0; padding-block: 0; border-color: transparent; opacity: 0; } }
+/* Something new arriving in a list drops in and glows for a moment. */
+.task-body.fresh, .li-row.fresh, .captured li { animation: freshIn 0.55s var(--spring-soft) both; }
+@keyframes freshIn {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  60% { opacity: 1; }
+  100% { transform: none; }
+}
+
+/* ---- Folding cards: the chevron springs, and the card's contents rise back in when opened ---- */
+.fold-btn { transition: transform 0.45s var(--pop), color 0.2s; }
+.fold:not(.folded) > .card .card-head ~ *, .fold:not(.folded) > .card > :not(.card-head):not(:has(.card-head)) {
+  animation: foldOpen 0.36s var(--ease-out) both;
+}
+@keyframes foldOpen { from { opacity: 0; transform: translateY(-6px); } }
+
+/* ---- Sheets: spring up over a soft blur; contents cascade; they leave by dropping away ---- */
+.scrim { -webkit-backdrop-filter: blur(4px) saturate(0.85); backdrop-filter: blur(4px) saturate(0.85); animation: fade 0.28s var(--ease-out) both; }
+.sheet { animation: sheetSpring 0.55s var(--spring-soft) both; }
+@keyframes sheetSpring { from { transform: translateY(min(60%, 420px)) scale(0.97); opacity: 0.5; } }
+.sheet > :not(.grab-bar) { animation: stepIn 0.4s calc(0.08s + var(--n, 0) * 35ms) var(--ease-out) both; }
+.sheet > :nth-child(3) { --n: 1; } .sheet > :nth-child(4) { --n: 2; } .sheet > :nth-child(5) { --n: 3; }
+.sheet > :nth-child(6) { --n: 4; } .sheet > :nth-child(7) { --n: 5; } .sheet > :nth-child(n + 8) { --n: 6; }
+.grab-bar { transition: width 0.3s var(--pop), background-color 0.2s; }
+.sheet:active .grab-bar { width: 54px; background: var(--muted); }
+.ghost, .ghost * { pointer-events: none !important; }
+.ghost .sheet, .ghost .sheet > * { animation: none !important; }
+.ghost.scrim { animation: none; }
+
+/* ---- Toasts: spring up from the bottom with a slight tilt ---- */
+.toast { animation: toastSpring 0.5s var(--spring-soft) both; }
+@keyframes toastSpring {
+  0% { opacity: 0; transform: translate(-50%, 24px) scale(0.85) rotate(-2deg); }
+  60% { opacity: 1; }
+  100% { transform: translate(-50%, 0); }
+}
+.ghost.toast { animation: none; }
+
+/* ---- Celebrations: plus-shaped confetti to match the logo, and numbers that tick ---- */
+.cheer-spark.plus {
+  border-radius: 1px;
+  clip-path: polygon(36% 0, 64% 0, 64% 36%, 100% 36%, 100% 64%, 64% 64%, 64% 100%, 36% 100%, 36% 64%, 0 64%, 0 36%, 36% 36%);
+}
+.coin-badge b { display: inline-block; animation: numTick 0.45s var(--pop) both; }
+@keyframes numTick { 0% { transform: translateY(-60%); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.coin-badge .icon { transition: transform 0.6s var(--pop); }
+.coin-badge:hover .icon, .coin-badge:active .icon { transform: rotateY(180deg); }
+
+/* ---- Bars and rings fill with a spring rather than a slide ---- */
+.lvl-fill, .df-bar i, .coin-cap i { transition-timing-function: var(--spring-soft); transition-duration: 0.8s; }
+
+/* Don't replay state animations on things that were already checked or picked when a page appears. */
+.settling .chip, .settling .check::after, .settling .check .icon path, .settling .habit-chip .tick::after, .settling .habit-chip .tick .icon path,
+.settling .fold > .card *, .settling .tab .icon { animation-delay: -10s !important; }

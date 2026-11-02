@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { sheetOut, toastOut } from '../lib/motion.js';
 import { heartSVG } from '../lib/logo.js';
 import { createPortal } from 'react-dom';
 import { pad } from '../lib/dates.js';
@@ -127,6 +128,11 @@ export function Sheet({ title, onClose, children, top = false }) {
   const sheetRef = useRef(null);
   const scrimRef = useRef(null);
   useDragDismiss(sheetRef, () => closeRef.current(), { scrim: scrimRef });
+  // However it closes, the sheet animates out (see motion.js).
+  useLayoutEffect(() => {
+    const node = scrimRef.current;
+    return () => sheetOut(node);
+  }, []);
   // Runs once per sheet. (onClose is often a fresh function each render; re-running this on every
   // keystroke would unpin and re-pin the page, which makes it jump.)
   useEffect(() => {
@@ -213,8 +219,17 @@ export function FlipClock() {
 export function Toaster() {
   const t = useToast();
   if (!t) return null;
+  return <Toast t={t} key={t.key} />;
+}
+
+function Toast({ t }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    return () => toastOut(node);
+  }, []);
   return (
-    <div className={`toast${t.action ? ' has-action' : ''}`} key={t.key} role="status">
+    <div className={`toast${t.action ? ' has-action' : ''}`} ref={ref} role="status">
       {t.text}
       {t.action && (
         <button

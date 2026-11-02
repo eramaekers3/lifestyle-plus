@@ -15,7 +15,7 @@ export default function CoinBadge() {
     <>
       <button className={`coin-badge${c.full ? ' full' : ''}`} onClick={() => setOpen(true)} aria-label={`${c.balance} coins. Open rewards`}>
         <Icon name="coin" size={17} />
-        <b>{c.balance}</b>
+        <b key={c.balance}>{c.balance}</b>
       </button>
       {open && <ShopSheet c={c} onClose={() => setOpen(false)} />}
     </>
