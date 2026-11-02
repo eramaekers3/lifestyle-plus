@@ -17,6 +17,7 @@ import { haptic } from './haptics.js';
 import { sessionScore } from './lifting.js';
 import { todayISO, iso, addDays } from './dates.js';
 import { norm } from './text.js';
+import { latestCoins } from './coins.js';
 
 export const XP = { task: 10, habit: 5, workout: 30, perSet: 2, maxSets: 30, pr: 20 };
 const COMBO_GAP = 15 * 60 * 1000;
@@ -257,6 +258,8 @@ export function cheerGain(at, kind, extra, sparks = true) {
   const g = latestGain(kind);
   const bits = [];
   if (g.combo) bits.push(`×${g.combo} combo`);
+  const coins = latestCoins(kind);
+  if (coins) bits.push(`+${coins} coin${coins === 1 ? '' : 's'}`);
   if (extra) bits.push(extra);
   bits.push(`${g.today} today`);
   cheer(at, { text: `+${g.xp} XP`, sub: bits.join(' · '), sparks });

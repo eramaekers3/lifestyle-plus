@@ -156,7 +156,8 @@ export function DeepFocus({ s }) {
     if (!confirmEnd) return setConfirmEnd(true);
     const mins = endDeep(s);
     haptic('success');
-    toast(mins >= 1 ? `${fmtDur(mins)} of deep work logged` : 'Session ended');
+    const coins = Math.floor(mins / 10);
+    toast(mins >= 1 ? `${fmtDur(mins)} of deep work logged${coins ? ` · +${coins} coin${coins === 1 ? '' : 's'}` : ''}` : 'Session ended');
   };
   const finishTask = (e) => {
     if (!task || taskDone) return;

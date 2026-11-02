@@ -1589,3 +1589,34 @@ body.deep-on .brand, body.deep-on .top-right { opacity: 0.45; transition: opacit
 .deep-pill .t { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--sun); }
 .deep-pill .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--sun); animation: blink 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .deep-focus, body.deep-on::before { animation: none; } }
+
+/* ---------- Coins and the rewards shop ---------- */
+.coin-badge {
+  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 11px 0 9px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink);
+}
+.coin-badge .icon { color: var(--sun); }
+.coin-badge b { font: 800 14px/1 var(--body); font-variant-numeric: tabular-nums; }
+.coin-badge.full { border-color: var(--sun); animation: blink 2.4s ease-in-out infinite; }
+.coin-badge:active { transform: scale(0.95); }
+@media (max-width: 430px) { .sync-text { display: none; } }
+
+.coin-head { display: flex; align-items: center; gap: 14px; }
+.coin-big { display: inline-flex; align-items: center; gap: 8px; color: var(--sun); }
+.coin-big b { font: var(--display-weight) 44px/1 var(--display); letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.coin-stats { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.coin-cap { height: 6px; margin-top: 12px; border-radius: 99px; background: var(--raised); overflow: hidden; }
+.coin-cap i { display: block; height: 100%; border-radius: inherit; background: var(--sun); transition: width 0.6s var(--ease-out); }
+.coin-warn { color: var(--coral); }
+.reward-row .row-title { display: flex; flex-direction: column; font-weight: 700; font-size: 15.5px; }
+.reward-row .row-title small { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.rw-emoji { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); font-size: 21px; }
+.rw-emoji.small { width: 30px; height: 30px; border-radius: 9px; font-size: 16px; }
+.rw-go {
+  flex: none; border: 0; border-radius: 11px; padding: 8px 14px; font-weight: 800; font-size: 14px;
+  background: var(--sun); color: var(--sun-ink); box-shadow: 0 3px 0 var(--sun-edge);
+}
+.rw-go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--sun-edge); }
+.rw-go:disabled { background: var(--raised); color: var(--muted); box-shadow: none; }
+.coin-log .row { padding-block: 7px; font-size: 14px; }
+.coin-plus { flex: none; min-width: 34px; font-weight: 800; color: var(--sun); font-variant-numeric: tabular-nums; }

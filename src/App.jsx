@@ -7,6 +7,8 @@ import { useCanvasSync } from './lib/canvas.js';
 import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
 import LevelBadge from './components/LevelBadge.jsx';
+import CoinBadge from './components/Coins.jsx';
+import { useCoinsSetup } from './lib/coins.js';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
 import { todayISO } from './lib/dates.js';
 import { toast } from './lib/toast.js';
@@ -99,6 +101,7 @@ export default function App() {
   }, []);
   useSeedRoutines();
   useRecurring();
+  useCoinsSetup();
 
   // The workout screen opens when a workout starts on this device; after a reload it waits behind the pill.
   const session = useSession();
@@ -200,6 +203,7 @@ export default function App() {
           <HeartMark color={settingsData.heartColor || DEFAULT_HEART} />
         </div>
         <div className="top-right">
+          <CoinBadge />
           <LevelBadge />
           <button className="sync-btn" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
             <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />
