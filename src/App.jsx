@@ -43,7 +43,7 @@ const TABS = [
   { id: 'plan', label: 'Plan', View: PlanView },
   { id: 'stack', label: 'Stack', View: StackView },
   { id: 'lists', label: 'Lists', View: ListsView },
-  { id: 'habits', label: 'Habits', View: HabitsView },
+  { id: 'habits', label: 'Me', View: HabitsView },
   { id: 'body', label: 'Body', View: BodyView },
   { id: 'money', label: 'Money', View: MoneyView },
 ];
@@ -66,7 +66,7 @@ const skipToday = () => {
 
 const tabFromHash = () => {
   const h = window.location.hash.slice(1);
-  if (h === 'journal') return 'habits'; // the journal lives on the Habits tab
+  if (h === 'journal') return 'habits'; // the journal lives on the Me tab
   return TABS.some((t) => t.id === h) ? h : 'plan';
 };
 

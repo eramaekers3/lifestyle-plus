@@ -911,7 +911,7 @@ function StreaksImport() {
               </li>
             ))}
           </ul>
-          <p className="muted small">Paused habits only logged skips lately. You can resume any of them from the Habits tab.</p>
+          <p className="muted small">Paused habits only logged skips lately. You can resume any of them from Habits on the Me tab.</p>
           <div className="btn-row">
             <button className="btn" onClick={run}>Import {parsed.habits.length} habits</button>
             <button className="btn ghost" onClick={() => setParsed(null)}>Cancel</button>

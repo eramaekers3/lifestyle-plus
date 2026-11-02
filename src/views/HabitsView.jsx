@@ -254,22 +254,47 @@ function HabitGrid({ habits, paused, children }) {
   );
 }
 
+// Which page the Me tab was last on, so it comes back to the same one (this device only).
+const PAGE_KEY = 'lifestyleplus.mePage';
+const lastPage = () => {
+  try {
+    return localStorage.getItem(PAGE_KEY) === 'journal' ? 'journal' : 'habits';
+  } catch {
+    return 'habits';
+  }
+};
+const rememberPage = (p) => {
+  try {
+    localStorage.setItem(PAGE_KEY, p);
+  } catch {
+    /* storage unavailable */
+  }
+};
+
 /**
- * The Habits tab holds two pages: your habits, and the journal. #journal opens straight to the journal
- * (the shutdown and notifications link there).
+ * The Me tab holds two pages: your habits, and the journal. It reopens on whichever you left it on.
+ * #journal opens straight to the journal (the shutdown and notifications link there).
  */
 export default function HabitsView() {
-  const [page, setPage] = useState(() => (window.location.hash === '#journal' ? 'journal' : 'habits'));
+  const [page, setPage] = useState(() => {
+    const p = window.location.hash === '#journal' ? 'journal' : lastPage();
+    rememberPage(p);
+    return p;
+  });
   const [enter, setEnter] = useState(0);
   const go = (p) => {
     if (p === page) return;
     setEnter(p === 'journal' ? 1 : -1);
     setPage(p);
+    rememberPage(p);
     history.replaceState(null, '', p === 'journal' ? '#journal' : '#habits');
   };
   useEffect(() => {
     const onHash = () => {
-      if (window.location.hash === '#journal') setPage('journal');
+      if (window.location.hash === '#journal') {
+        setPage('journal');
+        rememberPage('journal');
+      }
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
