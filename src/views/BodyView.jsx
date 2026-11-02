@@ -157,7 +157,6 @@ function Workouts() {
   const [mus, setMus] = useState(null);
   const [quick, setQuick] = useState(false);
   const tagged = useMemo(() => routines.map((r) => ({ r, g: groupsOf(r) })), [routines]);
-  const [reorder, setReorder] = useState(false);
   const used = GROUPS.filter((g) => tagged.some((t) => t.g.has(g.id)));
   const shown = mus ? tagged.filter((t) => t.g.has(mus)).map((t) => t.r) : routines;
   const iconsFor = (r) => GROUPS.filter((g) => tagged.find((t) => t.r === r).g.has(g.id)).slice(0, 4);
@@ -185,8 +184,7 @@ function Workouts() {
       )}
       {session && <p className="hint wk-hint">{session.name} is in progress. Finish it to start another.</p>}
       {shown.length > 0 ? (
-        reorder && !mus ? (
-          <SortableList items={shown} onReorder={(l) => (mus ? null : reorderRoutines(l))} className="rows routine-list" rowClass={() => 'row routine-row'}>
+        <SortableList items={shown} onReorder={(l) => (mus ? null : reorderRoutines(l))} className="rows routine-list" rowClass={() => 'row routine-row'}>
           {(r, grip) => (
             <>
               <button className="row-title task-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
@@ -208,38 +206,8 @@ function Workouts() {
             </>
           )}
         </SortableList>
-        ) : (
-          <ul className="routine-grid">
-            {shown.map((r) => (
-              <li key={r.id} className="routine-tile">
-                <button className="rt-open" onClick={() => setOpen(r.id)} aria-label={`Open ${r.name}`}>
-                  <b className="rt-name">{r.name}</b>
-                  <span className="rt-foot">
-                    <span className="routine-mus" aria-hidden="true">
-                      {iconsFor(r).slice(0, 3).map((g) => <MuscleIcon key={g.id} group={g.id} size={15} />)}
-                    </span>
-                    <span className="routine-n">{r.exercises.length} ex</span>
-                  </span>
-                </button>
-                <button
-                  className="mini sun rt-start"
-                  disabled={!!session || !r.exercises.length}
-                  onClick={() => startSession(r)}
-                  aria-label={`Start ${r.name}`}
-                >
-                  Start
-                </button>
-              </li>
-            ))}
-          </ul>
-        )
       ) : (
         <p className="empty">{mus ? 'None of your workouts hit that muscle yet. Tap New and add some from the library.' : 'No workouts yet.'}</p>
-      )}
-      {!mus && shown.length > 1 && (
-        <button className="link-btn rt-reorder" onClick={() => setReorder(!reorder)}>
-          {reorder ? 'Done reordering' : 'Reorder'}
-        </button>
       )}
       {open && <RoutineSheet id={open} onClose={() => setOpen(null)} onOpen={setOpen} />}
       {quick && (

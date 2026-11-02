@@ -65,7 +65,18 @@ export function haptic(kind = 'tick') {
 }
 
 // Anything you tap that should tick. Finishing something calls haptic('success') itself.
-const TAPPABLE = 'button, [role="button"], [role="switch"], a, .chip, .check, summary';
+const TAPPABLE =
+  'button, [role="button"], [role="switch"], [role="tab"], [role="checkbox"], a, label, select, summary, .chip, .check, ' +
+  'input[type="checkbox"], input[type="radio"], input[type="range"], input[type="date"], input[type="time"]';
+
+/** Also tick for anything styled as clickable (cursor: pointer) a few levels up from the tap. */
+function looksTappable(el) {
+  for (let i = 0; el && i < 4; i++, el = el.parentElement) {
+    if (el === document.body) return false;
+    if (getComputedStyle(el).cursor === 'pointer') return true;
+  }
+  return false;
+}
 
 /** One listener for the whole app: a light tick whenever a button-like thing is tapped. */
 export function installTapHaptics() {
@@ -74,7 +85,8 @@ export function installTapHaptics() {
     'click',
     (e) => {
       if (!e.isTrusted) return; // ignore our own label clicks
-      const t = e.target instanceof Element && e.target.closest(TAPPABLE);
+      if (!(e.target instanceof Element)) return;
+      const t = e.target.closest(TAPPABLE) || (looksTappable(e.target) && e.target);
       if (t && !t.disabled && t.getAttribute('aria-disabled') !== 'true') haptic('tick');
     },
     true

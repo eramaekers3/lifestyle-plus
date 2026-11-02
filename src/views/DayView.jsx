@@ -314,15 +314,36 @@ function WeekSpend({ date }) {
         {due.length > 0 && (
           <p className="muted small">{money(dueTotal, true)} in subscriptions still due this week: {due.map((r) => r.name).join(', ')}.</p>
         )}
-        <p className="wk-more">See purchases ›</p>
+        <p className="wk-more">Purchases &amp; past weeks ›</p>
       </div>
-      {open && <WeekPurchases f={f} from={from} upto={upto} days={days} today={today} pick={open} setPick={setOpen} onClose={() => setOpen(null)} />}
+      {open && <WeekPurchases f={f} start={from} today={today} pick={open} setPick={setOpen} onClose={() => setOpen(null)} />}
     </section>
   );
 }
 
-/** The popup: every purchase this week, newest first, grouped by day. Tap a day to see just that one. */
-function WeekPurchases({ f, from, upto, days, today, pick, setPick, onClose }) {
+/**
+ * The popup: a week's purchases, newest first, grouped by day. Tap a day to see just that one.
+ * The bars on top are the last 8 weeks (Monday to Sunday); tap one, or use the arrows, to look back.
+ */
+function WeekPurchases({ f, start, today, pick, setPick, onClose }) {
+  const thisWs = weekStart(today);
+  const [ws, setWs] = useState(start);
+  const from = ws;
+  const to = addDays(ws, 6);
+  const upto = to < today ? to : today;
+  const days = Array.from({ length: 7 }, (_, i) => ({ d: addDays(from, i) }));
+  const weeks = Array.from({ length: 8 }, (_, i) => {
+    const w = addDays(thisWs, -7 * (7 - i));
+    return { w, v: Math.max(0, sumKind(f.txns, 'spend', w, addDays(w, 6))) };
+  });
+  const wMax = Math.max(1, ...weeks.map((x) => x.v));
+  const avg = weeks.slice(0, 7).reduce((a, x) => a + x.v, 0) / 7;
+  const go = (w) => {
+    setWs(w);
+    setPick('all');
+  };
+  const isThis = ws === thisWs;
+  const label = isThis ? 'This week' : ws === addDays(thisWs, -7) ? 'Last week' : `Week of ${fmt(ws, { month: 'short', day: 'numeric' })}`;
   const inRange = (d) => (pick === 'all' ? d >= from && d <= upto : d === pick);
   const list = f.txns.filter((t) => t.kind === 'spend' && inRange(t.date));
   const sum = Math.round(list.reduce((s, t) => s + t.amount, 0) * 100) / 100;
@@ -333,22 +354,47 @@ function WeekPurchases({ f, from, upto, days, today, pick, setPick, onClose }) {
     else byDay.push({ d: t.date, txns: [t] });
   }
   const dayName = (d) => (d === today ? 'Today' : d === addDays(today, -1) ? 'Yesterday' : fmt(d, { weekday: 'long', month: 'short', day: 'numeric' }));
+  const elapsed = days.filter((x) => x.d <= upto).length;
   return (
-    <Sheet title={pick === 'all' ? 'This week’s purchases' : dayName(pick)} onClose={onClose}>
+    <Sheet title={pick === 'all' ? 'Purchases' : dayName(pick)} onClose={onClose}>
+      <div className="wp-nav">
+        <button className="icon-btn" onClick={() => go(addDays(ws, -7))} aria-label="Week before"><Icon name="left" size={18} /></button>
+        <div className="wp-range">
+          <b>{label}</b>
+          <span>Mon {fmt(from, { month: 'short', day: 'numeric' })} – Sun {fmt(to, { month: 'short', day: 'numeric' })}</span>
+        </div>
+        <button className="icon-btn" disabled={isThis} onClick={() => go(addDays(ws, 7))} aria-label="Week after"><Icon name="right" size={18} /></button>
+      </div>
+      <div className="wp-weeks" role="group" aria-label="Spending by week">
+        {weeks.map((x) => (
+          <button
+            key={x.w}
+            className={`${x.w === ws ? 'on' : ''}${x.w === thisWs ? ' cur' : ''}`}
+            onClick={() => go(x.w)}
+            aria-label={`Week of ${fmt(x.w, { month: 'short', day: 'numeric' })}: ${money(x.v)}`}
+            aria-pressed={x.w === ws}
+          >
+            <span className="wp-amt">{money(x.v)}</span>
+            <i style={{ height: `${Math.max(3, (x.v / wMax) * 48)}px` }} />
+            <span className="wp-lbl">{x.w === thisWs ? 'Now' : fmt(x.w, { month: 'numeric', day: 'numeric' })}</span>
+          </button>
+        ))}
+      </div>
+      <p className="muted small wp-avg">7-week average {money(avg)} a week</p>
       <div className="rv-stats money-stats">
         <div><b>{money(sum, true)}</b><span>spent</span></div>
         <div><b>{list.filter((t) => t.amount > 0).length}</b><span>purchases</span></div>
-        <div><b>{money(pick === 'all' ? sum / Math.max(1, days.filter((x) => x.d <= today).length) : sum)}</b><span>{pick === 'all' ? 'a day' : 'that day'}</span></div>
+        <div><b>{money(pick === 'all' ? sum / Math.max(1, elapsed) : sum)}</b><span>{pick === 'all' ? 'a day' : 'that day'}</span></div>
       </div>
       <div className="chips wk-chips">
         <button className="chip" aria-pressed={pick === 'all'} onClick={() => setPick('all')}>Week</button>
-        {days.filter((x) => x.d <= today).map((x) => (
+        {days.filter((x) => x.d <= upto).map((x) => (
           <button key={x.d} className="chip" aria-pressed={pick === x.d} onClick={() => setPick(x.d)}>
             {fmt(x.d, { weekday: 'short' })}
           </button>
         ))}
       </div>
-      {!list.length && <p className="empty">No purchases {pick === 'all' ? 'yet this week' : 'that day'}.</p>}
+      {!list.length && <p className="empty">No purchases {pick === 'all' ? (isThis ? 'yet this week' : 'that week') : 'that day'}.</p>}
       {byDay.map((g) => (
         <div key={g.d}>
           {pick === 'all' && (

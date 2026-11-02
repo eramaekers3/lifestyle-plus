@@ -1342,20 +1342,19 @@ form.inline .num-in { flex: 0 1 92px; }
 .wk-reset { color: var(--dim); }
 .hero-row.compact .label { white-space: nowrap; }
 
-/* Workouts: three square tiles a row */
-.routine-grid { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.routine-tile {
-  aspect-ratio: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; padding: 8px 8px 7px;
-  border: 1px solid var(--line); border-radius: 14px; background: var(--raised);
+/* Week purchases: look back by week */
+.wp-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.wp-range { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.wp-range b { font-size: 16px; }
+.wp-range span { font-size: 12.5px; color: var(--muted); }
+.wp-weeks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; align-items: end; height: 84px; }
+.wp-weeks button {
+  border: 0; background: none; padding: 0; font: inherit; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; gap: 3px; color: var(--dim); border-radius: 8px;
 }
-.rt-open {
-  flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;
-  gap: 4px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;
-}
-.rt-name {
-  font: 700 13px/1.15 var(--body); display: -webkit-box; flex: none; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.rt-foot { flex: none; margin-top: auto; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px; }
-.rt-foot .routine-n { font-size: 11.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
-.routine-tile .rt-start { flex: none; width: 100%; justify-content: center; padding: 3px 0; font-size: 13px; }
-.rt-reorder { display: block; margin: 8px auto 0; font-size: 13px; }
+.wp-weeks i { display: block; width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; background: color-mix(in srgb, var(--coral) 45%, var(--raised)); }
+.wp-weeks button.on i { background: var(--coral); }
+.wp-weeks button.on { color: var(--ink); font-weight: 800; }
+.wp-amt { font-size: 9.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wp-lbl { font-size: 10.5px; }
+.wp-avg { margin: 6px 0 12px; text-align: center; }

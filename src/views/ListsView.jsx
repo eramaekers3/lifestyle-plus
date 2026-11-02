@@ -54,6 +54,11 @@ function GroceryCard({ list }) {
       <div className="card-head">
         <h2 id="gr-h">Groceries</h2>
         <span className="meta">{todo.length ? `${todo.length} to get` : ''}</span>
+        {todo.length > 0 && (
+          <button className="mini" onClick={() => shareList(todo)} aria-label="Share the grocery list">
+            <Icon name="out" size={14} /> Share
+          </button>
+        )}
       </div>
       <AddBar listId={list.id} items={all} placeholder="Add an item, like eggs" />
       {recent.length > 0 && (
@@ -83,6 +88,31 @@ function GroceryCard({ list }) {
       )}
     </section>
   );
+}
+
+/** The list as plain text: a title, the date, and one "☐ item" line each, ready for Messages or Notes. */
+function listText(items) {
+  const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const lines = items.map((i) => `☐ ${i.text.trim().replace(/^./, (c) => c.toUpperCase())}`);
+  return [`🛒 Grocery list · ${date}`, '', ...lines, '', `${items.length} item${items.length === 1 ? '' : 's'}`].join('\n');
+}
+
+async function shareList(items) {
+  const text = listText(items);
+  try {
+    if (navigator.share) {
+      await navigator.share({ text });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // closed the share sheet
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('List copied');
+  } catch {
+    toast('Couldn’t share the list');
+  }
 }
 
 /* ---------- Packing ---------- */
