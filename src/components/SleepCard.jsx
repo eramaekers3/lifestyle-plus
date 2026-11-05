@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
-import { useKind } from '../store.js';
+import { put, remove, useKind } from '../store.js';
 import { addDays, fmt, fmtDur, minToLabel, todayISO } from '../lib/dates.js';
+import { idFor } from '../lib/ids.js';
+import { compareWithApple, levelFor, scoreAll } from '../lib/sleepScore.js';
 import { useSwipe } from '../lib/swipe.js';
 import { Icon, Sheet } from './ui.jsx';
 
@@ -24,9 +26,16 @@ function useNights() {
   return useMemo(() => Object.fromEntries(health.filter((h) => h.sleepMin).map((h) => [h.date, h])), [health]);
 }
 
+/** Apple's own scores, entered by hand for nights you want to compare. */
+function useApple() {
+  const rows = useKind('applesleep');
+  return useMemo(() => Object.fromEntries(rows.map((r) => [r.date, r])), [rows]);
+}
+
 /** Sleep from Apple Health: last night, the last 7 nights' schedule with stages, and last night's stages. */
 export default function SleepCard() {
   const byDate = useNights();
+  const scores = useMemo(() => scoreAll(byDate), [byDate]);
   const today = todayISO();
   const [open, setOpen] = useState(null);
   const nights = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
@@ -84,6 +93,8 @@ export default function SleepCard() {
         </div>
       </button>
 
+      {scores[lastDate] && <ScoreSummary s={scores[lastDate]} label={lastLabel} week={have.map((d) => scores[d]).filter(Boolean)} onOpen={() => setOpen(lastDate)} />}
+
       <SleepSchedule nights={nights} byDate={byDate} today={today} onPick={setOpen} />
       {hasSegs && <StageKey />}
 
@@ -96,7 +107,7 @@ export default function SleepCard() {
       )}
       <p className="sl-tap">Tap a night for the details; swipe between nights.</p>
 
-      {open && <SleepSheet start={open} byDate={byDate} onClose={() => setOpen(null)} />}
+      {open && <SleepSheet start={open} byDate={byDate} scores={scores} onClose={() => setOpen(null)} />}
     </section>
   );
 }
@@ -191,8 +202,9 @@ function SleepSchedule({ nights, byDate, today, onPick }) {
 /* ---------- One night in detail ---------- */
 
 /** One night at a time; swipe or use the arrows to go between nights. */
-function SleepSheet({ start, byDate, onClose }) {
+function SleepSheet({ start, byDate, scores, onClose }) {
   const today = todayISO();
+  const apple = useApple();
   const dates = Object.keys(byDate).sort();
   const [date, setDate] = useState(start);
   const [enter, setEnter] = useState(0);
@@ -233,6 +245,10 @@ function SleepSheet({ start, byDate, onClose }) {
               </div>
             )}
           </div>
+
+          {scores[date] && <ScoreDetail s={scores[date]} n={n} date={date} apple={apple[date]} />}
+          <ScoreTrend scores={scores} end={date} onPick={setDate} />
+          <AppleMatch scores={scores} apple={apple} />
 
           {n.segs && n.segs.length ? (
             <>
@@ -335,5 +351,234 @@ function NightNotes({ n }) {
     <ul className="sl-notes">
       {notes.map((t) => <li key={t}>{t}</li>)}
     </ul>
+  );
+}
+
+/* ---------- Sleep score ---------- */
+
+const PARTS = [
+  { id: 'duration', label: 'Duration', max: 50 },
+  { id: 'bedtime', label: 'Bedtime', max: 30 },
+  { id: 'interruptions', label: 'Interruptions', max: 20 },
+];
+
+/** The score as a ring, colored by level. */
+function ScoreRing({ score, size = 76 }) {
+  const lv = levelFor(score);
+  const r = size / 2 - 6;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg className={`ss-ring lv-${lv.cls}`} width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Sleep score ${score}, ${lv.label}`}>
+      <circle cx={size / 2} cy={size / 2} r={r} className="ss-track" />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        className="ss-fill"
+        strokeDasharray={`${(c * score) / 100} ${c}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text x="50%" y="50%" dy="0.35em" textAnchor="middle" className="ss-num" style={{ fontSize: size * 0.34 }}>{score}</text>
+    </svg>
+  );
+}
+
+function PartBars({ s }) {
+  return (
+    <ul className="ss-parts">
+      {PARTS.map((p) => (
+        <li key={p.id}>
+          <span>{p.label}</span>
+          <i className="ss-bar"><i style={{ width: `${(s[p.id].pts / p.max) * 100}%` }} /></i>
+          <b>{s[p.id].pts}<small>/{p.max}</small></b>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Last night's score on the card, with the three parts and the week's average. */
+function ScoreSummary({ s, label, week, onOpen }) {
+  const avg = week.length > 1 ? Math.round(week.reduce((a, x) => a + x.score, 0) / week.length) : null;
+  return (
+    <button className="ss-card" onClick={onOpen} aria-label={`${label} sleep score ${s.score}, ${s.level.label}. Open details`}>
+      <ScoreRing score={s.score} />
+      <div className="ss-side">
+        <div className="ss-head">
+          <span className="label">Sleep score</span>
+          <b className={`ss-level lv-${s.level.cls}`}>{s.level.label}</b>
+          {avg !== null && <span className="ss-avg">7-night avg <b>{avg}</b></span>}
+        </div>
+        <PartBars s={s} />
+      </div>
+    </button>
+  );
+}
+
+
+/** One night's score, with what went into each part in plain words. */
+function ScoreDetail({ s, n, date, apple }) {
+  const d = s.duration;
+  const b = s.bedtime;
+  const it = s.interruptions;
+  const why = {
+    duration: d.staged
+      ? `${fmtDur(n.sleepMin)} asleep (${d.total}/40) · deep ${Math.round(d.deepShare * 100)}% (${d.deep}/5) · REM ${Math.round(d.remShare * 100)}% (${d.rem}/5)`
+      : `${fmtDur(n.sleepMin)} asleep. No Apple Watch stages, so deep and REM aren't counted against you.`,
+    bedtime: b.off === null
+      ? 'Needs a few more nights to know your usual bedtime.'
+      : Math.abs(b.off) < 5
+        ? `Fell asleep right on your usual ${minToLabel(b.usual)}.`
+        : `Fell asleep ${fmtDur(Math.abs(b.off))} ${b.off > 0 ? 'later' : 'earlier'} than your usual ${minToLabel(b.usual)} (last ${b.nights} nights).`,
+    interruptions: it.estimated
+      ? `${fmtDur(it.awake)} awake. Wake-up count needs Apple Watch stage timing.`
+      : it.wakes
+        ? `${it.wakes} wake-up${it.wakes === 1 ? '' : 's'}, ${fmtDur(it.awake)} awake in the night.`
+        : it.awake ? `Only brief stirs, ${fmtDur(it.awake)} awake.` : 'Slept straight through.',
+  };
+  return (
+    <div className="ss-detail">
+      <div className="ss-top">
+        <ScoreRing score={s.score} size={92} />
+        <div>
+          <span className="label">Sleep score</span>
+          <b className={`ss-level big lv-${s.level.cls}`}>{s.level.label}</b>
+          {apple && <AppleLine s={s} apple={apple} />}
+        </div>
+      </div>
+      <ul className="ss-why">
+        {PARTS.map((p) => (
+          <li key={p.id}>
+            <div className="ss-why-h"><span>{p.label}</span><b>{s[p.id].pts}<small>/{p.max}</small></b></div>
+            <i className="ss-bar"><i style={{ width: `${(s[p.id].pts / p.max) * 100}%` }} /></i>
+            <p>{why[p.id]}</p>
+          </li>
+        ))}
+      </ul>
+      <AppleEntry date={date} apple={apple} />
+    </div>
+  );
+}
+
+function AppleLine({ s, apple }) {
+  const total = apple.duration + apple.bedtime + apple.interruptions;
+  const diff = s.score - total;
+  return (
+    <span className="ss-apple-line">
+      Apple: <b>{total}</b> · {diff === 0 ? 'exact match' : `this app is ${diff > 0 ? '+' : '−'}${Math.abs(diff)}`}
+    </span>
+  );
+}
+
+/** Type in Apple's three numbers from the Health app to see how close this score is. */
+function AppleEntry({ date, apple }) {
+  const [editing, setEditing] = useState(false);
+  const [vals, setVals] = useState({ duration: '', bedtime: '', interruptions: '' });
+  const id = idFor(`as:${date}`);
+  const start = () => {
+    setVals(apple ? { duration: apple.duration, bedtime: apple.bedtime, interruptions: apple.interruptions } : { duration: '', bedtime: '', interruptions: '' });
+    setEditing(true);
+  };
+  const save = (e) => {
+    e.preventDefault();
+    const out = {};
+    for (const p of PARTS) {
+      const v = parseInt(vals[p.id], 10);
+      if (!Number.isFinite(v) || v < 0 || v > p.max) return;
+      out[p.id] = v;
+    }
+    put('applesleep', { id, date, ...out });
+    setEditing(false);
+  };
+  if (!editing) {
+    return (
+      <div className="ss-apple">
+        <button className="btn ghost small" onClick={start}>{apple ? 'Edit Apple’s score' : 'Compare with Apple’s score'}</button>
+        {apple && <button className="btn ghost small" onClick={() => remove(id)}>Remove</button>}
+      </div>
+    );
+  }
+  return (
+    <form className="ss-apple-form" onSubmit={save}>
+      <p className="muted small">From Health → Sleep → Sleep Score, tap this night and type in its three parts.</p>
+      <div className="ss-apple-inputs">
+        {PARTS.map((p) => (
+          <label key={p.id}>
+            <span>{p.label}</span>
+            <input
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max={p.max}
+              value={vals[p.id]}
+              onChange={(e) => setVals((v) => ({ ...v, [p.id]: e.target.value }))}
+              placeholder={`/${p.max}`}
+              required
+            />
+          </label>
+        ))}
+      </div>
+      <div className="ss-apple">
+        <button className="btn small">Save</button>
+        <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+/** The last 14 nights' scores as bars, ending on the night being shown. */
+function ScoreTrend({ scores, end, onPick }) {
+  const days = Array.from({ length: 14 }, (_, i) => addDays(end, i - 13));
+  if (days.filter((d) => scores[d]).length < 2) return null;
+  const W = 340, H = 112, L = 22, R = 4, T = 14, B = 18;
+  const col = (W - L - R) / days.length;
+  const y = (v) => T + (H - T - B) * (1 - v / 100);
+  return (
+    <>
+      <p className="school-sub">Score, last 14 nights</p>
+      <svg className="chart ss-trend" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sleep scores for the last 14 nights">
+        {[40, 60, 80].map((v) => (
+          <g key={v}>
+            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="grid" />
+            <text x={L - 4} y={y(v) + 4} textAnchor="end">{v}</text>
+          </g>
+        ))}
+        {days.map((d, i) => {
+          const s = scores[d];
+          const x = L + col * i + col * 0.18;
+          const w = col * 0.64;
+          return (
+            <g key={d} className={s ? 'ss-col' : ''} onClick={s ? () => onPick(d) : undefined}>
+              {s ? (
+                <>
+                  <rect x={x} y={y(s.score)} width={w} height={y(0) - y(s.score)} rx={Math.min(4, w / 2)} className={`ss-b lv-${s.level.cls}${d === end ? ' on' : ''}`} />
+                  {d === end && <text x={x + w / 2} y={y(s.score) - 4} textAnchor="middle" className="ss-b-n">{s.score}</text>}
+                </>
+              ) : (
+                <rect x={x} y={y(0) - 2} width={w} height={2} className="ss-b none" />
+              )}
+              <text x={x + w / 2} y={H - 4} textAnchor="middle" className={d === end ? 'sl-today' : ''}>{fmt(d, { weekday: 'narrow' })}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </>
+  );
+}
+
+/** How close this score has been to Apple's, once you've entered Apple's numbers for some nights. */
+function AppleMatch({ scores, apple }) {
+  const m = compareWithApple(scores, Object.values(apple));
+  if (!m) return null;
+  const part = (v) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v).toFixed(1)}`;
+  return (
+    <div className="ss-match">
+      <p className="school-sub">Compared with Apple ({m.nights} night{m.nights === 1 ? '' : 's'})</p>
+      <p className="small">
+        Off by <b>{m.total.toFixed(1)}</b> points on average. By part, this app runs{' '}
+        duration <b>{part(m.duration)}</b>, bedtime <b>{part(m.bedtime)}</b>, interruptions <b>{part(m.interruptions)}</b>.
+      </p>
+    </div>
   );
 }

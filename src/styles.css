@@ -1890,3 +1890,48 @@ textarea.jr-note { margin-top: 8px; resize: none; min-height: 58px; background: 
 .jr-snip .tag { font-size: 10px; padding: 1px 5px; }
 .jr-snip mark { background: color-mix(in srgb, var(--sun) 30%, transparent); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 .jr-sheet-nav { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+
+/* ---------- Sleep score ---------- */
+.ss-ring .ss-track { fill: none; stroke: var(--raised); stroke-width: 8; }
+.ss-ring .ss-fill { fill: none; stroke: var(--lv); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.9s var(--spring, ease); }
+.ss-ring .ss-num { fill: var(--ink); font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums; }
+.lv-vh { --lv: var(--mint); } .lv-hi { --lv: #a9e6a0; } .lv-ok { --lv: var(--sun); } .lv-lo { --lv: #ffb07a; } .lv-vl { --lv: var(--coral); }
+.ss-level { color: var(--lv); font: var(--display-weight, 700) 17px/1.1 var(--display); }
+.ss-level.big { display: block; font-size: 24px; margin: 2px 0 4px; }
+.ss-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--raised); color: inherit; text-align: left; }
+.ss-card:active { transform: scale(0.99); }
+.ss-side { flex: 1; min-width: 0; }
+.ss-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.ss-head .label { margin: 0; }
+.ss-avg { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+.ss-avg b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.ss-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+.ss-parts li { display: grid; grid-template-columns: 82px 1fr 40px; align-items: center; gap: 8px; color: var(--muted); }
+.ss-parts b, .ss-why-h b { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.ss-parts small, .ss-why-h small { color: var(--dim); font-weight: 500; }
+.ss-bar { display: block; height: 6px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+.ss-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--accent, var(--sky)); }
+.ss-detail { margin: 2px 0 6px; }
+.ss-top { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.ss-top .label { margin: 0; }
+.ss-apple-line { font-size: 13px; color: var(--muted); }
+.ss-apple-line b { color: var(--ink); }
+.ss-why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ss-why-h { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.ss-why p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.ss-apple { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.btn.small { padding: 8px 14px; font-size: 13.5px; }
+.ss-apple-form { margin-top: 12px; }
+.ss-apple-form p { margin: 0 0 8px; }
+.ss-apple-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ss-apple-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.ss-apple-inputs .input { width: 100%; text-align: center; font-variant-numeric: tabular-nums; }
+.ss-trend .ss-b { fill: var(--lv); opacity: 0.55; }
+.ss-trend .ss-b.on { opacity: 1; }
+.ss-trend .ss-b.none { fill: var(--line); opacity: 1; }
+.ss-trend .ss-b-n { fill: var(--ink); font-weight: 800; }
+.ss-trend .ss-col { cursor: pointer; }
+.ss-match { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--raised); }
+.ss-match .school-sub { margin-top: 0; }
+.ss-match p.small { margin: 0; color: var(--muted); }
+.ss-match b { color: var(--ink); font-variant-numeric: tabular-nums; }
