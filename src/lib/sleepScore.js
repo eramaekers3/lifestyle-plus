@@ -6,18 +6,20 @@
 // Apple publishes the parts, not the exact curves, so the curves below are the tunable bit.
 // Entering Apple's numbers for a few nights (in the night sheet) shows how far off each part is.
 
+// Fitted to real Apple scores (Oct 31: 8h 49m → 50, 8m early → 30, 4 wake-ups / 8m → 19;
+// Nov 3: 6h 2m → 36, 30m late → 27, 4 / 7m → 19; Nov 5: 4h 49m → 27, 1h 16m late → 17, 6 / 15m → 16).
 export const TUNE = {
-  fullSleep: 470,      // Apple starts taking points off below 7h 50m
-  short2h: 13,         // and two hours under that costs 13 of the 40
-  shortRest: 27 / 240, // after that, the rest of the 40 runs out over the next 4 hours
-  deepFull: 0.10, deepZero: 0.03, // deep sleep as a share of sleep: full 5 pts at 10%, none at 3%
-  remFull: 0.18, remZero: 0.08,   // REM: full 5 pts at 18%, none at 8%
-  bedFree: 30,         // falling asleep within 30 min of your usual time costs nothing
-  bedPerPt: 7,         // then 1 point for every 7 minutes further off
+  fullSleep: 470,      // full duration points at 7h 50m or more
+  perShortMin: 0.13,   // then 0.13 of the 40 per minute short (about 8 points an hour)
+  deepFull: 0.06, deepZero: 0.02, // Apple only docks deep sleep when it's clearly low
+  remFull: 0.12, remZero: 0.05,   // same for REM
+  bedFree: 16,         // falling asleep within ~16 min of your usual time costs nothing
+  bedPerPt: 4.6,       // then 1 point for every 4.6 minutes further off
   bedNights: 13,
-  wakeMin: 2,          // awake stretches of 2 min or longer count as a wake-up
-  perWake: 2,          // points per wake-up
-  perAwakeMin: 0.15,   // points per minute awake in the middle of the night
+  wakeMin: 2,          // awake stretches of 2 min or longer are shown as wake-ups (not scored on their own)
+  perWake: 0,          // Apple barely counts wake-ups: 4 of them still scored 19/20
+  awakeFree: 5,        // the first 5 minutes awake in the night are free
+  perAwakeMin: 0.4,    // then 0.4 points per minute awake
 };
 
 export const LEVELS = [
@@ -36,7 +38,7 @@ const onAxis = (m) => (m >= 18 * 60 ? m - 18 * 60 : m + 6 * 60);
 
 function durationPart(n) {
   const short = Math.max(0, TUNE.fullSleep - n.sleepMin);
-  const lost = short <= 120 ? (TUNE.short2h * short) / 120 : TUNE.short2h + (short - 120) * TUNE.shortRest;
+  const lost = short * TUNE.perShortMin;
   const total = clamp(40 - lost, 0, 40);
   const st = n.stages || {};
   const staged = st.deep != null || st.rem != null || st.core != null;
@@ -77,7 +79,7 @@ function interruptionsPart(n) {
   } else if (n.stages && n.stages.awake) {
     awake = n.stages.awake;
   }
-  const pts = clamp(20 - wakes * TUNE.perWake - awake * TUNE.perAwakeMin, 0, 20);
+  const pts = clamp(20 - wakes * TUNE.perWake - Math.max(0, awake - TUNE.awakeFree) * TUNE.perAwakeMin, 0, 20);
   return { pts: Math.round(pts), wakes, awake: Math.round(awake), estimated: !segs.length };
 }
 
