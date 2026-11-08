@@ -24,6 +24,15 @@ function devApi() {
         const { handle } = await server.ssrLoadModule('/api/_calendar-core.js');
         await handle(body, send);
       });
+      server.middlewares.use('/api/media', async (req, res) => {
+        const params = Object.fromEntries(new URL(req.originalUrl || req.url, 'http://x').searchParams);
+        const { handle } = await server.ssrLoadModule('/api/_media-core.js');
+        await handle(params, (status, data) => {
+          res.statusCode = status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        });
+      });
     },
   };
 }

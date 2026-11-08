@@ -209,3 +209,19 @@ exercise (it runs while that exercise is open, and can be reset), and a row per 
 pre-filled from last time. Check off each set you do; only checked sets are saved. The workout survives
 closing the app; a bar at the bottom brings you back. **Finish** shows a summary and saves it to Recent
 workouts.
+
+## Watch list
+
+**Self → Watch** keeps the movies and shows you've watched, are watching, or want to watch, each with a
+half-star rating, notes and the date you watched it. Search a title and pick it from the list to fill in
+the poster, year, length, genres, cast and summary; anything search can't find can be added by hand.
+
+Search goes through `api/media.js`, so it works with no setup: shows come from TVmaze and movies from
+Apple's iTunes catalog, neither of which needs a key. For better results (one search for both, more
+complete info), add a free TMDB key:
+
+1. Make an account at [themoviedb.org](https://www.themoviedb.org), then go to **Settings → API** and request a key (pick "Personal").
+2. Copy the **API Read Access Token** (the long one).
+3. In Vercel, add it to the project as the environment variable `TMDB_TOKEN`, then redeploy. For `npm run dev`, put `TMDB_TOKEN=…` in `.env`.
+
+Entries are ordinary synced records (kind `watch`), so no database changes are needed.

@@ -9,6 +9,7 @@ import CardStack from '../components/CardStack.jsx';
 import { haptic } from '../lib/haptics.js';
 import { toggleHabitFx } from '../lib/game.js';
 import JournalView from './JournalView.jsx';
+import WatchView from './WatchView.jsx';
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -256,9 +257,13 @@ function HabitGrid({ habits, paused, children }) {
 
 // Which page the Self tab was last on, so it comes back to the same one (this device only).
 const PAGE_KEY = 'lifestyleplus.selfPage';
+const SELF_PAGES = ['habits', 'journal', 'watch'];
+// #journal and #watch open straight to those pages.
+const pageFromHash = () => (['#journal', '#watch'].includes(window.location.hash) ? window.location.hash.slice(1) : null);
 const lastPage = () => {
   try {
-    return localStorage.getItem(PAGE_KEY) === 'journal' ? 'journal' : 'habits';
+    const p = localStorage.getItem(PAGE_KEY);
+    return SELF_PAGES.includes(p) ? p : 'habits';
   } catch {
     return 'habits';
   }
@@ -272,28 +277,30 @@ const rememberPage = (p) => {
 };
 
 /**
- * The Self tab holds two pages: your habits, and the journal. It reopens on whichever you left it on.
- * #journal opens straight to the journal (the shutdown and notifications link there).
+ * The Self tab holds three pages: your habits, the journal, and what you watch. It reopens on
+ * whichever you left it on. #journal opens straight to the journal (the shutdown and notifications
+ * link there), #watch to the watch list.
  */
 export default function HabitsView() {
   const [page, setPage] = useState(() => {
-    const p = window.location.hash === '#journal' ? 'journal' : lastPage();
+    const p = pageFromHash() || lastPage();
     rememberPage(p);
     return p;
   });
   const [enter, setEnter] = useState(0);
   const go = (p) => {
     if (p === page) return;
-    setEnter(p === 'journal' ? 1 : -1);
+    setEnter(Math.sign(SELF_PAGES.indexOf(p) - SELF_PAGES.indexOf(page)));
     setPage(p);
     rememberPage(p);
-    history.replaceState(null, '', p === 'journal' ? '#journal' : '#habits');
+    history.replaceState(null, '', `#${p}`);
   };
   useEffect(() => {
     const onHash = () => {
-      if (window.location.hash === '#journal') {
-        setPage('journal');
-        rememberPage('journal');
+      const p = pageFromHash();
+      if (p) {
+        setPage(p);
+        rememberPage(p);
       }
     };
     window.addEventListener('hashchange', onHash);
@@ -302,13 +309,14 @@ export default function HabitsView() {
   return (
     <>
       <div className="plan-bar">
-        <div className="seg" role="group" aria-label="Habits or journal">
+        <div className="seg" role="group" aria-label="Habits, journal or watch list">
           <button aria-pressed={page === 'habits'} onClick={() => go('habits')}>Habits</button>
           <button aria-pressed={page === 'journal'} onClick={() => go('journal')}>Journal</button>
+          <button aria-pressed={page === 'watch'} onClick={() => go('watch')}>Watch</button>
         </div>
       </div>
       <div className={`subview${enter ? (enter > 0 ? ' enter-next' : ' enter-prev') : ''}`} key={page}>
-        {page === 'journal' ? <JournalView /> : <HabitsPage />}
+        {page === 'journal' ? <JournalView /> : page === 'watch' ? <WatchView /> : <HabitsPage />}
       </div>
     </>
   );

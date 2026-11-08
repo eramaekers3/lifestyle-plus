@@ -1935,3 +1935,64 @@ textarea.jr-note { margin-top: 8px; resize: none; min-height: 58px; background: 
 .ss-match .school-sub { margin-top: 0; }
 .ss-match p.small { margin: 0; color: var(--muted); }
 .ss-match b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ---------- Watch list (Self → Watch) ---------- */
+.wt-types button { padding: 6px 11px; font-size: 13px; }
+.wt-search { position: relative; margin-top: 2px; }
+.wt-search .input { padding-right: 38px; }
+.wt-search input::-webkit-search-cancel-button { display: none; }
+.wt-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 22px; line-height: 1; }
+.wt-results { margin-top: 8px; transition: opacity 0.2s var(--ease-out); }
+.wt-results.stale { opacity: 0.55; }
+.wt-row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wt-row:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.wt-row .row-title { display: flex; flex-direction: column; gap: 2px; }
+.wt-row .row-title b { font-weight: 700; }
+.wt-row > .icon { color: var(--dim); flex: none; }
+.wt-manual { margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-snippet { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+
+.wt-poster { flex: none; display: block; object-fit: cover; background: var(--raised); border-radius: 8px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.35); }
+.wt-poster.sm { width: 40px; height: 60px; border-radius: 6px; }
+.wt-poster.lg { width: 104px; height: 156px; border-radius: 10px; }
+.wt-poster.blank { display: grid; place-items: center; color: var(--dim); font: var(--display-weight) 20px/1 var(--display); border: 1px solid var(--line); box-shadow: none; }
+.wt-poster.lg.blank { font-size: 40px; }
+
+.wt-status { display: flex; margin: 0 0 6px; }
+.wt-status button { flex: 1; padding-inline: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.wt-status.wide { margin: 16px 0 2px; width: 100%; }
+.wt-count { font-size: 11.5px; font-variant-numeric: tabular-nums; opacity: 0.7; }
+.wt-filter { margin: 6px 0 2px; }
+.wt-stars-sm { flex: none; color: var(--sun); font-size: 13px; letter-spacing: 1px; white-space: nowrap; }
+
+.wt-info { display: flex; flex-direction: column; gap: 12px; }
+.wt-top { display: flex; gap: 14px; align-items: flex-start; }
+.wt-facts { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.wt-facts p { margin: 0; }
+.wt-kicker { font-weight: 800; font-size: 14px; }
+.wt-genres { font-size: 13px; color: color-mix(in srgb, var(--sun) 70%, var(--ink)); font-weight: 700; }
+.wt-overview { margin: 0; font-size: 15px; line-height: 1.5; color: color-mix(in srgb, var(--ink) 85%, var(--muted)); }
+.wt-source { margin: -4px 0 0; font-size: 11.5px; color: var(--dim); }
+.wt-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.wt-add .btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.wt-add .btn:first-child { flex-basis: 100%; }
+
+.wt-stars { display: flex; align-items: center; gap: 2px; }
+.wt-star { border: 0; background: none; padding: 2px 3px; font-size: 34px; line-height: 1; -webkit-tap-highlight-color: transparent; }
+.wt-star span {
+  /* The star's fill is a hard-stop gradient, so half stars show half gold. */
+  background: linear-gradient(90deg, var(--sun) var(--fill), var(--raised) var(--fill));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  display: inline-block; transition: transform 0.25s var(--spring);
+}
+.wt-star:active span { transform: scale(1.2); }
+.wt-score { margin-left: 10px; font-size: 13px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.wt-date { margin-top: 14px; }
+.wt-notes { min-height: 96px; }
+.wt-remove { margin-top: 18px; }
+
+.wt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; }
+.wt-tiles div { background: var(--raised); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.wt-tiles b { font: var(--display-weight) 22px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.wt-tiles span { font-size: 12px; color: var(--muted); font-weight: 700; }
+.wt-top-genres { margin: 10px 0 0; }
