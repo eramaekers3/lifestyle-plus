@@ -15,6 +15,7 @@ import { addCalendar, removeCalendar, refreshCalendar, useCalendarStatus, setCal
 import { enablePush, disablePush, sendTestPush, usePushState } from '../lib/push.js';
 import { connectCanvas, disconnectCanvas, refreshCanvas, useCanvasStatus, looksLikeCanvasFeed, setCanvasColor, saveCanvasToken, removeCanvasToken, refreshSubmissions } from '../lib/canvas.js';
 import { DEFAULT_NOTIFY } from '../../api/_push-core.js';
+import { useShootStatus, loadGalleries } from '../lib/shootStack.js';
 import { settingsVersions, recentChanges, restoreVersion, settingsSummary, kindName, labelOf, exportBackup } from '../lib/history.js';
 
 export default function SettingsSheet({ onClose }) {
@@ -56,6 +57,8 @@ export default function SettingsSheet({ onClose }) {
       <CalendarSection />
 
       <CanvasSection />
+
+      <ShootSection signedIn={!!st.email} />
 
       <HealthSection signedIn={!!st.email} />
 
@@ -451,6 +454,35 @@ function CanvasToken({ c }) {
         </>
       )}
     </div>
+  );
+}
+
+function ShootSection({ signedIn }) {
+  const { shootToStack } = useSettings();
+  const st = useShootStatus();
+  const waiting = st.galleries.filter((g) => !g.delivered).length;
+  return (
+    <section className="set-sec">
+      <h3>shoot+</h3>
+      {!signedIn ? (
+        <p className="muted small">Sign in (with the same account as shoot+) to bring galleries you need to edit into your stack.</p>
+      ) : (
+        <>
+          <label className="toggle">
+            <input type="checkbox" checked={shootToStack !== false} onChange={(e) => saveSettings({ shootToStack: e.target.checked })} />
+            <span>Add galleries I still need to edit and deliver to my backlog (finishing one marks it delivered in shoot+)</span>
+          </label>
+          <p className="muted small">
+            {st.error
+              ? `Couldn’t read shoot+: ${st.error}`
+              : st.loaded
+                ? `${waiting} ${waiting === 1 ? 'gallery' : 'galleries'} waiting in shoot+.`
+                : 'Checking shoot+…'}
+          </p>
+          <button className="btn ghost" onClick={() => loadGalleries(true)}>Check shoot+ now</button>
+        </>
+      )}
+    </section>
   );
 }
 

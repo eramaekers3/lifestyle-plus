@@ -16,6 +16,7 @@ import { usePushKeepAlive } from './lib/push.js';
 import { useSwipe } from './lib/swipe.js';
 import { useRecurring } from './lib/recurring.js';
 import { useCanvasTasks } from './lib/canvasStack.js';
+import { useShootTasks } from './lib/shootStack.js';
 import { useSeedRoutines, useSession } from './lib/workouts.js';
 import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
 import { DeepPill } from './components/DeepWork.jsx';
@@ -87,6 +88,7 @@ export default function App() {
   useCalendarSync();
   useCanvasSync();
   useCanvasTasks();
+  useShootTasks();
 
   // Coming back from a bank's own sign-in page (Capital One and others): finish connecting it.
   useEffect(() => {
