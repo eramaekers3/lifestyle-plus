@@ -8,7 +8,8 @@ import { fmt, todayISO } from '../lib/dates.js';
 import { plural } from '../lib/text.js';
 import {
   STATUSES, useWatch, addTitle, saveWatch, removeWatch, restoreWatch, sorted, matches, watchStats,
-  useTitleSearch, fetchDetails, lengthLabel, typeLabel, starsText, watchId,
+  useTitleSearch, fetchDetails, lengthLabel, typeLabel, starsText, watchId, WATCH_BUDDY,
+  epKey, loadEpisodes, episodesStale, progress, setEpisodes, setEpisodeNote,
 } from '../lib/watch.js';
 
 const TYPES = [
@@ -65,8 +66,8 @@ export default function WatchView() {
             const rec = addTitle(full, status);
             haptic('success');
             setPreview(null);
-            // Seen it: go straight to rating it. Otherwise it's just on the list.
-            if (status === 'watched') setOpen(rec.id);
+            // Seen it or watching: open it, to rate it or check off episodes. Want to watch just goes on the list.
+            if (status !== 'want') setOpen(rec.id);
             else toast(`${rec.title} → ${STATUSES.find((s) => s.id === status).label}`);
           }}
         />
@@ -207,8 +208,9 @@ function ListCard({ items, onOpen }) {
               <span className="row-title">
                 <b>{i.title}</b>
                 <span className="muted small">
-                  {[typeLabel(i.type), i.year, status === 'watched' && i.watchedOn ? shortDate(i.watchedOn) : null].filter(Boolean).join(' · ')}
+                  {[typeLabel(i.type), i.year, status === 'watched' && i.watchedOn ? shortDate(i.watchedOn) : null, showProgress(i, status)].filter(Boolean).join(' · ')}
                 </span>
+                {i.withLaighla && <span className="wt-buddy">with {WATCH_BUDDY}</span>}
                 {i.notes && <span className="wt-snippet">{i.notes}</span>}
               </span>
               {i.rating ? <span className="wt-stars-sm" aria-label={`${i.rating} stars`}>{starsText(i.rating)}</span> : null}
@@ -220,6 +222,15 @@ function ListCard({ items, onOpen }) {
       )}
     </section>
   );
+}
+
+/** "Next: S2 E4" for a show you're partway through, "12 of 30 episodes" otherwise. */
+function showProgress(i, status) {
+  if (i.type !== 'show' || !i.episodeList) return null;
+  const p = progress(i);
+  if (!p.done) return null;
+  if (status === 'watching' && p.next) return `next S${p.next.s} E${p.next.e}`;
+  return p.done < p.total ? `${p.done} of ${p.total} episodes` : null;
 }
 
 /* ---------- One saved title ---------- */
@@ -282,6 +293,11 @@ function EntrySheet({ id, onClose }) {
         </label>
       )}
 
+      <label className="toggle wt-buddy-toggle">
+        <input type="checkbox" checked={!!item.withLaighla} onChange={(e) => { haptic('tick'); saveWatch(id, { withLaighla: e.target.checked }); }} />
+        <span>Watched with {WATCH_BUDDY}</span>
+      </label>
+
       <h3 className="jr-sub">Notes</h3>
       <textarea
         className="input wt-notes"
@@ -291,8 +307,165 @@ function EntrySheet({ id, onClose }) {
         placeholder={item.status === 'want' ? 'Who recommended it, where it’s streaming…' : 'What stuck with you? Favorite scene, who you watched with…'}
       />
 
+      {item.type === 'show' && <Episodes item={item} />}
+
       <button className="mini danger wt-remove" onClick={del}>Remove from list</button>
     </Sheet>
+  );
+}
+
+/* ---------- Episodes ---------- */
+
+function Episodes({ item }) {
+  const { id } = item;
+  const list = item.episodeList;
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const today = todayISO();
+
+  // Load the episodes the first time, and refresh a running show's list once a day.
+  const canLoad = !!item.ref;
+  const stale = canLoad && (!list || episodesStale(item));
+  useEffect(() => {
+    if (!stale) return;
+    let live = true;
+    setLoading(true);
+    loadEpisodes(id).then((e) => {
+      if (!live) return;
+      setLoading(false);
+      // A failed background refresh is fine when there's already a list.
+      if (e && !list) setErr(e);
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, stale]);
+
+  const seasons = useMemo(() => {
+    const by = new Map();
+    (list || []).forEach((x) => {
+      if (!by.has(x.s)) by.set(x.s, []);
+      by.get(x.s).push(x);
+    });
+    return [...by.entries()];
+  }, [list]);
+  const p = progress(item, today);
+  // The season you're up to starts open; the rest start folded.
+  const [openSeasons, setOpenSeasons] = useState(() => new Set([p.next ? p.next.s : seasons.length ? seasons[0][0] : 1]));
+  const toggleSeason = (n) => setOpenSeasons((o) => {
+    const next = new Set(o);
+    next.has(n) ? next.delete(n) : next.add(n);
+    return next;
+  });
+
+  const check = (keys, done) => {
+    haptic('tick');
+    const moved = setEpisodes(id, keys, done);
+    if (moved === 'watched') {
+      haptic('success');
+      toast(`Finished ${item.title}`);
+    } else if (moved === 'watching') toast(`${item.title} → Watching`);
+  };
+
+  return (
+    <>
+      <h3 className="jr-sub wt-ep-head">
+        Episodes
+        {p.total > 0 && <span className="wt-ep-count">{p.done} of {p.total}</span>}
+      </h3>
+      {!canLoad ? (
+        <p className="hint">Episodes show for shows picked from search, not ones added by hand.</p>
+      ) : !list ? (
+        err ? (
+          <p className="hint">{err} <button className="link" onClick={() => { setErr(''); loadEpisodes(id).then(setErr); }}>Try again</button></p>
+        ) : (
+          <p className="hint">{loading ? 'Loading episodes…' : ''}</p>
+        )
+      ) : !list.length ? (
+        <p className="hint">No episodes listed for this show yet.</p>
+      ) : (
+        <>
+          {p.total > 0 && <div className="wt-bar" aria-hidden="true"><i style={{ width: `${(p.done / p.total) * 100}%` }} /></div>}
+          <div className="wt-seasons">
+            {seasons.map(([n, eps]) => {
+              const out = eps.filter((x) => !x.d || x.d <= today);
+              const done = out.filter((x) => item.eps && item.eps[epKey(x.s, x.e)] && item.eps[epKey(x.s, x.e)].done).length;
+              const all = out.length > 0 && done === out.length;
+              const isOpen = openSeasons.has(n);
+              return (
+                <section key={n} className={`wt-season${all ? ' done' : ''}`}>
+                  <div className="wt-season-head">
+                    <button className="wt-season-name" onClick={() => toggleSeason(n)} aria-expanded={isOpen}>
+                      <Icon name={isOpen ? 'down' : 'right'} size={16} />
+                      Season {n}
+                      <span className="muted small">{done}/{out.length || eps.length}</span>
+                    </button>
+                    {out.length > 0 && (
+                      <button className="mini" onClick={() => check(out.map((x) => epKey(x.s, x.e)), !all)}>{all ? 'Uncheck all' : 'Check all'}</button>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <ul className="rows wt-eps">
+                      {eps.map((x) => (
+                        <Episode key={x.e} id={id} x={x} state={item.eps && item.eps[epKey(x.s, x.e)]} today={today} onCheck={check} />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** One episode: a check, its title and air date, and an optional note (none until you add one). */
+function Episode({ id, x, state, today, onCheck }) {
+  const key = epKey(x.s, x.e);
+  const done = !!(state && state.done);
+  const note = (state && state.note) || '';
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(note);
+  const future = x.d && x.d > today;
+  const finish = () => {
+    setEditing(false);
+    if (text.trim() !== note) setEpisodeNote(id, key, text.trim());
+  };
+  return (
+    <li className={`row wt-ep${done ? ' done' : ''}${future ? ' future' : ''}`}>
+      <button
+        className={`check${done ? ' on' : ''}`}
+        onClick={() => onCheck([key], !done)}
+        disabled={future}
+        aria-label={`${done ? 'Uncheck' : 'Check'} episode ${x.e}`}
+        aria-pressed={done}
+      >
+        {done && <Icon name="check" size={16} />}
+      </button>
+      <div className="row-title">
+        <span className="wt-ep-title"><span className="wt-ep-n">{x.e}</span> {x.t}</span>
+        {(future || x.d) && <span className="muted small">{future ? `Airs ${shortDate(x.d)}` : shortDate(x.d)}</span>}
+        {editing ? (
+          <textarea
+            className="input wt-ep-note"
+            rows={2}
+            value={text}
+            autoFocus
+            onChange={(e) => setText(e.target.value)}
+            onBlur={finish}
+            placeholder="A note about this episode…"
+          />
+        ) : note ? (
+          <button className="wt-ep-saved" onClick={() => { setText(note); setEditing(true); }}>{note}</button>
+        ) : null}
+      </div>
+      {!editing && !note && !future && (
+        <button className="mini wt-ep-add" onClick={() => { setText(''); setEditing(true); }} aria-label={`Add a note to episode ${x.e}`}>Note</button>
+      )}
+    </li>
   );
 }
 
@@ -362,6 +535,7 @@ function StatsCard({ stats, onOpen }) {
         <div><b>{stats.movies}</b><span>movies</span></div>
         <div><b>{stats.shows}</b><span>shows</span></div>
         <div><b>{stats.avg ? stats.avg.toFixed(1) : '–'}</b><span>avg ★</span></div>
+        {stats.together > 0 && <div><b>{stats.together}</b><span>with {WATCH_BUDDY}</span></div>}
         {hours > 0 && <div><b>{hours}h</b><span>of movies</span></div>}
       </div>
       {stats.topGenres.length > 0 && <p className="muted small wt-top-genres">You watch the most {stats.topGenres.join(', ').toLowerCase()}.</p>}

@@ -215,6 +215,9 @@ workouts.
 **Self → Watch** keeps the movies and shows you've watched, are watching, or want to watch, each with a
 half-star rating, notes and the date you watched it. Search a title and pick it from the list to fill in
 the poster, year, length, genres, cast and summary; anything search can't find can be added by hand.
+Each title has a "Watched with Laighla" checkbox. Shows from search also get an episode checklist by
+season, with an optional note on any episode; checking episodes moves a show to Watching, and checking
+the last aired one marks it Watched. A running show's episode list refreshes once a day.
 
 Search goes through `api/media.js`, so it works with no setup: shows come from TVmaze and movies from
 Apple's iTunes catalog, neither of which needs a key. For better results (one search for both, more

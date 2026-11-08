@@ -3,7 +3,10 @@
 //   kind 'watch': { id, ref, type: 'movie'|'show', title, year, poster, overview, genres: [], runtime,
 //                   seasons, episodes, credit, people: [], source,
 //                   status: 'want'|'watching'|'watched', rating: 0.5–5 | null, notes,
-//                   watchedOn: 'YYYY-MM-DD' | null, addedAt, editedAt }
+//                   watchedOn: 'YYYY-MM-DD' | null, withLaighla: bool, addedAt, editedAt,
+//                   shows only: episodeList: [{ s, e, t, d }] (season, number, title, air date),
+//                               episodesAt (when the list was fetched),
+//                               eps: { 's1e3': { done: bool, note } } }
 //
 // A title picked from search gets a stable id from its database ref, so adding it twice (or from two
 // devices) opens the same entry instead of making a copy. Titles typed in by hand get a random id.
@@ -21,6 +24,9 @@ export const STATUSES = [
 ];
 
 export const watchId = (ref) => idFor(`watch:${ref}`);
+
+/** Who you watch with (a checkbox on each title). */
+export const WATCH_BUDDY = 'Laighla';
 
 export const useWatch = () => useKind('watch');
 
@@ -78,7 +84,7 @@ export function sorted(items, status) {
 export function matches(item, q) {
   const n = norm(q);
   if (!n) return true;
-  return [item.title, item.notes, item.credit, ...(item.genres || []), ...(item.people || [])].some((s) => norm(s).includes(n));
+  return [item.title, item.notes, item.withLaighla ? WATCH_BUDDY : '', item.credit, ...(item.genres || []), ...(item.people || [])].some((s) => norm(s).includes(n));
 }
 
 export function watchStats(items, today = todayISO()) {
@@ -91,6 +97,7 @@ export function watchStats(items, today = todayISO()) {
     seen: seen.length,
     thisYear: seen.filter((i) => (i.watchedOn || '').startsWith(year)).length,
     movies: seen.filter((i) => i.type === 'movie').length,
+    together: seen.filter((i) => i.withLaighla).length,
     shows: seen.filter((i) => i.type === 'show').length,
     avg: rated.length ? rated.reduce((a, i) => a + i.rating, 0) / rated.length : null,
     favorites: [...rated].sort((a, b) => b.rating - a.rating || byNewest('watchedOn')(a, b)).filter((i) => i.rating >= 4).slice(0, 5),
@@ -143,6 +150,64 @@ export async function fetchDetails(ref) {
   } catch {
     return null;
   }
+}
+
+/* ---------- Episodes (shows) ---------- */
+
+export const epKey = (s, e) => `s${s}e${e}`;
+const aired = (x, today) => !x.d || x.d <= today;
+
+/** Fetches a show's episodes and saves them on its entry. Returns an error message, or ''. */
+export async function loadEpisodes(id) {
+  const cur = get(id);
+  if (!cur || !cur.ref) return 'Episodes are only available for shows picked from search.';
+  try {
+    const res = await fetch(`/api/media?episodes=${encodeURIComponent(cur.ref)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return data.error || 'Couldn’t load the episodes.';
+    saveWatch(id, { episodeList: data.episodes || [], episodesAt: new Date().toISOString() });
+    return '';
+  } catch {
+    return navigator.onLine === false ? 'You’re offline. Episodes will load when you’re back online.' : 'Couldn’t load the episodes.';
+  }
+}
+
+/** True when a running show's episode list is over a day old (new episodes may be out). */
+export const episodesStale = (i) => !i.ended && (!i.episodesAt || Date.now() - Date.parse(i.episodesAt) > 864e5);
+
+export function progress(i, today = todayISO()) {
+  const list = (i.episodeList || []).filter((x) => aired(x, today));
+  const eps = i.eps || {};
+  const done = list.filter((x) => eps[epKey(x.s, x.e)] && eps[epKey(x.s, x.e)].done).length;
+  const next = list.find((x) => !(eps[epKey(x.s, x.e)] && eps[epKey(x.s, x.e)].done)) || null;
+  return { done, total: list.length, next };
+}
+
+/**
+ * Checks episodes on or off, and moves the show along: the first check puts a want-to-watch show in
+ * Watching, and checking every aired episode marks it Watched. Returns the new status if it changed.
+ */
+export function setEpisodes(id, keys, done) {
+  const cur = get(id);
+  if (!cur) return null;
+  const eps = { ...(cur.eps || {}) };
+  keys.forEach((k) => (eps[k] = { note: '', ...(eps[k] || {}), done }));
+  const next = { ...cur, eps };
+  const p = progress(next);
+  let status = cur.status;
+  // Unchecking never moves a show; checking can.
+  if (done && p.total && p.done === p.total) status = 'watched';
+  else if (done && p.done > 0 && cur.status !== 'watching') status = 'watching';
+  saveWatch(id, { eps, status });
+  return status !== cur.status ? status : null;
+}
+
+export function setEpisodeNote(id, key, note) {
+  const cur = get(id);
+  if (!cur) return;
+  const eps = { ...(cur.eps || {}) };
+  eps[key] = { done: false, ...(eps[key] || {}), note };
+  saveWatch(id, { eps });
 }
 
 /* ---------- Labels ---------- */

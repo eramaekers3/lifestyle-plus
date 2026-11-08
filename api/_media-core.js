@@ -177,6 +177,39 @@ async function itunesDetails(id) {
   return fromItunes(m);
 }
 
+/* ---------- Episode lists (shows) ---------- */
+
+// Every episode as { s, e, t, d }: season, episode number, title, air date. Specials (season 0) are left out.
+const ep = (s, e, t, d) => ({ s, e, t: t || `Episode ${e}`, d: d || null });
+
+async function tmdbEpisodes(id) {
+  const show = await tmdbGet(`/tv/${id}`);
+  const seasons = (show.seasons || []).map((x) => x.season_number).filter((n) => n > 0);
+  const out = [];
+  // TMDB lets one request carry up to 20 seasons.
+  for (let i = 0; i < seasons.length; i += 20) {
+    const chunk = seasons.slice(i, i + 20);
+    const data = await tmdbGet(`/tv/${id}?append_to_response=${chunk.map((n) => `season/${n}`).join(',')}`);
+    chunk.forEach((n) => {
+      const season = data[`season/${n}`];
+      ((season && season.episodes) || []).forEach((x) => out.push(ep(n, x.episode_number, x.name, x.air_date)));
+    });
+  }
+  return out;
+}
+
+async function mazeEpisodes(id) {
+  const data = await getJson(`https://api.tvmaze.com/shows/${id}/episodes`);
+  return data.filter((x) => x.season > 0 && x.number).map((x) => ep(x.season, x.number, x.name, x.airdate));
+}
+
+export async function episodes(ref) {
+  const [src, a, b] = String(ref || '').split(':');
+  if (src === 'tmdb' && a === 'tv' && /^\d+$/.test(b) && hasTmdb()) return tmdbEpisodes(b);
+  if (src === 'tvmaze' && /^\d+$/.test(a)) return mazeEpisodes(a);
+  throw Object.assign(new Error('Episodes are only available for shows picked from search.'), { status: 400 });
+}
+
 /* ---------- Entry points ---------- */
 
 export async function search(q, type = 'all') {
@@ -195,9 +228,10 @@ export async function details(ref) {
   throw Object.assign(new Error('Unknown title'), { status: 400 });
 }
 
-/** GET /api/media?q=…&type=all|movie|show  or  ?ref=tmdb:movie:603 */
+/** GET /api/media?q=…&type=all|movie|show  or  ?ref=tmdb:movie:603  or  ?episodes=tvmaze:82 */
 export async function handle(params, send) {
   try {
+    if (params.episodes) return send(200, { episodes: await episodes(params.episodes) });
     if (params.ref) return send(200, { item: await details(params.ref) });
     return send(200, { results: await search(params.q, params.type), source: hasTmdb() ? 'TMDB' : 'TVmaze + iTunes' });
   } catch (e) {

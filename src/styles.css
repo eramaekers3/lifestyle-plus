@@ -1996,3 +1996,30 @@ textarea.jr-note { margin-top: 8px; resize: none; min-height: 58px; background: 
 .wt-tiles b { font: var(--display-weight) 22px/1.1 var(--display); font-variant-numeric: tabular-nums; }
 .wt-tiles span { font-size: 12px; color: var(--muted); font-weight: 700; }
 .wt-top-genres { margin: 10px 0 0; }
+.wt-buddy { align-self: flex-start; margin-top: 2px; font-size: 11.5px; font-weight: 800; color: var(--coral); background: color-mix(in srgb, var(--coral) 14%, transparent); border-radius: 999px; padding: 2px 8px; }
+.wt-buddy-toggle { margin-top: 10px; font-size: 15px; font-weight: 700; }
+button.link { border: 0; background: none; padding: 0; margin: 0; text-decoration: underline; }
+
+/* Episodes */
+.wt-ep-head { display: flex; align-items: baseline; gap: 8px; margin-top: 20px; }
+.wt-ep-count { margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wt-bar { height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; margin-bottom: 10px; }
+.wt-bar i { display: block; height: 100%; background: var(--sun); border-radius: 3px; transition: width 0.4s var(--ease-out); }
+.wt-seasons { display: flex; flex-direction: column; gap: 8px; }
+.wt-season { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 10px; }
+.wt-season-head { display: flex; align-items: center; gap: 8px; }
+.wt-season-name { flex: 1; display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 6px 0; font-weight: 800; font-size: 15px; text-align: left; }
+.wt-season-name .muted { margin-left: 4px; font-variant-numeric: tabular-nums; }
+.wt-season.done .wt-season-name { color: color-mix(in srgb, var(--sun) 75%, var(--ink)); }
+.wt-eps { margin-top: 2px; }
+.wt-ep { align-items: flex-start; }
+.wt-ep .check { width: 26px; height: 26px; border-radius: 8px; margin-top: 1px; }
+.wt-ep .check:disabled { opacity: 0.3; }
+.wt-ep .row-title { display: flex; flex-direction: column; gap: 2px; }
+.wt-ep-title { font-size: 15px; }
+.wt-ep-n { color: var(--muted); font-weight: 800; font-variant-numeric: tabular-nums; margin-right: 2px; }
+.wt-ep.done .wt-ep-title { color: var(--muted); }
+.wt-ep.future { opacity: 0.55; }
+.wt-ep-add { flex: none; padding: 3px 9px; font-size: 12px; opacity: 0.75; }
+.wt-ep-saved { border: 0; background: color-mix(in srgb, var(--sun) 9%, var(--raised)); border-left: 2px solid var(--sun); border-radius: 6px; padding: 5px 8px; margin-top: 4px; text-align: left; font-size: 13.5px; line-height: 1.4; color: var(--ink); white-space: pre-wrap; }
+.wt-ep-note { margin-top: 6px; min-height: 58px; resize: none; }
