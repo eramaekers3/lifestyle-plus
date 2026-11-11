@@ -127,7 +127,7 @@ function ShopSheet({ c, onClose }) {
         <li><b>+{COINS.taskBase}</b> finish a task, +{COINS.taskPer15} per 15 min of time needed (up to {COINS.taskMax})</li>
         <li><b>+{COINS.repeat}</b> finish a repeating task</li>
         <li><b>+{COINS.deepPer10}</b> every 10 minutes of deep work you log</li>
-        <li><b>+{COINS.workout}</b> save a workout, +{COINS.pr} per personal record</li>
+        <li><b>+{COINS.workout}</b> finish a workout in fit+, +{COINS.pr} per PR</li>
         <li><b>+{COINS.habit}</b> check off a habit</li>
         <li><b>+{COINS.shutdown}</b> do the evening shutdown</li>
       </ul>

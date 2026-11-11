@@ -17,8 +17,7 @@ import { useSwipe } from './lib/swipe.js';
 import { useRecurring } from './lib/recurring.js';
 import { useCanvasTasks } from './lib/canvasStack.js';
 import { useShootTasks } from './lib/shootStack.js';
-import { useSeedRoutines, useSession } from './lib/workouts.js';
-import LiveWorkout, { WorkoutPill } from './components/LiveWorkout.jsx';
+import './lib/fit.js'; // reads workouts finished in fit+ after each sync
 import { DeepPill } from './components/DeepWork.jsx';
 import DeepReview from './components/DeepReview.jsx';
 import { useDeep, useWakeLock } from './lib/deep.js';
@@ -103,18 +102,9 @@ export default function App() {
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
     idle(prefetchSheets);
   }, []);
-  useSeedRoutines();
   useRecurring();
   useCoinsSetup();
 
-  // The workout screen opens when a workout starts on this device; after a reload it waits behind the pill.
-  const session = useSession();
-  const [liveOpen, setLiveOpen] = useState(false);
-  const sessionStart = session && session.startedAt;
-  useEffect(() => {
-    if (sessionStart && Date.now() - sessionStart < 5000) setLiveOpen(true);
-    if (!sessionStart) setLiveOpen(false);
-  }, [sessionStart]);
   useTheme();
   // Deep work changes the look of the whole app, and keeps the screen awake for the clock.
   const deep = !!useDeep();
@@ -249,10 +239,8 @@ export default function App() {
         {ritual === 'shutdown' && <ShutdownSheet onClose={closeRitual} />}
         {ritual === 'review' && <ReviewSheet onClose={closeRitual} />}
       </Suspense>
-      {deep && tab !== 'plan' && !session && <DeepPill />}
+      {deep && tab !== 'plan' && <DeepPill />}
       <DeepReview />
-      {session && !liveOpen && <WorkoutPill onOpen={() => setLiveOpen(true)} />}
-      {session && liveOpen && <LiveWorkout onMinimize={() => setLiveOpen(false)} />}
       {morning && (
         <MorningSheet
           onClose={() => {

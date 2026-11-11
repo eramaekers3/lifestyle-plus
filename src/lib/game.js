@@ -6,15 +6,15 @@
 //
 //   task finished     10 XP
 //   habit checked      5 XP   (build habits; avoid habits don't log check-offs)
-//   workout saved     30 XP + 2 per set (up to +30)
-//   personal record   20 XP   (best estimated max, or best reps, for an exercise)
+//   workout finished  30 XP + 2 per set (up to +30)   (workouts are logged in fit+; see fit.js)
+//   personal record   20 XP   (fit+ decides what's a PR: a new best estimated max)
 //   combo             finishing tasks/habits within 15 minutes of each other: +2 XP per link, up to +10
 
 import { useMemo } from 'react';
 import { useKind, list } from '../store.js';
 import { buildHabitIndex, habitStats, toggleHabit, completeTask } from './model.js';
 import { haptic } from './haptics.js';
-import { sessionScore } from './lifting.js';
+import { useFitWorkouts, listFit } from './fit.js';
 import { todayISO, iso, addDays } from './dates.js';
 import { norm } from './text.js';
 import { latestCoins } from './coins.js';
@@ -38,6 +38,23 @@ export function levelFor(total) {
 }
 
 
+// Workouts saved in lifestyle+ before they moved to fit+. They're no longer shown, but keep the
+// XP and coins they earned, so your level and balance don't drop.
+const e1rm = (wt, reps) => (wt > 0 && reps > 0 ? wt * (1 + Math.min(reps, 12) / 30) : 0);
+function sessionScore(sets) {
+  const weighted = sets.some((s) => s.wt > 0);
+  if (weighted) {
+    let best = { score: 0, wt: 0, reps: 0 };
+    for (const s of sets) {
+      const v = e1rm(s.wt, s.reps);
+      if (v > best.score) best = { score: v, wt: s.wt, reps: s.reps };
+    }
+    return { weighted, ...best };
+  }
+  const top = Math.max(0, ...sets.map((s) => s.reps || 0));
+  return { weighted, score: top, wt: 0, reps: top };
+}
+
 /** Each workout's exercises as { name, sets: [{wt, reps}] }. */
 function exercisesOf(w) {
   if (w.exercises && w.exercises.length) return w.exercises;
@@ -49,8 +66,20 @@ function exercisesOf(w) {
   return [...map.values()];
 }
 
-/** Every personal record ever set, oldest first. A first-ever session of an exercise isn't a record. */
-export function findPRs(workouts) {
+/** Every personal record ever set, oldest first: old lifestyle+ workouts, then fit+'s own PRs. */
+export function findPRs(workouts, fit = []) {
+  return [...legacyPRs(workouts), ...fit.flatMap((w) => w.prs.map((p) => ({ ...p, workoutId: w.id, name: p.label })))].sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** One finished workout of either kind, as { at, sets, label }. */
+export function workoutList(workouts, fit = []) {
+  return [
+    ...workouts.map((w) => ({ at: w.startedAt || `${w.date}T12:00:00`, date: w.date, sets: exercisesOf(w).reduce((a, e) => a + (e.sets ? e.sets.length : 0), 0), label: w.name || 'Workout' })),
+    ...fit.map((w) => ({ at: w.at, date: w.date, sets: w.sets, label: w.name, fit: true })),
+  ];
+}
+
+function legacyPRs(workouts) {
   const best = new Map();
   const out = [];
   const sorted = [...workouts].sort((a, b) => (a.startedAt || a.date || '').localeCompare(b.startedAt || b.date || ''));
@@ -70,10 +99,10 @@ export function findPRs(workouts) {
   return out;
 }
 
-export const prLabel = (p) => (p.weighted ? `${p.name} ${+p.wt.toFixed(1)}×${p.reps}` : `${p.name} ${p.reps} reps`);
+export const prLabel = (p) => (p.label ? p.label : p.weighted ? `${p.name} ${+p.wt.toFixed(1)}×${p.reps}` : `${p.name} ${p.reps} reps`);
 
 /** Everything that earned XP, oldest first, with combos worked out. */
-export function buildEvents({ tasks, logs, habits, workouts }) {
+export function buildEvents({ tasks, logs, habits, workouts, fit = [] }) {
   const avoid = new Set(habits.filter((h) => h.mode === 'avoid').map((h) => h.id));
   const ev = [];
   for (const t of tasks) if (t.status === 'done' && t.doneAt) ev.push({ kind: 'task', at: t.doneAt, xp: XP.task, label: t.title });
@@ -81,11 +110,8 @@ export function buildEvents({ tasks, logs, habits, workouts }) {
     if (!l.done || avoid.has(l.habitId)) continue;
     ev.push({ kind: 'habit', at: l.at || `${l.date}T12:00:00`, xp: XP.habit, timed: !!l.at, label: 'Habit' });
   }
-  for (const w of workouts) {
-    const sets = exercisesOf(w).reduce((a, e) => a + (e.sets ? e.sets.length : 0), 0);
-    ev.push({ kind: 'workout', at: w.startedAt || `${w.date}T12:00:00`, xp: XP.workout + Math.min(XP.maxSets, sets * XP.perSet), label: w.name || 'Workout' });
-  }
-  for (const p of findPRs(workouts)) ev.push({ kind: 'pr', at: p.at, xp: XP.pr, label: prLabel(p), pr: p });
+  for (const w of workoutList(workouts, fit)) ev.push({ kind: 'workout', at: w.at, xp: XP.workout + Math.min(XP.maxSets, w.sets * XP.perSet), label: w.label });
+  for (const p of findPRs(workouts, fit)) ev.push({ kind: 'pr', at: p.at, xp: XP.pr, label: prLabel(p), pr: p });
   ev.sort((a, b) => a.at.localeCompare(b.at));
 
   // Combos: quick tasks and habits back to back.
@@ -136,7 +162,7 @@ export function summarizeGame(ev, today = todayISO()) {
 }
 
 function snapshot() {
-  return { tasks: list('task'), logs: list('habitlog'), habits: list('habit'), workouts: list('workout') };
+  return { tasks: list('task'), logs: list('habitlog'), habits: list('habit'), workouts: list('workout'), fit: listFit() };
 }
 
 export function useGame() {
@@ -144,7 +170,8 @@ export function useGame() {
   const logs = useKind('habitlog');
   const habits = useKind('habit');
   const workouts = useKind('workout');
-  return useMemo(() => summarizeGame(buildEvents({ tasks, logs, habits, workouts })), [tasks, logs, habits, workouts]);
+  const fit = useFitWorkouts();
+  return useMemo(() => summarizeGame(buildEvents({ tasks, logs, habits, workouts, fit })), [tasks, logs, habits, workouts, fit]);
 }
 
 /** Right after something was finished: what the latest event earned. */
@@ -152,11 +179,6 @@ export function latestGain(kind) {
   const ev = buildEvents(snapshot());
   const e = [...ev].reverse().find((x) => x.kind === kind);
   return { xp: e ? e.xp : XP[kind] || 0, combo: e && e.combo > 1 ? e.combo : 0, today: summarizeGame(ev).today };
-}
-
-/** Personal records set in the workout that started at this time. */
-export function prsSince(startedAtIso) {
-  return findPRs(list('workout')).filter((p) => p.at >= startedAtIso);
 }
 
 /** Habit stats right now, read straight from the store (for before/after a check-off). */

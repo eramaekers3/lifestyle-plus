@@ -87,27 +87,5 @@ export function seed() {
     add('weight', { id: idFor(`w:${d}`), date: d, lbs: +(182.4 - (30 - i) * 0.09 + Math.sin(i * 1.7) * 0.9).toFixed(1) });
   }
 
-  // Workouts
-  add('workout', {
-    date: addDays(t, -2),
-    name: 'Pull',
-    sets: [
-      { ex: 'Lat pulldown', reps: 10, wt: 120 },
-      { ex: 'Lat pulldown', reps: 9, wt: 120 },
-      { ex: 'Cable row', reps: 12, wt: 100 },
-      { ex: 'Hammer curl', reps: 10, wt: 30 },
-    ],
-  });
-  add('workout', {
-    date: t,
-    name: 'Push',
-    sets: [
-      { ex: 'Bench press', reps: 8, wt: 165 },
-      { ex: 'Bench press', reps: 7, wt: 165 },
-      { ex: 'Incline DB press', reps: 10, wt: 55 },
-      { ex: 'Lateral raise', reps: 14, wt: 20 },
-    ],
-  });
-
   putMany(items);
 }

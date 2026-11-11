@@ -8,6 +8,8 @@ import { reviewWeek, saveWeek, weekId, weekDays, inRange, shortDay } from '../li
 import { toast } from '../lib/toast.js';
 import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
+import { useFitWorkouts } from '../lib/fit.js';
+import { workoutList } from '../lib/game.js';
 
 /** The weekly review: look back at last week, clear the backlog, decide what next week is for. */
 export default function ReviewSheet({ onClose }) {
@@ -66,6 +68,7 @@ function LookBack({ ws }) {
   const blocks = useKind('block');
   const tasks = useKind('task');
   const workouts = useKind('workout');
+  const fit = useFitWorkouts();
   const plan = useRecord(weekId(ws));
   const { habits, isDone } = useHabits();
   const today = todayISO();
@@ -75,9 +78,9 @@ function LookBack({ ws }) {
     const deep = wk.filter((b) => b.type === 'deep').reduce((a, b) => a + b.end - b.start, 0);
     const total = wk.reduce((a, b) => a + b.end - b.start, 0);
     const done = tasks.filter((t) => t.status === 'done' && inRange(t.doneAt, ws, we)).length;
-    const lifts = workouts.filter((w) => w.date >= ws && w.date <= we).length;
+    const lifts = workoutList(workouts, fit).filter((w) => w.date >= ws && w.date <= we).length;
     return { deep, total, done, lifts };
-  }, [blocks, tasks, workouts, ws, we]);
+  }, [blocks, tasks, workouts, fit, ws, we]);
 
   const big = ((plan && plan.big) || []).map((b, i) => ({ text: b, i })).filter((b) => b.text && b.text.trim());
   const hit = (plan && plan.hit) || [];

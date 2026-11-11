@@ -233,6 +233,13 @@ let session = null;
 let timer = null;
 let syncing = false;
 let again = false;
+const syncedListeners = new Set();
+/** Runs `fn(session)` after every successful sync (used to read other apps' tables, like fit+). */
+export function onSynced(fn) {
+  syncedListeners.add(fn);
+  if (session && status.state === 'synced') Promise.resolve().then(() => fn(session)).catch(() => {});
+  return () => syncedListeners.delete(fn);
+}
 
 function scheduleSync(delay = 1200) {
   if (!session) return;
@@ -336,6 +343,7 @@ export async function sync() {
     persist();
     if (changed.size) emit(changed);
     setStatus({ state: 'synced', lastSynced: new Date().toISOString() });
+    syncedListeners.forEach((fn) => Promise.resolve().then(() => fn(session)).catch(() => {}));
   } catch (e) {
     setStatus({ state: 'error', error: e.message || String(e) });
   } finally {

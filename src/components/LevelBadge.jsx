@@ -93,14 +93,14 @@ function GameSheet({ g, onClose }) {
           ))}
         </ul>
       ) : (
-        <p className="empty">Beat your best on any exercise (heavier, or more reps) and it shows up here.</p>
+        <p className="empty">Set a PR in fit+ (a new best on any lift) and it shows up here.</p>
       )}
 
       <h3 className="mini-h">How XP works</h3>
       <ul className="xp-rules">
         <li><b>+{XP.task}</b> finish a task <span className="meta">{g.counts.task}</span></li>
         <li><b>+{XP.habit}</b> check off a habit <span className="meta">{g.counts.habit}</span></li>
-        <li><b>+{XP.workout}</b> save a workout, +{XP.perSet} a set <span className="meta">{g.counts.workout}</span></li>
+        <li><b>+{XP.workout}</b> finish a workout in fit+, +{XP.perSet} a set <span className="meta">{g.counts.workout}</span></li>
         <li><b>+{XP.pr}</b> set a personal record <span className="meta">{g.prs.length}</span></li>
         <li><b>+2</b> each combo link: finish things within 15 minutes of each other (up to +10)</li>
       </ul>

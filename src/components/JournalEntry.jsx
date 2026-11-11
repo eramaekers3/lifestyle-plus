@@ -5,6 +5,8 @@ import { haptic } from '../lib/haptics.js';
 import { useHabits } from '../lib/model.js';
 import { iso } from '../lib/dates.js';
 import { plural } from '../lib/text.js';
+import { useFitWorkouts } from '../lib/fit.js';
+import { workoutList } from '../lib/game.js';
 import {
   METRICS, useEntry, setRating, addMoment, editMoment, removeMoment, valueOf, noteOf,
 } from '../lib/journal.js';
@@ -194,15 +196,16 @@ function NoteField({ date, k, note, label, autoFocus, onEmptyBlur }) {
 function DayContext({ date }) {
   const tasks = useKind('task');
   const workouts = useKind('workout');
+  const fit = useFitWorkouts();
   const { habits, isDone } = useHabits();
   const done = useMemo(() => tasks.filter((t) => t.status === 'done' && t.doneAt && iso(new Date(t.doneAt)) === date), [tasks, date]);
-  const lifts = useMemo(() => workouts.filter((w) => w.date === date), [workouts, date]);
+  const lifts = useMemo(() => workoutList(workouts, fit).filter((w) => w.date === date), [workouts, fit, date]);
   const tracked = habits.filter((h) => h.mode !== 'avoid');
   const hit = tracked.filter((h) => isDone(h, date)).length;
   const parts = [];
   if (done.length) parts.push(plural(done.length, 'task') + ' done');
   if (tracked.length) parts.push(`${hit}/${tracked.length} habits`);
-  lifts.forEach((w) => parts.push(w.name || 'Workout'));
+  lifts.forEach((w) => parts.push(w.label));
   if (!parts.length) return null;
   return (
     <p className="jr-context">

@@ -7,7 +7,7 @@
 //   one-off task      2 + 1 per 15 min of its time estimate (12 at most)
 //   repeating task    1
 //   habit checked     1
-//   workout saved     8, +2 per personal record
+//   workout finished  8, +2 per personal record   (logged in fit+)
 //   deep work         1 per 10 minutes actually logged
 //   shutdown done     3
 //
@@ -17,7 +17,8 @@
 import { useEffect, useMemo } from 'react';
 import { get, list, put, remove, saveSettings, SETTINGS_ID, useKind, useSettings } from '../store.js';
 import { idFor } from './ids.js';
-import { findPRs } from './game.js';
+import { findPRs, workoutList } from './game.js';
+import { useFitWorkouts, listFit } from './fit.js';
 import { iso, todayISO, weekStart } from './dates.js';
 
 export const COINS = { taskBase: 2, taskPer15: 1, taskMax: 12, repeat: 1, habit: 1, workout: 8, pr: 2, deepPer10: 1, shutdown: 3 };
@@ -33,7 +34,7 @@ export const taskCoins = (t) =>
   t.recurId ? COINS.repeat : Math.min(COINS.taskMax, COINS.taskBase + Math.floor((t.estimate || 0) / 15) * COINS.taskPer15);
 
 /** Everything that earned coins since `since` (an ISO time), oldest first. */
-export function coinEvents({ tasks, logs, habits, workouts, deepLogs, days }, since) {
+export function coinEvents({ tasks, logs, habits, workouts, fit = [], deepLogs, days }, since) {
   const after = (at) => at && at >= since;
   const avoid = new Set(habits.filter((h) => h.mode === 'avoid').map((h) => h.id));
   const names = new Map(habits.map((h) => [h.id, h.name || h.title || 'Habit']));
@@ -43,11 +44,8 @@ export function coinEvents({ tasks, logs, habits, workouts, deepLogs, days }, si
     const at = l.at || `${l.date}T12:00:00`;
     if (l.done && !avoid.has(l.habitId) && after(at)) ev.push({ kind: 'habit', at, coins: COINS.habit, label: names.get(l.habitId) || 'Habit' });
   }
-  for (const w of workouts) {
-    const at = w.startedAt || `${w.date}T12:00:00`;
-    if (after(at)) ev.push({ kind: 'workout', at, coins: COINS.workout, label: w.name || 'Workout' });
-  }
-  for (const p of findPRs(workouts)) if (after(p.at)) ev.push({ kind: 'pr', at: p.at, coins: COINS.pr, label: `PR · ${p.name}` });
+  for (const w of workoutList(workouts, fit)) if (after(w.at)) ev.push({ kind: 'workout', at: w.at, coins: COINS.workout, label: w.label });
+  for (const p of findPRs(workouts, fit)) if (after(p.at)) ev.push({ kind: 'pr', at: p.at, coins: COINS.pr, label: `PR · ${p.name}` });
   for (const l of deepLogs) {
     const at = new Date(l.endedAt).toISOString();
     const c = Math.floor((l.minutes || 0) / 10) * COINS.deepPer10;
@@ -111,6 +109,7 @@ function gather(src) {
     logs: src('habitlog'),
     habits: src('habit'),
     workouts: src('workout'),
+    fit: listFit(),
     deepLogs: src('deep_log'),
     days: src('day'),
   };
@@ -122,15 +121,16 @@ export function useCoins() {
   const logs = useKind('habitlog');
   const habits = useKind('habit');
   const workouts = useKind('workout');
+  const fit = useFitWorkouts();
   const deepLogs = useKind('deep_log');
   const days = useKind('day');
   const spends = useKind('coin_spend');
   return useMemo(() => {
     const since = coinsSince || midnight();
-    const ev = coinEvents({ tasks, logs, habits, workouts, deepLogs, days }, since);
+    const ev = coinEvents({ tasks, logs, habits, workouts, fit, deepLogs, days }, since);
     const mine = spends.filter((s) => s.at >= since);
     return { ...coinSummary(ev, mine), events: ev, spends: mine.sort((a, b) => b.at.localeCompare(a.at)) };
-  }, [coinsSince, tasks, logs, habits, workouts, deepLogs, days, spends]);
+  }, [coinsSince, tasks, logs, habits, workouts, fit, deepLogs, days, spends]);
 }
 
 /** What the most recent thing of a kind just earned (for the pop after finishing it). */
