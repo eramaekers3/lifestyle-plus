@@ -23,15 +23,19 @@ function load() {
   } catch {
     /* storage unavailable */
   }
-  return { rows: {}, lastPull: null, owner: null };
+  return { rows: {}, open: {}, lastPull: null, owner: null };
 }
 
 let st = load();
+if (!st.open) st.open = {};
 let workouts = [];
+// What the last check found: { state: 'idle' | 'checking' | 'ok' | 'error' | 'signed-out', at, error, open: [workouts not finished yet] }
+let status = { state: 'idle', at: null, error: null, open: [] };
 const listeners = new Set();
 
 function rebuild() {
   workouts = Object.values(st.rows).sort((a, b) => a.at.localeCompare(b.at));
+  status = { ...status, open: Object.values(st.open).sort((a, b) => b.date.localeCompare(a.date)) };
 }
 rebuild();
 
@@ -47,13 +51,21 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+const nameOf = (s) => (s.day ? `Day ${String(s.day).replace(/^d/, '')}${DAY_NAMES[s.day] ? ` · ${DAY_NAMES[s.day]}` : ''}` : 'Workout');
+
+/** A fit+ session started in the last two days but not finished yet. */
+function toOpen(id, s) {
+  if (!s || s.status === 'done' || !s.date) return null;
+  const cutoff = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  return s.date >= cutoff ? { id, date: s.date, name: nameOf(s), stage: s.status } : null;
+}
+
 /** A finished fit+ session, boiled down to what lifestyle+ needs. Null if it isn't finished. */
 function toWorkout(id, s) {
   if (!s || s.status !== 'done' || !s.date) return null;
   const items = s.items || [];
   const sets = items.reduce((a, it) => a + ((it.log || []).length || 0), 0);
-  const num = s.day ? String(s.day).replace(/^d/, '') : '';
-  const name = s.day ? `Day ${num}${DAY_NAMES[s.day] ? ` · ${DAY_NAMES[s.day]}` : ''}` : 'Workout';
+  const name = nameOf(s);
   const at = s.finishedAt || `${s.date}T12:00:00`;
   const prs = (s.prs || []).map((p) => ({ at, label: p.text || p.ex || 'PR', ex: p.ex }));
   const started = s.createdAt ? Date.parse(s.createdAt) : null;
@@ -72,14 +84,31 @@ export const useFitWorkouts = () =>
     () => workouts
   );
 
+/** { state, at, error, open } for the last check of fit+. */
+export const useFitStatus = () =>
+  useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    () => status
+  );
+const setStatus = (changes) => {
+  status = { ...status, ...changes };
+  listeners.forEach((l) => l());
+};
+
 let pulling = false;
 /** Pulls fit+ workouts changed since last time. Runs after every lifestyle+ sync. */
 export async function syncFit(session) {
-  if (!supabase || !session || pulling) return;
+  if (!supabase) return;
+  if (!session) return setStatus({ state: 'signed-out' });
+  if (pulling) return;
   pulling = true;
+  setStatus({ state: 'checking' });
   try {
     const uid = session.user.id;
-    if (st.owner && st.owner !== uid) st = { rows: {}, lastPull: null, owner: uid };
+    if (st.owner && st.owner !== uid) st = { rows: {}, open: {}, lastPull: null, owner: uid };
     st.owner = uid;
     const first = !st.lastPull;
     const fresh = [];
@@ -97,12 +126,16 @@ export async function syncFit(session) {
           if (!st.rows[row.id]) fresh.push(w);
           st.rows[row.id] = w;
         } else delete st.rows[row.id];
+        const o = row.deleted ? null : toOpen(row.id, row.data);
+        if (o) st.open[row.id] = o;
+        else delete st.open[row.id];
         maxSeen = Math.max(maxSeen, Date.parse(row.synced_at));
       }
       if (data.length < 1000) break;
     }
     st.lastPull = new Date(maxSeen || Date.now()).toISOString();
     save();
+    status = { ...status, state: 'ok', at: new Date().toISOString(), error: null };
     emit();
 
     // A workout just finished in fit+: say what it earned here.
@@ -116,11 +149,19 @@ export async function syncFit(session) {
       const prs = w.prs.length ? ` · ${w.prs.length} PR${w.prs.length > 1 ? 's' : ''}` : '';
       toast(`fit+ workout: +${xp} XP · +${coins} coins${prs}`);
     }
-  } catch {
-    /* fit+ not set up yet, or offline: try again next sync */
+  } catch (e) {
+    // Offline, or fit+'s table isn't reachable: say so on the Body tab, and try again next sync.
+    setStatus({ state: 'error', error: (e && e.message) || String(e) });
   } finally {
     pulling = false;
   }
+}
+
+/** Check fit+ right now (the refresh button on the Body tab). */
+export async function refreshFit() {
+  if (!supabase) return;
+  const { data } = await supabase.auth.getSession();
+  await syncFit(data.session);
 }
 
 onSynced(syncFit);

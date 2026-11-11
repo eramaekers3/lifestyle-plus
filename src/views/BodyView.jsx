@@ -3,7 +3,7 @@ import { put, useKind, useRecord } from '../store.js';
 import { idFor } from '../lib/ids.js';
 import { addDays, fmt, fmtDur, parse, todayISO, weekStart } from '../lib/dates.js';
 import { toast } from '../lib/toast.js';
-import { useFitWorkouts } from '../lib/fit.js';
+import { useFitWorkouts, useFitStatus, refreshFit } from '../lib/fit.js';
 import CardStack from '../components/CardStack.jsx';
 import SleepCard from '../components/SleepCard.jsx';
 import WeightSheet from '../components/WeightSheet.jsx';
@@ -95,13 +95,30 @@ export default function BodyView() {
   );
 }
 
-/** The last few workouts finished in fit+, with what they earned here. */
+/** The last few workouts finished in fit+, any still in progress there, and when fit+ was last checked. */
 function FitWorkouts({ fit, today }) {
+  const st = useFitStatus();
   const recent = useMemo(() => [...fit].reverse().slice(0, 6), [fit]);
   const sinceMon = fit.filter((w) => w.date >= weekStart(today) && w.date <= today).length;
+  const checked = st.at ? new Date(st.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
+  const line =
+    st.state === 'checking' ? 'Checking fit+…'
+    : st.state === 'error' ? `Couldn’t reach fit+: ${st.error}`
+    : st.state === 'signed-out' ? 'Sign in (same account as fit+) to see your workouts.'
+    : checked ? `Checked fit+ at ${checked}` : 'Not checked yet';
   return (
     <section className="card" aria-labelledby="rw-h">
       <div className="card-head"><h2 id="rw-h">Workouts from fit+</h2><span className="meta">{sinceMon} this week</span></div>
+      {st.open.length > 0 && (
+        <ul className="rows">
+          {st.open.map((w) => (
+            <li key={w.id} className="row">
+              <span className="row-title"><b>{w.name}</b> <span className="muted">· not finished yet. Tap Finish in fit+ to earn XP and coins.</span></span>
+              <span className="meta">{w.date === today ? 'Today' : fmt(w.date, { month: 'short', day: 'numeric' })}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {recent.length ? (
         <ul className="rows">
           {recent.map((w) => (
@@ -117,8 +134,12 @@ function FitWorkouts({ fit, today }) {
           ))}
         </ul>
       ) : (
-        <p className="empty">Finish a workout in fit+ and it shows up here, with its XP, coins and PRs. Same sign-in in both apps.</p>
+        !st.open.length && <p className="empty">Finish a workout in fit+ and it shows up here, with its XP, coins and PRs. Same sign-in in both apps.</p>
       )}
+      <p className="card-sub fit-status">
+        <span>{line}</span>{' '}
+        <button className="mini" onClick={() => refreshFit()} disabled={st.state === 'checking'}>Check now</button>
+      </p>
     </section>
   );
 }
