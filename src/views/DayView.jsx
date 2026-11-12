@@ -7,6 +7,7 @@ import { toast } from '../lib/toast.js';
 import { FlipClock, Icon, Sheet } from '../components/ui.jsx';
 import NowStack from '../components/NowStack.jsx';
 import Timeline from '../components/Timeline.jsx';
+import DayStrip from '../components/DayStrip.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
 import AutoPlanSheet from '../components/AutoPlanSheet.jsx';
 import { useDayStarted } from '../components/MorningSheet.jsx';
@@ -37,6 +38,7 @@ export default function DayView({ date }) {
   const blocks = useMemo(() => allBlocks.filter((b) => b.date === date), [allBlocks, date]);
   const prevDate = addDays(date, -1);
   const prevBlocks = useMemo(() => allBlocks.filter((b) => b.date === prevDate), [allBlocks, prevDate]);
+  const todayTimed = useMemo(() => tasks.filter((t) => t.due === date && t.dueTime != null), [tasks, date]);
   const tasksById = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks]);
 
   const total = blocks.reduce((a, b) => a + (b.end - b.start), 0);
@@ -75,6 +77,15 @@ export default function DayView({ date }) {
           {isToday && <ReviewBanner />}
           {isToday && <ShutdownBanner date={date} />}
           {isToday && <DeepTab />}
+          {isToday && (blocks.length > 0 || cal.timed.length > 0) && (
+            <DayStrip
+              blocks={blocks}
+              events={cal.timed}
+              tasks={todayTimed}
+              dayStart={settings.dayStart}
+              dayEnd={settings.dayEnd}
+            />
+          )}
         </>
       )}
 

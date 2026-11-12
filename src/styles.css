@@ -2023,3 +2023,36 @@ button.link { border: 0; background: none; padding: 0; margin: 0; text-decoratio
 .wt-ep-add { flex: none; padding: 3px 9px; font-size: 12px; opacity: 0.75; }
 .wt-ep-saved { border: 0; background: color-mix(in srgb, var(--sun) 9%, var(--raised)); border-left: 2px solid var(--sun); border-radius: 6px; padding: 5px 8px; margin-top: 4px; text-align: left; font-size: 13.5px; line-height: 1.4; color: var(--ink); white-space: pre-wrap; }
 .wt-ep-note { margin-top: 6px; min-height: 58px; resize: none; }
+
+/* Patterns across the app (weekly review, journal stats) */
+.pt-list .row { align-items: flex-start; padding-block: 9px; gap: 10px; }
+.pt-list .row-title { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.pt-arrow { flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin-top: 1px; border-radius: 8px; background: color-mix(in srgb, var(--mint) 18%, transparent); color: var(--mint); }
+.pt-arrow.down { background: color-mix(in srgb, var(--coral) 18%, transparent); color: var(--coral); }
+.pt-arrow.down svg { transform: rotate(180deg); }
+.pt-note { margin: 6px 0 0; font-size: 12px; }
+
+/* Today at a glance: watch-style strip with a moving now marker */
+.dstrip { padding: 12px 14px 10px; }
+.ds-status { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.ds-now, .ds-next { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ds-k { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.ds-now .ds-k { color: var(--sun); }
+.ds-v { font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-v b { font-weight: 800; }
+.ds-bar { position: relative; height: 30px; border-radius: 9px; background: var(--raised); overflow: visible; }
+.ds-lane { position: absolute; left: 0; right: 0; }
+.ds-blocks { top: 4px; height: 13px; }
+.ds-events { top: 20px; height: 6px; }
+.ds-lane i { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--c); min-width: 3px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18); }
+.ds-blocks i.cur { box-shadow: 0 0 0 1.5px var(--ink), 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
+.ds-events i { background: repeating-linear-gradient(135deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 50%, #000) 3px 6px); }
+.ds-lane i.past { opacity: 0.5; }
+.ds-task { position: absolute; top: -3px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--surface); }
+.ds-task.late { background: var(--coral); }
+.ds-past { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px 0 0 9px; background: rgba(0, 0, 0, 0.12); pointer-events: none; }
+.ds-nowmark { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--sun); border-radius: 2px; z-index: 2; transition: left 0.8s var(--ease-out, ease-out); }
+.ds-nowmark::before { content: ''; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--sun); animation: blink 1.6s ease-in-out infinite; }
+.ds-hours { position: relative; height: 16px; margin-top: 6px; }
+.ds-hours span { position: absolute; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.ds-hours span.tick { top: 0; width: 1px; height: 4px; background: var(--line, rgba(255, 255, 255, 0.15)); }

@@ -1,3 +1,4 @@
+import Patterns from '../components/Patterns.jsx';
 import { useMemo, useState } from 'react';
 import { Icon, Sheet } from '../components/ui.jsx';
 import CardStack from '../components/CardStack.jsx';
@@ -142,6 +143,10 @@ function StatsCard({ entries, onOpen }) {
                 : 'No ratings that clearly move together yet.'}
             </p>
           )}
+
+          <h3 className="jr-sub">Across the app</h3>
+          <p className="muted small" style={{ marginTop: -4 }}>Your ratings next to sleep, workouts, deep work, XP and spending.</p>
+          <Patterns max={3} />
 
           {best.length > 0 && (
             <>

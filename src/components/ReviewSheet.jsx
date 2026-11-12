@@ -10,6 +10,7 @@ import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 import { useFitWorkouts } from '../lib/fit.js';
 import { workoutList } from '../lib/game.js';
+import Patterns from './Patterns.jsx';
 
 /** The weekly review: look back at last week, clear the backlog, decide what next week is for. */
 export default function ReviewSheet({ onClose }) {
@@ -41,15 +42,19 @@ export default function ReviewSheet({ onClose }) {
           <LookBack ws={prev} />
         </Step>
 
-        <Step n={2} title="Clear out the backlog">
+        <Step n={2} title="What moved together">
+          <Patterns />
+        </Step>
+
+        <Step n={3} title="Clear out the backlog">
           <Backlog />
         </Step>
 
-        <Step n={3} title="What’s fixed">
+        <Step n={4} title="What’s fixed">
           <Fixed ws={ws} />
         </Step>
 
-        <Step n={4} title="Three priorities">
+        <Step n={5} title="Three priorities">
           <Priorities key={ws + (plan ? 'p' : '')} ws={ws} plan={plan} />
         </Step>
 
