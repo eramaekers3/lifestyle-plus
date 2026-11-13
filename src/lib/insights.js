@@ -1,7 +1,7 @@
 // Patterns across everything the app already collects: journal ratings, sleep (Apple Health),
 // workouts (fit+ and older ones), deep work sessions, XP and bank spending.
 //
-// Each insight splits recent days into two groups by one thing (slept 7+ hours, worked out, a busy day…)
+// Each insight splits recent days into two groups by one thing (slept 8+ hours, worked out, a busy day…)
 // and compares another thing between them. Only differences big enough to matter, with enough days on
 // both sides, are shown. These are patterns, not proof of cause.
 
@@ -85,8 +85,8 @@ const OUTCOMES = {
 const SPLITS = [
   {
     id: 'sleep7',
-    test: (f) => (f.sleepBefore == null ? null : f.sleepBefore >= 420),
-    a: 'after 7+ hours of sleep',
+    test: (f) => (f.sleepBefore == null ? null : f.sleepBefore >= 480),
+    a: 'after 8+ hours of sleep',
     b: 'after less',
     outcomes: ['energy', 'outlook', 'deep', 'xp'],
   },
@@ -148,7 +148,7 @@ export function findInsights(days) {
   return out.sort((x, y) => y.weight - x.weight);
 }
 
-/** "Energy averaged 3.8 after 7+ hours of sleep, vs 2.6 after less." plus a short change line. */
+/** "Energy averaged 3.8 after 8+ hours of sleep, vs 2.6 after less." plus a short change line. */
 export function describe(ins) {
   const { o, split, a, b, diff } = ins;
   const lead = `${o.label} ${o.unit === 'money' ? 'came to' : 'averaged'} ${o.fmt(a)} ${split.a}, vs ${o.fmt(b)} ${split.b}.`;
