@@ -12,17 +12,11 @@ import { supabase } from '../supabase.js';
 import { onSynced } from '../store.js';
 import { toast } from './toast.js';
 
-// v2 adds what the nightly stretch needs (exercises, soreness, back pain); a new key re-pulls everything once.
-const KEY = 'lifestyleplus.fit.v2';
+const KEY = 'lifestyleplus.fit.v1';
 const TABLE = 'fit_records';
 const DAY_NAMES = { d1: 'Lower + pull', d2: 'Upper + legs', d3: 'Full body' };
 
 function load() {
-  try {
-    localStorage.removeItem('lifestyleplus.fit.v1');
-  } catch {
-    /* storage unavailable */
-  }
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
     if (raw && raw.rows) return raw;
@@ -76,15 +70,7 @@ function toWorkout(id, s) {
   const prs = (s.prs || []).map((p) => ({ at, label: p.text || p.ex || 'PR', ex: p.ex }));
   const started = s.createdAt ? Date.parse(s.createdAt) : null;
   const durationMin = started && s.finishedAt ? Math.round((Date.parse(s.finishedAt) - started) / 60000) : null;
-  const done = items.filter((it) => (it.log || []).length);
-  // For the nightly stretch: which exercises you did, how sore you were going in, and back pain after.
-  const exs = done.map((it) => ({ ex: it.ex || '', name: it.name || '' }));
-  const check = s.check || {};
-  return {
-    id, date: s.date, at, name, sets, prs, exercises: done.length, day: s.day || null, exs,
-    sore: check.sore || {}, backPain: Number(s.backPain) || 0,
-    durationMin: durationMin > 0 && durationMin < 300 ? durationMin : null,
-  };
+  return { id, date: s.date, at, name, sets, prs, exercises: items.filter((it) => (it.log || []).length).length, durationMin: durationMin > 0 && durationMin < 300 ? durationMin : null };
 }
 
 /** Finished fit+ workouts on this device, oldest first: [{ id, date, at, name, sets, prs, … }]. */

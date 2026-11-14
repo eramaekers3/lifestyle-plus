@@ -10,7 +10,6 @@ import { Icon, Sheet, Step } from './ui.jsx';
 import SchoolList from './SchoolList.jsx';
 import BlockSheet from './BlockSheet.jsx';
 import JournalEntry from './JournalEntry.jsx';
-import StretchCard from './Stretch.jsx';
 import { haptic } from '../lib/haptics.js';
 import { completeTaskFx, toggleHabitFx } from '../lib/game.js';
 
@@ -63,10 +62,6 @@ export default function ShutdownSheet({ onClose }) {
 
         <Step n={6} title="Block out tomorrow">
           <BlockTomorrow today={today} tomorrow={tomorrow} />
-        </Step>
-
-        <Step n={7} title="Stretch · about 5 min">
-          <StretchCard date={today} compact />
         </Step>
 
         <button className="btn wide mo-go sd-go" onClick={finish}>
