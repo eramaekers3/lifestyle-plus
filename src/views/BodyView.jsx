@@ -7,6 +7,7 @@ import { useFitWorkouts, useFitStatus, refreshFit } from '../lib/fit.js';
 import CardStack from '../components/CardStack.jsx';
 import SleepCard from '../components/SleepCard.jsx';
 import WeightSheet from '../components/WeightSheet.jsx';
+import StretchCard from '../components/Stretch.jsx';
 
 // Workouts are run and logged in fit+. This page shows the ones you finish there (read-only);
 // they still earn XP and coins here (see lib/fit.js).
@@ -87,6 +88,7 @@ export default function BodyView() {
             ),
           },
           { id: 'recent', title: 'Workouts from fit+', node: <FitWorkouts fit={fit} today={today} /> },
+          { id: 'stretch', title: 'Tonight’s stretch', node: <StretchCard date={today} /> },
           { id: 'sleep', title: 'Sleep', node: <SleepCard /> },
           { id: 'health', title: 'Apple Health', node: <HealthCard today={today} /> },
         ]}
