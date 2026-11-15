@@ -3,7 +3,7 @@
 // notifications are due for each person with notifications turned on, and sends them.
 //   Header: Authorization: Bearer <CRON_SECRET>
 import { hasDb, hasPushKeys, serverDb, sendTo } from './_server.js';
-import { dueNotifications, needsSchool, addDays } from './_push-core.js';
+import { dueNotifications, needsSchool, needsSelf, hasJournal, habitsNotDone, addDays } from './_push-core.js';
 import { readCalendar } from './_calendar-core.js';
 import { toItem, localParts } from '../src/lib/school.js';
 
@@ -57,7 +57,26 @@ async function forUser(db, userId, subs, now) {
     }
   }
 
-  const notes = dueNotifications({ now, tz, settings, blocks, tasksById, started, school, shutDown, reviewed });
+  // Tonight's journal and habits, only fetched when those reminders could go out.
+  let journaled = true;
+  let habitsLeft = [];
+  if (needsSelf(now, tz, settings)) {
+    const [{ data: jRows }, { data: hRows }, { data: logRows }, { data: monthRows }] = await Promise.all([
+      db.from('records').select('data').eq('user_id', userId).eq('kind', 'journal').eq('deleted', false).eq('data->>date', date),
+      db.from('records').select('data').eq('user_id', userId).eq('kind', 'habit').eq('deleted', false),
+      db.from('records').select('data').eq('user_id', userId).eq('kind', 'habitlog').eq('deleted', false).eq('data->>date', date),
+      db.from('records').select('data').eq('user_id', userId).eq('kind', 'habitmonth').eq('deleted', false).eq('data->>month', date.slice(0, 7)),
+    ]);
+    journaled = (jRows || []).some((r) => hasJournal(r.data));
+    habitsLeft = habitsNotDone({
+      date,
+      habits: (hRows || []).map((r) => r.data),
+      logs: (logRows || []).map((r) => r.data),
+      months: (monthRows || []).map((r) => r.data),
+    });
+  }
+
+  const notes = dueNotifications({ now, tz, settings, blocks, tasksById, started, school, shutDown, reviewed, journaled, habitsLeft });
   let sent = 0;
   for (const note of notes) {
     // Claim the key first; if it's already there, this one went out on an earlier tick.
@@ -78,11 +97,12 @@ export default async function handler(req, res) {
   const db = serverDb();
   const now = new Date();
 
-  const { data: subs, error } = await db.from('push_subscriptions').select('user_id, endpoint, p256dh, auth, tz, updated_at').order('updated_at', { ascending: false });
+  const { data: subs, error } = await db.from('push_subscriptions').select('*').order('updated_at', { ascending: false });
   if (error) return res.status(500).json({ error: 'Couldn’t read subscriptions. Is the push_subscriptions table set up?' });
 
+  // fit+ and shoot+ share this table; their phones are theirs to notify.
   const byUser = new Map();
-  for (const s of subs || []) byUser.set(s.user_id, [...(byUser.get(s.user_id) || []), s]);
+  for (const s of subs || []) if (!s.app || s.app === 'lifestyle') byUser.set(s.user_id, [...(byUser.get(s.user_id) || []), s]);
 
   let sent = 0;
   for (const [userId, list] of byUser) {

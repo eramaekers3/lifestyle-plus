@@ -47,3 +47,8 @@ select cron.schedule(
     );
   $cron$
 );
+
+-- Added Nov 2026: fit+ and shoot+ send notifications too and share this table, so each phone's
+-- row says which app it's for. Existing rows are lifestyle+'s.
+alter table public.push_subscriptions add column if not exists app text not null default 'lifestyle';
+create index if not exists push_subscriptions_app_user on public.push_subscriptions (app, user_id);

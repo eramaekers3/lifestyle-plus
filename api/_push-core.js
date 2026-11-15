@@ -3,7 +3,14 @@
 import { localParts } from '../src/lib/school.js';
 import { plural } from '../src/lib/text.js';
 
-export const DEFAULT_NOTIFY = { blocks: true, lead: 5, morning: true, morningAt: 8 * 60, school: true, schoolAt: 20 * 60, shutdown: true, shutdownAt: 21 * 60 };
+export const DEFAULT_NOTIFY = {
+  blocks: true, lead: 5,
+  morning: true, morningAt: 8 * 60,
+  school: true, schoolAt: 20 * 60,
+  shutdown: true, shutdownAt: 21 * 60,
+  habits: true, habitsAt: 20 * 60 + 30, // habits still open tonight
+  journal: true, journalAt: 22 * 60, // today's journal not written yet
+};
 // The tick runs every minute; a few minutes of grace covers a late or skipped run.
 // Each notification has a key, and push_log makes sure a key is only ever sent once.
 const GRACE = 4;
@@ -35,6 +42,36 @@ export function needsSchool(now, tz, settings) {
   return (n.morning && isDue(min, n.morningAt)) || (n.school && isDue(min, n.schoolAt));
 }
 
+/** Whether the habits or journal reminder could go out now, so their data is only read then. */
+export function needsSelf(now, tz, settings) {
+  const n = { ...DEFAULT_NOTIFY, ...((settings && settings.notify) || {}) };
+  const { min } = localParts(now, tz);
+  return (n.habits && isDue(min, n.habitsAt)) || (n.journal && isDue(min, n.journalAt));
+}
+
+/** A journal entry counts once it has a moment or a rating. */
+export const hasJournal = (e) =>
+  !!e && ((e.moments || []).some((m) => m && String(m.text || '').trim()) || Object.values(e.ratings || {}).some((r) => r && r.v));
+
+/**
+ * Build habits not checked off (or skipped) today. Avoid habits and paused ones never nag.
+ *   logs: today's habitlog records; months: this month's imported habitmonth records
+ */
+export function habitsNotDone({ date, habits = [], logs = [], months = [] }) {
+  const day = +date.slice(8, 10) - 1;
+  return habits
+    .filter((h) => !h.paused && h.mode !== 'avoid' && !(h.startDate && h.startDate > date))
+    .filter((h) => !(h.pauses || []).some(([a, b]) => date >= a && (!b || date <= b)))
+    .filter((h) => {
+      const log = logs.find((l) => l.habitId === h.id);
+      if (log) return !log.done;
+      const m = months.find((x) => x.habitId === h.id);
+      const c = m && m.s ? m.s[day] : undefined;
+      return !(c === 'd' || c === 's' || c === 'p');
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
 /**
  * Returns [{ key, title, body, url }] for notifications due at `now`.
  *   settings:  the settings record (notify prefs, canvas link)
@@ -45,7 +82,7 @@ export function needsSchool(now, tz, settings) {
  *   shutDown:  whether today's shutdown was finished
  *   reviewed:  on Sundays, whether next week's review is done
  */
-export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksById = {}, started = false, school = null, shutDown = false, reviewed = true }) {
+export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksById = {}, started = false, school = null, shutDown = false, reviewed = true, journaled = true, habitsLeft = [] }) {
   const n = { ...DEFAULT_NOTIFY, ...(settings.notify || {}) };
   const { date, min } = localParts(now, tz);
   const out = [];
@@ -113,6 +150,22 @@ export function dueNotifications({ now, tz, settings = {}, blocks = [], tasksByI
     } else if (!shutDown) {
       out.push({ key: `sd:${date}`, title: 'Shut down the day', body: 'Close your open loops and block out tomorrow. Then you’re done.', url: '/#shutdown' });
     }
+  }
+
+  // 5. Evening: habits still open today.
+  if (n.habits && habitsLeft.length && isDue(min, n.habitsAt)) {
+    const names = habitsLeft.slice(0, 3).map((h) => h.name).join(', ') + (habitsLeft.length > 3 ? ` +${habitsLeft.length - 3} more` : '');
+    out.push({
+      key: `h:${date}`,
+      title: habitsLeft.length === 1 ? `Still open: ${habitsLeft[0].name}` : `${habitsLeft.length} habits still open`,
+      body: habitsLeft.length === 1 ? 'There’s still time today. Keep the streak going.' : names,
+      url: '/#habits',
+    });
+  }
+
+  // 6. Night: write today's journal.
+  if (n.journal && !journaled && isDue(min, n.journalAt)) {
+    out.push({ key: `j:${date}`, title: 'Journal', body: 'What happened today that mattered? Then rate pace, outlook, energy and others first.', url: '/#journal' });
   }
 
   return out;

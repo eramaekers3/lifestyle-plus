@@ -18,12 +18,13 @@ export default async function handler(req, res) {
   const user = await userFor(db, token);
   if (!user) return res.status(401).json({ error: 'Sign in again, then try.' });
 
-  const { data: subs } = await db.from('push_subscriptions').select('endpoint, p256dh, auth').eq('user_id', user.id);
+  const { data: all } = await db.from('push_subscriptions').select('*').eq('user_id', user.id);
+  const subs = (all || []).filter((s) => !s.app || s.app === 'lifestyle');
   if (!subs || !subs.length) return res.status(400).json({ error: 'No devices have notifications on yet.' });
   const sent = await sendTo(db, subs, {
     key: `test:${Date.now()}`,
     title: 'lifestyle+ notifications are on',
-    body: 'You’ll get a heads-up before each block, a morning nudge and school reminders.',
+    body: 'You’ll get a heads-up before each block, a morning nudge, school, habit and journal reminders.',
     url: '/#plan',
   });
   res.status(200).json({ sent });

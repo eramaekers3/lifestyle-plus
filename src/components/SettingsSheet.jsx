@@ -376,6 +376,20 @@ function NotifySection({ signedIn }) {
           </select>
         </label>
         <label className="toggle">
+          <input type="checkbox" checked={n.habits} onChange={(e) => setN({ habits: e.target.checked })} />
+          <span>Evening nudge for habits still open</span>
+          <select className="input" value={n.habitsAt} disabled={!n.habits} onChange={(e) => setN({ habitsAt: +e.target.value })} aria-label="Habits reminder time">
+            {timeOptions(17, 23).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={n.journal} onChange={(e) => setN({ journal: e.target.checked })} />
+          <span>Journal reminder if today’s entry is empty</span>
+          <select className="input" value={n.journalAt} disabled={!n.journal} onChange={(e) => setN({ journalAt: +e.target.value })} aria-label="Journal reminder time">
+            {timeOptions(19, 23).map((m) => <option key={m} value={m}>{minToLabel(m)}</option>)}
+          </select>
+        </label>
+        <label className="toggle">
           <input type="checkbox" checked={s.morningPage !== false} onChange={(e) => saveSettings({ morningPage: e.target.checked })} />
           <span>Open the morning page on the first open of each morning</span>
         </label>

@@ -25,14 +25,21 @@ async function registration() {
 
 async function save(sub) {
   const j = sub.toJSON();
-  const { error } = await supabase.from('push_subscriptions').upsert({
+  const row = {
     endpoint: j.endpoint,
     p256dh: j.keys.p256dh,
     auth: j.keys.auth,
+    app: 'lifestyle', // fit+ and shoot+ share this table
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     user_agent: navigator.userAgent.slice(0, 200),
     updated_at: new Date().toISOString(),
-  });
+  };
+  let { error } = await supabase.from('push_subscriptions').upsert(row);
+  // Before the app column exists (supabase/push.sql not re-run yet), save without it.
+  if (error && /\bapp\b/.test(error.message)) {
+    delete row.app;
+    ({ error } = await supabase.from('push_subscriptions').upsert(row));
+  }
   if (error) {
     throw new Error(/push_subscriptions/.test(error.message)
       ? 'The database isn’t set up for notifications yet. Run supabase/push.sql in Supabase.'
