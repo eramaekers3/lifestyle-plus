@@ -2056,3 +2056,14 @@ button.link { border: 0; background: none; padding: 0; margin: 0; text-decoratio
 .ds-hours { position: relative; height: 16px; margin-top: 6px; }
 .ds-hours span { position: absolute; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
 .ds-hours span.tick { top: 0; width: 1px; height: 4px; background: var(--line, rgba(255, 255, 255, 0.15)); }
+
+/* ---------- iPhone haptics (see lib/haptics.js) ----------
+   An invisible label over each button, wrapping a hidden switch: the finger flips the switch
+   (that's what makes the iPhone tap) and the click carries on to the button. */
+.hx-host { position: relative; }
+.hx {
+  position: absolute; inset: 0; z-index: 5; margin: 0; padding: 0;
+  border-radius: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.hx input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0.001; pointer-events: none; }
+:disabled > .hx, [aria-disabled='true'] > .hx { display: none; }
