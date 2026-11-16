@@ -121,6 +121,9 @@ function useVisibleArea() {
   return area;
 }
 
+// How many sheets are open, and where the page was before the first one opened.
+const pin = { count: 0, y: 0, prev: null };
+
 export function Sheet({ title, onClose, children, top = false }) {
   const area = useVisibleArea();
   const closeRef = useRef(onClose);
@@ -138,15 +141,21 @@ export function Sheet({ title, onClose, children, top = false }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', onKey);
-    // Pin the page in place while a sheet is open, so iPhone can't scroll it underneath.
-    const y = window.scrollY;
-    const b = document.body.style;
-    const prev = { position: b.position, top: b.top, width: b.width, overflow: b.overflow };
-    Object.assign(b, { position: 'fixed', top: `-${y}px`, width: '100%', overflow: 'hidden' });
+    // Pin the page in place while a sheet is open, so iPhone can't scroll it underneath. With a
+    // sheet open over another, the page is pinned once and let go when the last one closes (in
+    // whatever order they close), so it's never left stuck or put back in the wrong place.
+    if (pin.count++ === 0) {
+      const b = document.body.style;
+      pin.y = window.scrollY;
+      pin.prev = { position: b.position, top: b.top, width: b.width, overflow: b.overflow };
+      Object.assign(b, { position: 'fixed', top: `-${pin.y}px`, width: '100%', overflow: 'hidden' });
+    }
     return () => {
       window.removeEventListener('keydown', onKey);
-      Object.assign(b, prev);
-      window.scrollTo(0, y);
+      if (--pin.count === 0) {
+        Object.assign(document.body.style, pin.prev);
+        window.scrollTo(0, pin.y);
+      }
     };
   }, []);
   return createPortal(

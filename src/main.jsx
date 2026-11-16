@@ -5,11 +5,13 @@ import './styles.css';
 import { isEmpty, initSync } from './store.js';
 import { seed } from './seed.js';
 import { installTapHaptics } from './lib/haptics.js';
+import { installViewportFix } from './lib/viewport.js';
 
 // First run on this device: show example data so every screen has something in it.
 if (isEmpty()) seed();
 initSync();
 installTapHaptics();
+installViewportFix();
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
