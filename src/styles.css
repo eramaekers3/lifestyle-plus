@@ -1118,6 +1118,9 @@ form.inline .num-in { flex: 0 1 92px; }
   position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: flex-end; justify-content: center;
   background: rgba(14, 17, 22, 0.55);
+  /* Dims past its own edges too, so if iPhone scrolls under it for a moment (keyboard opening),
+     the page never shows through undimmed. */
+  box-shadow: 0 0 0 100vmax rgba(14, 17, 22, 0.55);
   animation: fade 0.22s var(--ease-out) both;
 }
 .sheet {

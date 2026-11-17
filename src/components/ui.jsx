@@ -98,10 +98,14 @@ function useVisibleArea() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    // Only follow real size changes (the keyboard opening or closing), not scrolling, and ignore
-    // sub-pixel jitter: reacting to every scroll fights iPhone's own scroll-to-the-text-box and
-    // makes the sheet jump back and forth.
+    // Size changes (the keyboard opening or closing) apply right away. iPhone often scrolls to the
+    // text box a moment *after* the keyboard is up, though; if the sheet ignored that, it was left
+    // sitting too high and the page showed through below it. So scrolling is followed too, but only
+    // once it has settled: moving with every scroll frame fights iPhone's own scroll-to-the-text-box
+    // and makes the sheet jump back and forth. Sub-pixel jitter is ignored.
     let frame = 0;
+    let settle = 0;
+    let late = 0;
     const update = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() =>
@@ -112,10 +116,24 @@ function useVisibleArea() {
         })
       );
     };
-    vv.addEventListener('resize', update);
+    const onResize = () => {
+      update();
+      // Check once more after the keyboard has finished sliding, in case the scroll came late.
+      clearTimeout(late);
+      late = setTimeout(update, 400);
+    };
+    const onScroll = () => {
+      clearTimeout(settle);
+      settle = setTimeout(update, 120);
+    };
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onScroll);
     return () => {
       cancelAnimationFrame(frame);
-      vv.removeEventListener('resize', update);
+      clearTimeout(settle);
+      clearTimeout(late);
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onScroll);
     };
   }, []);
   return area;
