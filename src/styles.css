@@ -2063,7 +2063,10 @@ button.link { border: 0; background: none; padding: 0; margin: 0; text-decoratio
 /* ---------- iPhone haptics (see lib/haptics.js) ----------
    An invisible label over each button, wrapping a hidden switch: the finger flips the switch
    (that's what makes the iPhone tap) and the click carries on to the button. */
-.hx-host { position: relative; }
+/* Each button holds its own label. Matched on the label itself (not a class added from code),
+   so a button whose classes change when you tap it never lets its label spread over its
+   neighbors. Zero specificity: a button with its own position (fixed, absolute…) keeps it. */
+:where(:has(> .hx)) { position: relative; }
 .hx {
   position: absolute; inset: 0; z-index: 5; margin: 0; padding: 0;
   border-radius: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;

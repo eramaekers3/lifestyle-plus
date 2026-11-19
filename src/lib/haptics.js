@@ -70,7 +70,6 @@ function dress(root) {
       el.appendChild(old); // keep it last so it sits on top
       return;
     }
-    if (getComputedStyle(el).position === 'static') el.classList.add('hx-host');
     el.appendChild(makeOverlay());
   });
 }
