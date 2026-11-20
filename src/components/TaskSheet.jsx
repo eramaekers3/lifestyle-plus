@@ -1,3 +1,4 @@
+import { stepPlace, useShootFor } from '../lib/shootStack.js';
 import { useState } from 'react';
 import { remove, useRecord } from '../store.js';
 import { setTaskPriority, renameTask } from '../lib/model.js';
@@ -90,8 +91,13 @@ export default function TaskSheet({ id, onClose }) {
 
       {t.shootId && (
         <div className="edit-sec">
+          {t.shootStepId && <ShootSteps t={t} />}
           {t.link && <a className="btn ghost" href={t.link} target="_blank" rel="noreferrer">Open gallery</a>}
-          <p className="hint-quiet">From shoot+. Finishing this task marks the gallery delivered there too.</p>
+          <p className="hint-quiet">
+            {t.shootStepId
+              ? 'From shoot+. Finishing this task checks the step off there too, and the shoot’s next step comes up at the top of your backlog.'
+              : 'From shoot+. Finishing this task marks the gallery delivered there too.'}
+          </p>
         </div>
       )}
 
@@ -126,5 +132,25 @@ export default function TaskSheet({ id, onClose }) {
         </button>
       </div>
     </Sheet>
+  );
+}
+
+/** The whole shoot, layered: done steps checked, this one lit, the rest waiting underneath. */
+function ShootSteps({ t }) {
+  const shoot = useShootFor(t);
+  const place = stepPlace(shoot, t.shootStepId);
+  if (!place) return null;
+  return (
+    <>
+      <p className="sub-h shoot-steps-h">{shoot.what} · step {place.n} of {place.total}</p>
+      <ol className="shoot-steps">
+        {place.steps.map((x) => (
+          <li key={x.id} className={x.id === t.shootStepId ? 'cur' : x.done ? 'done' : 'later'}>
+            <i aria-hidden="true" />
+            {x.label}
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }

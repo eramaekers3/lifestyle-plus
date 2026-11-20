@@ -1,11 +1,17 @@
-// shoot+ galleries in your stack. Every shoot whose gallery still needs editing and delivering becomes a
-// backlog task (in a "Photo" category), due when shoot+ says the gallery is due. They stay in step:
-//   - finishing the task marks the gallery delivered in shoot+
-//   - marking it delivered in shoot+ finishes the task
-//   - a new due date in shoot+ moves the task's due date
-// Each shoot makes its task once (a stable id), so deleting a task you don't want keeps it gone.
+// shoot+ shoots in your stack, one step at a time. Each shoot+ booking has its own checklist of steps
+// (edit photos, build poster, buttons made, gallery delivered, post to socials, everything finished…).
+// Here a shoot is a layered card: only its next unchecked step is a real task you can pull, and the
+// rest wait underneath it. So a shoot can never take more than one slot in Now.
+//   - finishing the step's task checks that step off in shoot+, and the shoot's next step comes up
+//     at the top of your backlog
+//   - checking a step off in shoot+ finishes its task here (and brings up the next one)
+//   - unchecking a step in shoot+ reopens it here; a later step that was waiting is put back underneath
+//   - shoot+'s due date (when the gallery is due) is the due date for every step up to delivery
+// The "Shoot" step itself isn't stack work: it counts as done once the shoot date has passed.
+// Each step makes its task once (a stable id), so deleting a step's task keeps that shoot out of your
+// stack until you check the step off in shoot+.
 //
-// shoot+ keeps its data in its own tables (shoot_records) in the same Supabase project, and you're signed
+// shoot+ keeps its data in its own table (shoot_records) in the same Supabase project, and you're signed
 // in to both with the same account, so this reads and writes your own shoot+ rows directly.
 import { useEffect, useSyncExternalStore } from 'react';
 import { supabase } from '../supabase.js';
@@ -19,9 +25,15 @@ const EVERY = 10 * 60 * 1000;
 // shoot+ treats shoots before this as delivered unless they have their own due date (keep in step with shoot+).
 const QUEUE_START = '2026-10-01';
 
+/** The old one-task-per-gallery id (before steps). Kept so those tasks can be swapped for step tasks. */
 export const shootTaskId = (bookingId) => idFor(`shoot-task:${bookingId}`);
+export const stepTaskId = (bookingId, stepId) => idFor(`shoot-step:${bookingId}:${stepId}`);
 
-let state = { galleries: [], loaded: false, error: '', at: 0 };
+// Tasks parked out of sight. Nothing in the app lists these statuses.
+const WAITING = 'waiting'; // a step that's no longer next (an earlier step was unchecked in shoot+)
+const REPLACED = 'replaced'; // an old gallery task, now covered by step tasks
+
+let state = { shoots: [], loaded: false, error: '', at: 0 };
 const listeners = new Set();
 const set = (c) => {
   state = { ...state, ...c };
@@ -41,8 +53,73 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Reads shoot+ and works out which galleries are waiting, the same way shoot+'s "To edit" card does. */
-export async function loadGalleries(force = false) {
+/* ---------- shoot+'s step rules (keep in step with shoot+ src/lib/steps.js) ---------- */
+
+const has = (text, re) => re.test(text);
+
+function stepLabels(service, pkgName) {
+  const sv = service || {};
+  const pkg = (sv.packages || []).find((p) => p.name === pkgName);
+  const text = (pkg ? `${pkg.name} ${pkg.includes || ''}` : `${sv.name || ''} ${sv.includes || ''}`).toLowerCase();
+  const all = `${text} ${(sv.includes || '').toLowerCase()} ${(sv.name || '').toLowerCase()}`;
+  const video = sv.kind === 'video';
+  const out = [{ label: 'Shoot', tag: 'shoot' }];
+  if (!video && has(all, /preview/)) out.push({ label: 'Send preview photos' });
+  if (video) out.push({ label: 'Edit video' });
+  else out.push({ label: has(text, /\bhdr\b/) ? 'Edit HDR photos' : 'Edit photos' });
+  if (has(text, /poster/)) out.push({ label: 'Build poster' });
+  if (has(text, /button/)) out.push({ label: 'Build button template' }, { label: 'Buttons designed' }, { label: 'Buttons made' });
+  if (!video && has(text, /video|film|reel|media day/)) out.push({ label: 'Videos made' });
+  out.push({ label: video ? 'Video delivered' : 'Gallery delivered', tag: 'deliver' });
+  out.push({ label: 'Post to socials' });
+  out.push({ label: 'Everything finished', tag: 'final' });
+  return out;
+}
+
+/** A booking's steps as shoot+ sees them (bookings from before steps get a list worked out from the service). */
+function bookingSteps(b, sv) {
+  if (b.steps && b.steps.length) return b.steps;
+  const today = todayISO();
+  const steps = stepLabels(sv, b.pkg).map((x, i) => ({
+    id: `${b.id}-step${i}`,
+    label: x.label,
+    tag: x.tag || '',
+    done: x.tag === 'shoot' && !!b.date && b.date <= today,
+  }));
+  return b.delivered ? steps.map((x) => ({ ...x, done: true })) : steps;
+}
+
+/** shoot+'s saveSteps rules: "Everything finished" checks everything; delivered/finished follow the steps. */
+function settle(b, steps) {
+  const today = todayISO();
+  let next = steps;
+  const final = next.find((x) => x.tag === 'final');
+  if (final && final.done && next.some((x) => !x.done)) next = next.map((x) => ({ ...x, done: true }));
+  const allDone = next.length > 0 && next.every((x) => x.done);
+  if (!allDone && final && final.done) next = next.map((x) => (x.tag === 'final' ? { ...x, done: false } : x));
+  const deliver = next.find((x) => x.tag === 'deliver');
+  let delivered = b.delivered || '';
+  if (deliver) delivered = deliver.done ? delivered || today : '';
+  else if (allDone) delivered = delivered || today;
+  return { ...b, steps: next, delivered, finished: allDone ? b.finished || today : '', updatedAt: Date.now() };
+}
+
+/** The steps that are stack work: everything but "Shoot" (which counts as done once the date has passed). */
+const workSteps = (steps) => steps.filter((x) => x.tag !== 'shoot');
+
+/** Where a step task stands in its shoot, for the layered look: { n, total, rest: [upcoming labels] }. */
+export function stepPlace(shoot, stepId) {
+  if (!shoot) return null;
+  const work = workSteps(shoot.steps);
+  const i = work.findIndex((x) => x.id === stepId);
+  if (i < 0) return null;
+  return { n: i + 1, total: work.length, rest: work.slice(i + 1).filter((x) => !x.done), steps: work };
+}
+
+/* ---------- Reading and writing shoot+ ---------- */
+
+/** Reads shoot+ and works out each recent shoot's steps. */
+export async function loadShoots(force = false) {
   if (!supabase) return;
   if (!force && Date.now() - state.at < EVERY) return;
   const { data: s } = await supabase.auth.getSession();
@@ -64,37 +141,53 @@ export async function loadGalleries(force = false) {
   const clients = Object.fromEntries(by('client').map((x) => [x.id, x]));
   const settings = by('settings')[0] || {};
   const today = todayISO();
-  const galleries = by('booking')
+  const shoots = by('booking')
     .filter((b) => !b.sample && !b.cancelled && b.date && b.date <= today && (b.date >= QUEUE_START || b.due))
     .map((b) => {
       const sv = services[b.serviceId];
       const days = num(sv && sv.turnaround) || num(settings.turnaround) || 7;
       const client = clients[b.clientId];
       const what = b.title || [sv && sv.name, b.pkg].filter(Boolean).join(' — ') || 'Shoot';
+      const steps = bookingSteps(b, sv).map((x) => (x.tag === 'shoot' && !x.done ? { ...x, done: true } : x));
       return {
         id: b.id,
-        title: client ? `Edit & deliver: ${client.name} (${what})` : `Edit & deliver: ${what}`,
+        who: client ? client.name : what,
+        what,
         due: b.due || addDays(b.date, days),
-        delivered: !!b.delivered,
         hours: num(b.hours),
         gallery: b.gallery || '',
-        row: b,
+        steps,
+        sv,
       };
     });
-  set({ galleries, loaded: true, error: '' });
+  set({ shoots, loaded: true, error: '' });
 }
 
-/** Marks a gallery delivered (or not) in shoot+. */
-async function setDelivered(g, delivered) {
+/** Checks steps on or off in shoot+. marks: { stepId: true/false }. */
+async function markSteps(shoot, marks) {
   if (!supabase) return;
   // Start from the booking as it is now in shoot+, so an edit made there since the last check isn't lost.
-  const { data: fresh } = await supabase.from(TABLE).select('data').eq('id', g.id).maybeSingle();
-  const data = { ...((fresh && fresh.data) || g.row), delivered: delivered ? todayISO() : '', updatedAt: Date.now() };
+  const { data: fresh } = await supabase.from(TABLE).select('data').eq('id', shoot.id).maybeSingle();
+  if (!fresh || !fresh.data) return;
+  const b = fresh.data;
+  const today = todayISO();
+  const steps = bookingSteps(b, shoot.sv).map((x) => {
+    if (x.id in marks) return { ...x, done: marks[x.id] };
+    if (x.tag === 'shoot' && b.date && b.date <= today) return { ...x, done: true };
+    return x;
+  });
+  const data = settle(b, steps);
   const { error } = await supabase
     .from(TABLE)
-    .upsert({ id: g.id, kind: 'booking', data, updated_at: new Date().toISOString(), deleted: false });
-  if (!error) g.row = data;
+    .upsert({ id: shoot.id, kind: 'booking', data, updated_at: new Date().toISOString(), deleted: false });
+  if (error) return;
+  // Keep our copy in line so the stack doesn't flip back before the next read.
+  const done = Object.fromEntries(data.steps.map((x) => [x.id, x.done]));
+  shoot.steps = shoot.steps.map((x) => (x.id in done ? { ...x, done: x.tag === 'shoot' ? true : done[x.id] } : x));
+  set({ shoots: [...state.shoots] });
 }
+
+/* ---------- Keeping the stack in step ---------- */
 
 function photoCategory() {
   const cats = list('category');
@@ -103,72 +196,128 @@ function photoCategory() {
 }
 
 // Rough editing time: about two hours per hour of shooting, at least an hour (change it on the task).
-const estimateFor = (g) => Math.max(60, Math.round((g.hours || 1) * 120 / 15) * 15);
+const editEstimate = (s) => Math.max(60, Math.round(((s.hours || 1) * 120) / 15) * 15);
 
-export function syncShootTasks(galleries) {
-  const backlog = list('task').filter((t) => t.status === 'backlog').map((t) => t.order ?? 0);
+/** Steps up to and including delivery are due when the gallery is due; after that, no due date. */
+function dueFor(s, step) {
+  const work = workSteps(s.steps);
+  const d = work.findIndex((x) => x.tag === 'deliver');
+  return d < 0 || work.indexOf(step) <= d ? s.due : null;
+}
+
+const titleFor = (s, step) => `${step.label} — ${s.who}`;
+
+export function syncShootTasks(shoots) {
+  const now = new Date().toISOString();
+  const all = list('task');
+  const backlog = all.filter((t) => t.status === 'backlog').map((t) => t.order ?? 0);
   let top = (backlog.length ? Math.min(...backlog) : 1) - 1;
   let cat = null;
 
-  for (const g of galleries) {
-    const id = shootTaskId(g.id);
-    const task = get(id);
+  for (const s of shoots) {
+    const work = workSteps(s.steps);
+    const mine = all.filter((t) => t.shootId === s.id && t.shootStepId);
+    const oldId = shootTaskId(s.id);
+    const old = get(oldId);
+    // You deleted this shoot's gallery task before steps came along: keep it out.
+    if (!mine.length && exists(oldId) && !old) continue;
 
-    if (!task) {
-      // New: only galleries still waiting, and never one whose task you deleted.
-      if (g.delivered || exists(id)) continue;
-      cat = cat || photoCategory();
-      put('task', {
-        id,
-        title: g.title,
-        status: 'backlog',
-        order: top--,
-        due: g.due,
-        estimate: estimateFor(g),
-        category: cat,
-        shootId: g.id,
-        link: g.gallery,
-        shootDelivered: false,
-        createdAt: new Date().toISOString(),
-      });
-      continue;
+    // 1. Bring each step's task in line with shoot+.
+    const marks = {};
+    for (const t of mine) {
+      const step = s.steps.find((x) => x.id === t.shootStepId);
+      if (!step) {
+        // The step was taken off the list in shoot+.
+        if (t.status !== 'done' && t.status !== REPLACED) patch(t.id, { status: REPLACED, due: null, dueTime: null });
+        continue;
+      }
+      const taskDone = t.status === 'done';
+      if (step.done !== !!t.shootStepDone) {
+        // shoot+ changed since we last looked: follow it.
+        const ch = { shootStepDone: step.done };
+        if (step.done && !taskDone) Object.assign(ch, { status: 'done', doneAt: now });
+        if (!step.done && taskDone) Object.assign(ch, { status: 'backlog', order: top--, doneAt: null });
+        patch(t.id, ch);
+      } else if (taskDone !== step.done) {
+        // You finished (or reopened) the step here: check it off in shoot+ to match.
+        marks[step.id] = taskDone;
+        step.done = taskDone;
+        patch(t.id, { shootStepDone: taskDone });
+      }
+    }
+    if (Object.keys(marks).length) {
+      // "Everything finished" finishes every step, here as in shoot+.
+      if (work.some((x) => x.tag === 'final' && x.done)) s.steps.forEach((x) => (x.done = true));
+      markSteps(s, marks);
     }
 
-    const taskDone = task.status === 'done';
-    const changes = {};
-    if (g.delivered !== !!task.shootDelivered) {
-      // shoot+ changed since we last looked: follow it.
-      changes.shootDelivered = g.delivered;
-      if (g.delivered && !taskDone) Object.assign(changes, { status: 'done', doneAt: new Date().toISOString() });
-      if (!g.delivered && taskDone) Object.assign(changes, { status: 'backlog', doneAt: null });
-    } else if (taskDone !== g.delivered) {
-      // You finished (or reopened) the task: mark the gallery in shoot+ to match.
-      setDelivered(g, taskDone);
-      g.delivered = taskDone;
-      changes.shootDelivered = taskDone;
+    // 2. Only the next unchecked step is out in your stack; any other open step goes back underneath.
+    const next = work.find((x) => !x.done);
+    const nextId = next ? stepTaskId(s.id, next.id) : '';
+    for (const t of mine) {
+      const cur = get(t.id);
+      if (cur && cur.id !== nextId && (cur.status === 'backlog' || cur.status === 'active')) {
+        const step = s.steps.find((x) => x.id === cur.shootStepId);
+        if (step && step.done) patch(cur.id, { status: 'done', doneAt: now, shootStepDone: true });
+        else patch(cur.id, { status: WAITING, due: null, dueTime: null });
+      }
     }
-    if (task.due !== g.due) changes.due = g.due;
-    if (g.gallery && task.link !== g.gallery) changes.link = g.gallery;
-    if (Object.keys(changes).length) patch(id, changes);
+
+    // 3. The step that's up next.
+    if (next) {
+      const task = get(nextId);
+      const due = dueFor(s, next);
+      if (task) {
+        const ch = {};
+        if (task.status === WAITING) Object.assign(ch, { status: 'backlog', order: top-- });
+        if ((task.due || null) !== (due || null)) ch.due = due;
+        if (task.title !== titleFor(s, next) && task.title === task.shootTitle) ch.title = ch.shootTitle = titleFor(s, next);
+        if (s.gallery && task.link !== s.gallery) ch.link = s.gallery;
+        if (Object.keys(ch).length) patch(nextId, ch);
+      } else if (!exists(nextId)) {
+        cat = cat || photoCategory();
+        // Swapping out an old gallery task you'd already pulled into Now: the step takes its place there.
+        const wasActive = old && old.status === 'active';
+        const title = titleFor(s, next);
+        put('task', {
+          id: nextId,
+          title,
+          shootTitle: title,
+          ...(wasActive ? { status: 'active', pulledAt: old.pulledAt || now, nowOrder: old.nowOrder ?? null } : { status: 'backlog', order: top-- }),
+          ...(due ? { due } : {}),
+          ...(/edit/i.test(next.label) ? { estimate: editEstimate(s) } : {}),
+          category: cat,
+          shootId: s.id,
+          shootStepId: next.id,
+          shootStepDone: false,
+          link: s.gallery,
+          createdAt: now,
+        });
+      }
+      // (A step task you deleted stays deleted: the shoot stays out until you check that step off in shoot+.)
+    }
+
+    // 4. The old one-task-per-gallery task is covered by the steps now.
+    if (old && old.status !== 'done' && old.status !== REPLACED) patch(oldId, { status: REPLACED, due: null, dueTime: null });
   }
 }
 
-/** Keeps shoot+ galleries and your stack in step. Mount once; waits for sync so other devices' deletes count. */
+/** Keeps shoot+ steps and your stack in step. Mount once; waits for sync so other devices' deletes count. */
 export function useShootTasks() {
   const { shootToStack } = useSettings();
   const sync = useSyncStatus();
   const tasks = useKind('task');
-  const { galleries, loaded } = useShootStatus();
+  const { shoots, loaded } = useShootStatus();
   const signedIn = !!sync.email;
   const settled = ['synced', 'error', 'offline'].includes(sync.state);
   const on = shootToStack !== false && signedIn;
 
   useEffect(() => {
     if (!on) return;
-    loadGalleries();
-    const onVis = () => document.visibilityState === 'visible' && loadGalleries();
+    loadShoots();
+    const onVis = () => document.visibilityState === 'visible' && loadShoots();
     document.addEventListener('visibilitychange', onVis);
-    const t = setInterval(() => loadGalleries(), EVERY);
+    const t = setInterval(() => loadShoots(), EVERY);
     return () => {
       document.removeEventListener('visibilitychange', onVis);
       clearInterval(t);
@@ -176,6 +325,12 @@ export function useShootTasks() {
   }, [on]);
 
   useEffect(() => {
-    if (on && settled && loaded && galleries.length) syncShootTasks(galleries);
-  }, [on, settled, loaded, galleries, tasks]);
+    if (on && settled && loaded && shoots.length) syncShootTasks(shoots);
+  }, [on, settled, loaded, shoots, tasks]);
+}
+
+/** Looks up the shoot a task came from (for the layered look and the task sheet). */
+export function useShootFor(t) {
+  const { shoots } = useShootStatus();
+  return t && t.shootId ? shoots.find((s) => s.id === t.shootId) || null : null;
 }

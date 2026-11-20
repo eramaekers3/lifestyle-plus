@@ -2073,3 +2073,24 @@ button.link { border: 0; background: none; padding: 0; margin: 0; text-decoratio
 }
 .hx input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0.001; pointer-events: none; }
 :disabled > .hx, [aria-disabled='true'] > .hx { display: none; }
+
+/* ---------- shoot+ steps: a shoot is a layered card, one step out at a time ---------- */
+.shoot-layers {
+  position: relative; display: inline-grid; place-items: center;
+  min-width: 30px; padding: 0 6px; height: 17px;
+  border-radius: 5px; border: 1px solid color-mix(in srgb, var(--sun) 55%, var(--line));
+  background: var(--surface); color: var(--ink);
+  font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+/* The steps still waiting peek out underneath, up to two layers. */
+.shoot-layers.u1 { box-shadow: 3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--line); }
+.shoot-layers.u2 { box-shadow: 3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--line), 6px 6px 0 -1px var(--surface), 6px 6px 0 0 color-mix(in srgb, var(--line) 60%, transparent); margin-right: 3px; }
+.shoot-steps-h { margin: 0 0 8px; font-weight: 800; font-size: 14px; }
+.shoot-steps { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.shoot-steps li { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 14px; color: var(--muted); }
+.shoot-steps li i { flex: none; width: 14px; height: 14px; border-radius: 5px; border: 2px solid var(--dim); }
+.shoot-steps li.done { color: var(--dim); text-decoration: line-through; }
+.shoot-steps li.done i { border-color: var(--mint); background: var(--mint); }
+.shoot-steps li.cur { color: var(--ink); font-weight: 700; }
+.shoot-steps li.cur i { border-color: var(--sun); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sun) 25%, transparent); }
+.shoot-steps li.later { opacity: 0.7; }

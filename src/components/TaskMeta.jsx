@@ -1,3 +1,4 @@
+import { stepPlace, useShootFor } from '../lib/shootStack.js';
 import { useCategories } from '../lib/model.js';
 import { Icon } from './ui.jsx';
 import { addDays, fmt, fmtDur, minToLabel, nowMin, todayISO } from '../lib/dates.js';
@@ -46,13 +47,26 @@ export function PriorityBadge({ t }) {
 }
 
 /** A task's category and due date, under its title. Renders nothing when it has neither. */
+/** A shoot+ step task: a little stack of cards, one per step still to come, with "step 3/8". */
+function ShootLayers({ t }) {
+  const place = stepPlace(useShootFor(t), t.shootStepId);
+  if (!place) return null;
+  const under = Math.min(place.rest.length, 2);
+  return (
+    <span className={`shoot-layers u${under}`} aria-label={`Step ${place.n} of ${place.total}${place.rest.length ? `, ${place.rest.length} more after this` : ', last step'}`}>
+      {place.n}/{place.total}
+    </span>
+  );
+}
+
 export default function TaskMeta({ t }) {
   const cats = useCategories();
   const cat = t.category && cats.find((c) => c.id === t.category);
   const due = t.status !== 'done' && dueLabel(t);
-  if (!cat && !due && !t.recurId && !t.course && !t.estimate) return null;
+  if (!cat && !due && !t.recurId && !t.course && !t.estimate && !t.shootStepId) return null;
   return (
     <span className="task-meta">
+      {t.shootStepId && t.status !== 'done' && <ShootLayers t={t} />}
       {cat && (
         <span className="cat" style={{ '--c': cat.color }}>
           <i aria-hidden="true" />
