@@ -81,7 +81,22 @@ export function reorderTasks(tasks, field) {
 /** Your own priority: 3 (!!!), 2 (!!), 1 (!), 0 (none), or null to go by the due date. */
 export const setTaskPriority = (t, p) => patch(t.id, { priority: p });
 export const renameTask = (t, title) => title.trim() && patch(t.id, { title: title.trim() });
-export const completeTask = (t) => patch(t.id, { status: 'done', doneAt: new Date().toISOString() });
+export const completeTask = (t) =>
+  patch(t.id, { status: 'done', doneAt: new Date().toISOString(), ...(t.steps && t.steps.length ? { steps: t.steps.map((x) => ({ ...x, done: true })) } : {}) });
+
+/* Layered tasks: a task can have its own steps. It stays one task in your stack and shows the next
+   open step; checking it off finishes that step, and the last step finishes the task. */
+export const openSteps = (t) => (t.steps || []).filter((x) => !x.done);
+export const setSteps = (t, steps) => patch(t.id, { steps });
+/** Finishes the next open step. Returns true if that was the last one (the task should finish). */
+export function finishStep(t) {
+  const left = openSteps(t);
+  if (!left.length) return true;
+  const steps = t.steps.map((x) => (x.id === left[0].id ? { ...x, done: true } : x));
+  patch(t.id, { steps });
+  return left.length === 1;
+}
+
 export const reopenTask = (t) => patch(t.id, { status: 'active', pulledAt: new Date().toISOString(), doneAt: null });
 
 /* ---------- Time blocks ---------- */

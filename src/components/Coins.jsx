@@ -6,6 +6,7 @@ import { cheer } from '../lib/game.js';
 import { haptic } from '../lib/haptics.js';
 import { toast } from '../lib/toast.js';
 import { fmt, iso, todayISO } from '../lib/dates.js';
+import LevelBadge from './LevelBadge.jsx';
 
 /** Coin balance in the top bar. Tap to open the rewards shop. */
 export default function CoinBadge() {
@@ -48,6 +49,7 @@ function ShopSheet({ c, onClose }) {
           <span>+{c.today} today · +{c.week} this week</span>
           <span className="muted-n">Holds up to {CAP}</span>
         </span>
+        <span className="coin-lvl"><LevelBadge /><small>Level</small></span>
       </div>
       <div className="coin-cap" aria-hidden="true"><i style={{ width: `${(c.balance / CAP) * 100}%` }} /></div>
       {c.full ? (

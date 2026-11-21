@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useSettings } from '../store.js';
-import { useStack, pullTask, sendBack, reorderTasks } from '../lib/model.js';
+import { useStack, pullTask, sendBack, reorderTasks, finishStep, openSteps } from '../lib/model.js';
 import SortableList from './SortableList.jsx';
 import TaskSheet from './TaskSheet.jsx';
 import { Icon } from './ui.jsx';
-import { completeTaskLater } from '../lib/game.js';
+import { completeTaskLater, cheer } from '../lib/game.js';
+import { haptic } from '../lib/haptics.js';
+import { toast } from '../lib/toast.js';
 import TaskMeta, { PriorityBadge } from './TaskMeta.jsx';
 
 export function TaskRow({ t, showBack, grip, onOpen }) {
@@ -12,6 +14,15 @@ export function TaskRow({ t, showBack, grip, onOpen }) {
   const fresh = t.pulledAt && Date.now() - Date.parse(t.pulledAt) < 1500;
   const finish = (e) => {
     if (leaving) return;
+    // A layered task: finish its next step; only the last step finishes the task.
+    if (openSteps(t).length > 1) {
+      const next = openSteps(t)[1];
+      finishStep(t);
+      haptic('success');
+      cheer(e.currentTarget);
+      toast(`Step done · next: ${next.label}`);
+      return;
+    }
     setLeaving(true);
     completeTaskLater(t, e.currentTarget, 520);
   };
@@ -26,7 +37,7 @@ export function TaskRow({ t, showBack, grip, onOpen }) {
       </button>
       {showBack && !leaving && (
         <button className="mini" onClick={() => sendBack(t)} title="Send back to the backlog">
-          Back
+          <Icon name="down" size={14} /> Back
         </button>
       )}
       {grip}
@@ -55,7 +66,7 @@ export default function NowStack({ full = false }) {
 
       {active.length > 0 && (
         <SortableList items={active} onReorder={(list) => reorderTasks(list, 'nowOrder')} rowClass={() => 'row task'}>
-          {(t, grip) => <TaskRow t={t} showBack={full} grip={full ? grip : null} onOpen={setOpen} />}
+          {(t, grip) => <TaskRow t={t} showBack grip={full ? grip : null} onOpen={setOpen} />}
         </SortableList>
       )}
 

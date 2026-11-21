@@ -329,6 +329,18 @@ export function useShootTasks() {
   }, [on, settled, loaded, shoots, tasks]);
 }
 
+/** Check a shoot's step on or off from here, in any order. The stack catches up on its own:
+ *  a step you check that's waiting underneath just drops out, and the next open step stays on top. */
+export function toggleShootStep(shootId, stepId, done) {
+  const s = state.shoots.find((x) => x.id === shootId);
+  if (!s) return;
+  const step = s.steps.find((x) => x.id === stepId);
+  if (!step) return;
+  s.steps = s.steps.map((x) => (x.id === stepId || (done && step.tag === 'final') ? { ...x, done } : x));
+  set({ shoots: [...state.shoots] });
+  markSteps(s, { [stepId]: done });
+}
+
 /** Looks up the shoot a task came from (for the layered look and the task sheet). */
 export function useShootFor(t) {
   const { shoots } = useShootStatus();

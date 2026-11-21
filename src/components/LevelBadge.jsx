@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sheet } from './ui.jsx';
-import { useGame, XP, prLabel, cheer } from '../lib/game.js';
+import { useGame, XP, prLabel } from '../lib/game.js';
 import { haptic } from '../lib/haptics.js';
 import { toast } from '../lib/toast.js';
 import { fmt, iso } from '../lib/dates.js';
@@ -21,35 +21,31 @@ const writeSeen = (n) => {
   }
 };
 
-/** Your level in the top bar: a ring that fills with XP toward the next level. Tap for details. */
-export default function LevelBadge() {
+/** Level-up celebration (a toast, once per level on this device). Mount once, in App. */
+export function useLevelUp() {
   const g = useGame();
-  const ref = useRef(null);
-  const [open, setOpen] = useState(false);
-  const [up, setUp] = useState(false);
-
-  // Level up: the badge hops and sparks, once per level on this device.
   useEffect(() => {
     const seen = readSeen();
     if (seen && g.level > seen) {
-      setUp(true);
       haptic('big');
       toast(`Level ${g.level}! Next one is ${g.need} XP away.`);
-      setTimeout(() => ref.current && cheer(ref.current), 250);
-      const t = setTimeout(() => setUp(false), 1400);
       writeSeen(g.level);
-      return () => clearTimeout(t);
+      return;
     }
     if (!seen || g.level < seen) writeSeen(g.level);
   }, [g.level, g.need]);
+}
 
+/** Your level: a ring that fills with XP toward the next level. Tap for details. Lives on the Rewards page. */
+export default function LevelBadge() {
+  const g = useGame();
+  const [open, setOpen] = useState(false);
   const R = 15;
   const C = 2 * Math.PI * R;
   return (
     <>
       <button
-        ref={ref}
-        className={`lvl-badge${up ? ' up' : ''}`}
+        className="lvl-badge"
         onClick={() => setOpen(true)}
         aria-label={`Level ${g.level}, ${g.into} of ${g.need} XP to the next level. ${g.today} XP today.`}
       >

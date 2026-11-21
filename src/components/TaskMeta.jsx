@@ -59,14 +59,32 @@ function ShootLayers({ t }) {
   );
 }
 
+/** Your own layered task: the same little stack, with the step that's up next. */
+function StepLayers({ t }) {
+  const steps = t.steps || [];
+  const i = steps.findIndex((x) => !x.done);
+  if (i < 0) return null;
+  const left = steps.length - i - 1;
+  return (
+    <>
+      <span className={`shoot-layers u${Math.min(left, 2)}`} aria-label={`Step ${i + 1} of ${steps.length}`}>
+        {i + 1}/{steps.length}
+      </span>
+      <span className="step-next">{steps[i].label}</span>
+    </>
+  );
+}
+
 export default function TaskMeta({ t }) {
   const cats = useCategories();
   const cat = t.category && cats.find((c) => c.id === t.category);
   const due = t.status !== 'done' && dueLabel(t);
-  if (!cat && !due && !t.recurId && !t.course && !t.estimate && !t.shootStepId) return null;
+  const layered = !t.shootStepId && t.status !== 'done' && t.steps && t.steps.length > 0;
+  if (!cat && !due && !t.recurId && !t.course && !t.estimate && !t.shootStepId && !layered) return null;
   return (
     <span className="task-meta">
       {t.shootStepId && t.status !== 'done' && <ShootLayers t={t} />}
+      {layered && <StepLayers t={t} />}
       {cat && (
         <span className="cat" style={{ '--c': cat.color }}>
           <i aria-hidden="true" />

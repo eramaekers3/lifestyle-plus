@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useSettings, useSyncStatus, clearSample } from './store.js';
-import { Icon, Toaster, HeartMark } from './components/ui.jsx';
-import { DEFAULT_HEART } from './lib/logo.js';
+import { Icon, Toaster } from './components/ui.jsx';
+import { WeatherTop } from './components/Weather.jsx';
+import Notices from './components/Notices.jsx';
 import { useCalendarSync } from './lib/calendar.js';
 import { useCanvasSync } from './lib/canvas.js';
 import { useTheme, useHeartIcon } from './lib/theme.js';
 import CaptureSheet from './components/CaptureSheet.jsx';
-import LevelBadge from './components/LevelBadge.jsx';
+import { useLevelUp } from './components/LevelBadge.jsx';
 import CoinBadge from './components/Coins.jsx';
 import { useCoinsSetup } from './lib/coins.js';
 import MorningSheet, { useDayStarted, wantsMorning } from './components/MorningSheet.jsx';
@@ -114,6 +115,7 @@ export default function App() {
   }, [deep]);
   useWakeLock(deep);
   useHeartIcon();
+  useLevelUp();
 
   // Open the morning page by itself on the first open of a morning, until the day is started.
   useEffect(() => {
@@ -192,16 +194,11 @@ export default function App() {
   return (
     <div className={`app${settling ? ' settling' : ''}`}>
       <header className="topbar">
-        <div className="brand" aria-label="lifestyle+">
-          <span aria-hidden="true">lifestyle</span>
-          <HeartMark color={settingsData.heartColor || DEFAULT_HEART} />
-        </div>
+        <WeatherTop />
         <div className="top-right">
           <CoinBadge />
-          <LevelBadge />
-          <button className="sync-btn" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
-            <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />
-            <span className="sync-text">{syncLabel}</span>
+          <button className="sync-btn icon-only" onClick={() => setSettings(true)} aria-label={`Settings. ${syncLabel}`}>
+            {['error', 'offline'].includes(sync.state) && <span className={`sync-dot s-${sync.state}`} aria-hidden="true" />}
             <Icon name="settings" />
           </button>
         </div>
@@ -250,6 +247,7 @@ export default function App() {
           }}
         />
       )}
+      {tab === 'plan' && !deep && <Notices />}
       <Toaster />
     </div>
   );

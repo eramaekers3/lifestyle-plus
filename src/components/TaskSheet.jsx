@@ -1,7 +1,9 @@
-import { stepPlace, useShootFor } from '../lib/shootStack.js';
+import { stepPlace, toggleShootStep, useShootFor } from '../lib/shootStack.js';
 import { useState } from 'react';
 import { remove, useRecord } from '../store.js';
-import { setTaskPriority, renameTask } from '../lib/model.js';
+import { setTaskPriority, renameTask, setSteps } from '../lib/model.js';
+import { idFor } from '../lib/ids.js';
+import { haptic } from '../lib/haptics.js';
 import { patch } from '../store.js';
 import { CategoryStep, DateStep, EstimateStep, TimeStep } from './CaptureSheet.jsx';
 import { toast } from '../lib/toast.js';
@@ -49,6 +51,13 @@ export default function TaskSheet({ id, onClose }) {
         <input id="task-title" className="input" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => renameTask(t, title)} autoComplete="off" />
       </label>
 
+      {t.shootStepId && (
+        <div className="edit-sec">
+          <ShootSteps t={t} />
+        </div>
+      )}
+      {!t.shootId && <OwnSteps t={t} />}
+
       <p className="cap-label" style={{ marginTop: 16 }}>Priority</p>
       <div className="seg prio-seg" role="group" aria-label="Priority">
         {LEVELS.map((l) => (
@@ -91,11 +100,10 @@ export default function TaskSheet({ id, onClose }) {
 
       {t.shootId && (
         <div className="edit-sec">
-          {t.shootStepId && <ShootSteps t={t} />}
           {t.link && <a className="btn ghost" href={t.link} target="_blank" rel="noreferrer">Open gallery</a>}
           <p className="hint-quiet">
             {t.shootStepId
-              ? 'From shoot+. Finishing this task checks the step off there too, and the shoot’s next step comes up at the top of your backlog.'
+              ? 'From shoot+. Check off any step above, in any order, and it’s checked off in shoot+ too. Finishing this task checks off this step, and the next open one takes its place.'
               : 'From shoot+. Finishing this task marks the gallery delivered there too.'}
           </p>
         </div>
@@ -135,7 +143,7 @@ export default function TaskSheet({ id, onClose }) {
   );
 }
 
-/** The whole shoot, layered: done steps checked, this one lit, the rest waiting underneath. */
+/** The whole shoot, layered. Tap any step to check it off (or back on), in any order. */
 function ShootSteps({ t }) {
   const shoot = useShootFor(t);
   const place = stepPlace(shoot, t.shootStepId);
@@ -143,14 +151,69 @@ function ShootSteps({ t }) {
   return (
     <>
       <p className="sub-h shoot-steps-h">{shoot.what} · step {place.n} of {place.total}</p>
-      <ol className="shoot-steps">
+      <ol className="shoot-steps tappable">
         {place.steps.map((x) => (
-          <li key={x.id} className={x.id === t.shootStepId ? 'cur' : x.done ? 'done' : 'later'}>
-            <i aria-hidden="true" />
-            {x.label}
+          <li key={x.id} className={x.id === t.shootStepId && !x.done ? 'cur' : x.done ? 'done' : 'later'}>
+            <button
+              type="button"
+              aria-pressed={!!x.done}
+              onClick={() => {
+                haptic('tick');
+                toggleShootStep(shoot.id, x.id, !x.done);
+              }}
+            >
+              <i aria-hidden="true" />
+              {x.label}
+            </button>
           </li>
         ))}
       </ol>
     </>
+  );
+}
+
+/** Steps on your own task: it stays one task in your stack, showing the next open step. */
+function OwnSteps({ t }) {
+  const steps = t.steps || [];
+  const [text, setText] = useState('');
+  const add = (e) => {
+    e.preventDefault();
+    const label = text.trim();
+    if (!label) return;
+    setSteps(t, [...steps, { id: idFor(`step:${t.id}:${Date.now()}`), label, done: false }]);
+    setText('');
+  };
+  const toggle = (x) => {
+    haptic('tick');
+    setSteps(t, steps.map((y) => (y.id === x.id ? { ...y, done: !y.done } : y)));
+  };
+  const drop = (x) => setSteps(t, steps.filter((y) => y.id !== x.id));
+  const next = steps.find((x) => !x.done);
+  return (
+    <div className="edit-sec">
+      <p className="cap-label">Steps</p>
+      {steps.length > 0 && (
+        <ol className="shoot-steps tappable">
+          {steps.map((x) => (
+            <li key={x.id} className={x.done ? 'done' : x === next ? 'cur' : 'later'}>
+              <button type="button" aria-pressed={!!x.done} onClick={() => toggle(x)}>
+                <i aria-hidden="true" />
+                {x.label}
+              </button>
+              <button type="button" className="step-x" onClick={() => drop(x)} aria-label={`Remove step “${x.label}”`}>×</button>
+            </li>
+          ))}
+        </ol>
+      )}
+      <form className="inline" onSubmit={add}>
+        <input className="input" style={{ flex: 1 }} value={text} onChange={(e) => setText(e.target.value)} placeholder={steps.length ? 'Add another step' : 'Add a step to layer this task'} enterKeyHint="done" />
+        <button className="mini sun" disabled={!text.trim()}>Add</button>
+      </form>
+      <p className="hint-quiet">
+        {steps.length
+          ? 'Checking this task off in your stack finishes the next step. The last step finishes the task.'
+          : 'Break a task into steps. It stays one task in your stack and shows one step at a time.'}
+      </p>
+    </div>
   );
 }

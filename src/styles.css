@@ -1501,19 +1501,17 @@ button.wx-fold .icon { transform: rotate(-90deg); }
 .day-cards { display: contents; }
 
 .deep-tab {
-  display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; border-radius: 16px;
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 13px;
   background: color-mix(in srgb, #8f9cff 10%, var(--surface)); border: 1px solid color-mix(in srgb, #8f9cff 35%, var(--line));
 }
-.dt-mark { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: color-mix(in srgb, #8f9cff 22%, transparent); color: #b3bcff; }
-.dt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; border: 0; background: none; padding: 0; text-align: left; }
-.dt-text b { font-size: 14.5px; font-weight: 800; }
-.dt-text b small { font-size: 12.5px; font-weight: 700; color: var(--muted); }
-.dt-text > span { max-width: 100%; font-size: 13px; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dt-text { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 6px 8px 6px 9px; color: #b3bcff; }
+.dt-text b { font-size: 14px; font-weight: 800; color: var(--ink); }
+.dt-text small { font-size: 12px; font-weight: 700; color: var(--muted); }
 .dt-go {
-  flex: none; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 11px; padding: 8px 13px;
-  background: #8f9cff; color: #10132e; font-weight: 800; font-size: 14px; box-shadow: 0 3px 0 #4e58b8;
+  flex: none; display: grid; place-items: center; width: 32px; height: 30px; border: 0; border-radius: 10px; padding: 0;
+  background: #8f9cff; color: #10132e; box-shadow: 0 2px 0 #4e58b8;
 }
-.dt-go:active { transform: translateY(2px); box-shadow: 0 1px 0 #4e58b8; }
+.dt-go:active { transform: translateY(2px); box-shadow: 0 0 0 #4e58b8; }
 .btn.deep-btn { background: #8f9cff; color: #10132e; box-shadow: 0 3px 0 #4e58b8; }
 
 /* Deep mode: retint the whole app. Overriding the accent on body wins over the one set on :root. */
@@ -2094,3 +2092,53 @@ button.link { border: 0; background: none; padding: 0; margin: 0; text-decoratio
 .shoot-steps li.cur { color: var(--ink); font-weight: 700; }
 .shoot-steps li.cur i { border-color: var(--sun); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sun) 25%, transparent); }
 .shoot-steps li.later { opacity: 0.7; }
+
+/* ---------- Top bar weather (in place of the logo) ---------- */
+.wx-top-btn {
+  display: inline-flex; align-items: center; gap: 7px; min-width: 0; padding: 4px 10px 4px 6px;
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; color: var(--ink);
+}
+.wx-top-btn .wx-ic { display: grid; place-items: center; }
+.wt-temp { font: var(--display-weight) 20px/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.wt-cond { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.15; }
+.wt-cond, .wt-cond small { max-width: 38vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wt-cond small { font-size: 11.5px; }
+.wx-top-btn:active { transform: scale(0.96); }
+.sync-btn.icon-only { position: relative; padding: 8px; gap: 0; }
+.sync-btn.icon-only .sync-dot { position: absolute; top: 4px; right: 4px; }
+
+/* ---------- Small notifications above the tab bar ---------- */
+.notices {
+  position: fixed; z-index: 19; left: max(12px, calc(env(safe-area-inset-left, 0px) + 12px));
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  max-width: calc(100% - 110px); display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+}
+@media (min-width: 900px) { .notices { left: calc(50% - 360px); } }
+.notice {
+  --c: var(--sun);
+  display: inline-flex; align-items: center; max-width: 100%; border-radius: 999px;
+  background: var(--grain-dark), #1c1c1b; border: 1px solid color-mix(in srgb, var(--c) 50%, var(--line));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); animation: toastSpring 0.5s var(--spring-soft) both;
+  transform: none;
+}
+.notice.t-sky { --c: var(--sky); }
+.notice.t-lilac { --c: var(--lilac); }
+.notice a { display: inline-flex; align-items: center; gap: 7px; padding: 7px 4px 7px 12px; color: var(--ink); text-decoration: none; min-width: 0; }
+.notice a .icon { color: var(--c); flex: none; }
+.notice a b { font-size: 13.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notice button { border: 0; background: none; color: var(--dim); font-size: 18px; line-height: 1; padding: 6px 11px 7px 6px; }
+@keyframes noticeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.notice { animation: noticeIn 0.4s var(--spring-soft) both; }
+
+/* ---------- Level, tucked into the Rewards page ---------- */
+.coin-lvl { margin-left: auto; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.coin-lvl small { font-size: 11px; font-weight: 700; color: var(--muted); }
+
+/* ---------- Steps you can check in any order, and your own layered tasks ---------- */
+.shoot-steps.tappable li { padding: 0; }
+.shoot-steps.tappable li > button:first-child {
+  flex: 1; display: flex; align-items: center; gap: 9px; padding: 7px 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; text-decoration: inherit;
+}
+.step-x { border: 0; background: none; color: var(--dim); font-size: 18px; padding: 4px 8px; }
+.step-next { color: var(--ink); font-weight: 700; max-width: 60%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

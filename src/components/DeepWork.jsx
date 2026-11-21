@@ -24,7 +24,7 @@ function useToday() {
   return { date, tasks, stack, tasksById, blocks: todays };
 }
 
-/** The small "Deep work" tab on the home screen: one tap to go deep. */
+/** The compact deep work control at the top of the home screen: tap the label to pick, ▶ to go. */
 export function DeepTab() {
   const { date, stack, tasksById, blocks } = useToday();
   useNow(60000); // the suggestion follows your blocks through the day
@@ -32,7 +32,7 @@ export function DeepTab() {
   const [picking, setPicking] = useState(false);
   const [log, setLog] = useState(false);
   const s = suggestDeep(blocks, stack.active, tasksById);
-  const what = s.title ? `${s.title}${s.plannedMin ? ` · ${fmtDur(s.plannedMin)}` : ''}` : 'Open session · no task picked';
+  const what = s.title ? `${s.title}${s.plannedMin ? ` · ${fmtDur(s.plannedMin)}` : ''}` : 'Open session';
 
   const go = () => {
     haptic('success');
@@ -40,26 +40,23 @@ export function DeepTab() {
   };
 
   return (
-    <section className="deep-tab" aria-label="Deep work">
-      <span className="dt-mark" aria-hidden="true"><Icon name="moon" size={18} /></span>
+    <div className="deep-tab" role="group" aria-label="Deep work">
       <button className="dt-text" onClick={() => setPicking(true)} aria-label={`Deep work: ${what}. Tap to change`}>
-        <b>Deep work{doneToday > 0 && <small> · {fmtDur(doneToday)} today</small>}</b>
-        <span>{what}</span>
+        <Icon name="moon" size={15} />
+        <b>Deep</b>
+        {doneToday > 0 && <small>{fmtDur(doneToday)}</small>}
       </button>
-      <button className="dt-log" onClick={() => setLog(true)} aria-label="Deep work log">
-        <Icon name="review" size={17} />
+      <button className="dt-go" onClick={go} aria-label={`Enter deep work: ${what}`}>
+        <Icon name="play" size={13} />
       </button>
-      <button className="dt-go" onClick={go}>
-        <Icon name="play" size={15} /> Enter
-      </button>
-      {picking && <DeepSetupSheet initial={s} onClose={() => setPicking(false)} />}
+      {picking && <DeepSetupSheet initial={s} onClose={() => setPicking(false)} onLog={() => { setPicking(false); setLog(true); }} />}
       {log && <DeepLogSheet onClose={() => setLog(false)} />}
-    </section>
+    </div>
   );
 }
 
 /** Pick the task and length before going in, or change them mid-session. */
-function DeepSetupSheet({ initial, running, onClose }) {
+function DeepSetupSheet({ initial, running, onClose, onLog }) {
   const { stack } = useToday();
   const [taskId, setTaskId] = useState(initial.taskId || '');
   const [plannedMin, setPlanned] = useState(initial.plannedMin || null);
@@ -114,6 +111,11 @@ function DeepSetupSheet({ initial, running, onClose }) {
         <button className="btn deep-btn" onClick={go}>{running ? 'Save' : 'Enter deep work'}</button>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
       </div>
+      {onLog && (
+        <button className="link-btn" onClick={onLog}>
+          <Icon name="review" size={15} /> Deep work log
+        </button>
+      )}
     </Sheet>
   );
 }

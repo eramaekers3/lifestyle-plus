@@ -10,16 +10,13 @@ import Timeline from '../components/Timeline.jsx';
 import DayStrip from '../components/DayStrip.jsx';
 import BlockSheet from '../components/BlockSheet.jsx';
 import AutoPlanSheet from '../components/AutoPlanSheet.jsx';
-import { useDayStarted } from '../components/MorningSheet.jsx';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn, overdue } from '../lib/canvas.js';
 import SchoolList from '../components/SchoolList.jsx';
-import { WeatherChip } from '../components/Weather.jsx';
 import CardStack from '../components/CardStack.jsx';
 import { PastDoneButton } from './WeekView.jsx';
-import { useShutDown, useReviewed, reviewWeek, reviewDue } from '../lib/review.js';
 import { toggleHabitFx } from '../lib/game.js';
-import { DeepFocus, DeepTab } from '../components/DeepWork.jsx';
+import { DeepFocus } from '../components/DeepWork.jsx';
 import { useDeep } from '../lib/deep.js';
 
 export default function DayView({ date }) {
@@ -72,11 +69,6 @@ export default function DayView({ date }) {
         <DeepFocus s={deepSession} />
       ) : (
         <>
-          <WeatherChip date={date} />
-          {isToday && <StartBanner date={date} />}
-          {isToday && <ReviewBanner />}
-          {isToday && <ShutdownBanner date={date} />}
-          {isToday && <DeepTab />}
           {isToday && (blocks.length > 0 || cal.timed.length > 0) && (
             <DayStrip
               blocks={blocks}
@@ -152,56 +144,6 @@ export default function DayView({ date }) {
       {edit && <BlockSheet block={edit} onClose={() => setEdit(null)} />}
       {autoPlan && <AutoPlanSheet date={date} blocks={blocks} events={cal.timed} onClose={() => setAutoPlan(false)} />}
     </>
-  );
-}
-
-function StartBanner({ date }) {
-  const started = useDayStarted(date);
-  const { morningPage } = useSettings();
-  if (started || morningPage === false || new Date().getHours() >= 15) return null;
-  return (
-    <a className="start-banner" href="#morning">
-      <Icon name="sun" size={22} />
-      <span>
-        <b>Start my day</b>
-        <span>Weigh in, see what’s fixed, block it out.</span>
-      </span>
-      <Icon name="right" />
-    </a>
-  );
-}
-
-function ShutdownBanner({ date }) {
-  const done = useShutDown(date);
-  const started = useDayStarted(date);
-  const hour = new Date().getHours();
-  // From 4pm on, until it's done.
-  if (done || hour < 16) return null;
-  return (
-    <a className="start-banner moon-banner" href="#shutdown">
-      <Icon name="moon" size={22} />
-      <span>
-        <b>Shut down the day</b>
-        <span>{started ? 'Close your loops, block out tomorrow, then stop.' : 'Two minutes: close out today and plan tomorrow.'}</span>
-      </span>
-      <Icon name="right" />
-    </a>
-  );
-}
-
-export function ReviewBanner() {
-  const ws = reviewWeek();
-  const reviewed = useReviewed(ws);
-  if (reviewed || !reviewDue()) return null;
-  return (
-    <a className="start-banner review-banner" href="#review">
-      <Icon name="review" size={22} />
-      <span>
-        <b>Weekly review</b>
-        <span>Look back, clear the backlog, set three priorities.</span>
-      </span>
-      <Icon name="right" />
-    </a>
   );
 }
 

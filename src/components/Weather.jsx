@@ -25,6 +25,49 @@ function WxIcon({ code, isDay = true, size = 22 }) {
 
 const dayName = (d) => (d === todayISO() ? 'Today' : d === addDays(todayISO(), 1) ? 'Tomorrow' : fmt(d, { weekday: 'short' }));
 
+/** Today's weather in the top bar: always the temperature and conditions. Tap for the full forecast. */
+export function WeatherTop() {
+  const { place, data, error } = useWeather();
+  const [sheet, setSheet] = useState(false);
+  let inner;
+  if (!place) {
+    inner = (
+      <>
+        <span className="wx-ic" style={{ color: 'var(--sky)' }}><Icon name="w-partly" size={22} /></span>
+        <span className="wt-cond">Add weather</span>
+      </>
+    );
+  } else if (!data) {
+    inner = (
+      <>
+        <span className="wx-ic" style={{ color: 'var(--muted)' }}><Icon name="w-cloud" size={22} /></span>
+        <span className="wt-cond">{error ? 'Weather unavailable' : 'Loading…'}</span>
+      </>
+    );
+  } else {
+    const { label } = condition(data.now.code, data.now.isDay);
+    const rain = rainOutlook(data);
+    inner = (
+      <>
+        <WxIcon code={data.now.code} isDay={data.now.isDay} size={24} />
+        <span className="wt-temp">{deg(data.now.temp)}</span>
+        <span className="wt-cond">
+          {label}
+          {rain && <small className="wx-alert">{rain.short}</small>}
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <button className="wx-top-btn" onClick={() => setSheet(true)} aria-label={data ? 'Weather. Open the full forecast' : 'Weather'}>
+        {inner}
+      </button>
+      {sheet && <WeatherSheet start={todayISO()} onClose={() => setSheet(false)} />}
+    </>
+  );
+}
+
 /** The weather on the day screen: now for today, the forecast for a coming day. Folds down to one
  *  line; open, it shows the day's hours and the main things to know. Tap the top for the full forecast. */
 export function WeatherChip({ date }) {
