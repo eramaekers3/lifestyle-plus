@@ -4,7 +4,7 @@ import { useStack, completeTask } from '../lib/model.js';
 import { useCalendarDays } from '../lib/calendar.js';
 import { useSchool, itemsOn } from '../lib/canvas.js';
 import { fmtDur, minToLabel, nowMin, todayISO } from '../lib/dates.js';
-import { clockText, endDeep, startDeep, suggestDeep, updateDeep, useDeep, useDeepMinutes } from '../lib/deep.js';
+import { clockText, discardDeep, endDeep, startDeep, suggestDeep, timeAfter, toTimeInput, updateDeep, useDeep, useDeepMinutes } from '../lib/deep.js';
 import { cheerGain } from '../lib/game.js';
 import { haptic } from '../lib/haptics.js';
 import { toast } from '../lib/toast.js';
@@ -126,6 +126,7 @@ export function DeepFocus({ s }) {
   const cal = useCalendarDays()[date] || { timed: [] };
   const [editing, setEditing] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [late, setLate] = useState(false);
   const task = s.taskId && tasksById[s.taskId];
   const taskDone = task && task.status === 'done';
 
@@ -232,9 +233,51 @@ export function DeepFocus({ s }) {
         <button className={`btn ${confirmEnd ? 'danger' : 'ghost'}`} onClick={end} onBlur={() => setConfirmEnd(false)}>
           {confirmEnd ? 'Tap again to end' : 'End session'}
         </button>
+        <button className="btn ghost" onClick={() => setLate(true)}>Forgot to end it?</button>
       </div>
       {editing && <DeepSetupSheet initial={s} running={s} onClose={() => setEditing(false)} />}
+      {late && <EndEarlierSheet s={s} onClose={() => setLate(false)} />}
     </section>
+  );
+}
+
+/** End a session you left running: pick when you actually stopped, or throw it away. */
+function EndEarlierSheet({ s, onClose }) {
+  // Default to where the plan ran out, else now.
+  const guess = s.plannedMin ? Math.min(Date.now(), s.startedAt + s.plannedMin * 60000) : Date.now();
+  const [time, setTime] = useState(toTimeInput(guess));
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const at = time ? timeAfter(s.startedAt, time) : null;
+  const bad = !at || at > Date.now();
+  const mins = at ? Math.round((at - s.startedAt) / 60000) : 0;
+
+  const save = () => {
+    if (bad) return;
+    onClose();
+    const m = endDeep(s, at);
+    haptic('success');
+    if (m < 1) toast('Session ended');
+  };
+  const discard = () => {
+    if (!confirmDiscard) return setConfirmDiscard(true);
+    discardDeep();
+    haptic('tick');
+    toast('Session discarded');
+    onClose();
+  };
+
+  return (
+    <Sheet title="When did you stop?" onClose={onClose}>
+      <p className="hint-quiet">Started at {minToLabel(Math.round((s.startedAt - new Date(s.startedAt).setHours(0, 0, 0, 0)) / 60000))}.</p>
+      <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Stopped at" />
+      <p className="hint-quiet">{bad ? 'Pick a time between the start and now.' : `Logs ${fmtDur(Math.max(mins, 0))} of deep work.`}</p>
+      <div className="btn-row">
+        <button className="btn" onClick={save} disabled={bad}>End at this time</button>
+        <button className={`btn ${confirmDiscard ? 'danger' : 'ghost'}`} onClick={discard}>
+          {confirmDiscard ? 'Tap again to discard' : 'Discard session'}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 

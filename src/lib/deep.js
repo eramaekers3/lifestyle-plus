@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { put, remove, useKind, useRecord } from '../store.js';
 import { idFor } from './ids.js';
-import { nowMin, todayISO } from './dates.js';
+import { iso, nowMin, todayISO } from './dates.js';
 
 export const DEEP_ID = idFor('deep-session');
 export const useDeep = () => useRecord(DEEP_ID);
@@ -22,8 +22,8 @@ export function updateDeep(s, changes) {
  * End the session and log it (sessions under a minute aren't worth keeping), then ask for a
  * review of it on this device. Returns minutes.
  */
-export function endDeep(s) {
-  const endedAt = Date.now();
+export function endDeep(s, at = Date.now()) {
+  const endedAt = Math.min(Date.now(), Math.max(s.startedAt, at));
   const minutes = Math.round((endedAt - s.startedAt) / 60000);
   if (minutes >= 1) {
     const log = put('deep_log', { date: s.date || todayISO(), startedAt: s.startedAt, endedAt, minutes, taskId: s.taskId || '', title: s.title || '' });
@@ -31,6 +31,42 @@ export function endDeep(s) {
   }
   remove(DEEP_ID);
   return minutes;
+}
+
+/** Throw away the running session without logging it. */
+export const discardDeep = () => remove(DEEP_ID);
+
+/** Fix a logged session's start/end (e.g. you forgot to end it). Minutes follow. */
+export function retimeDeepLog(log, startedAt, endedAt) {
+  const minutes = Math.max(0, Math.round((endedAt - startedAt) / 60000));
+  return put('deep_log', { ...log, startedAt, endedAt, minutes, date: dateOf(startedAt) });
+}
+
+export const deleteDeepLog = (log) => remove(log.id);
+
+const dateOf = (ms) => iso(new Date(ms));
+
+/** "HH:MM" for a <input type="time">. */
+export const toTimeInput = (ms) => {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+/** A time-of-day picked after `after`: same day as it, or the next day if it would land before it. */
+export function timeAfter(after, hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(after);
+  d.setHours(h, m, 0, 0);
+  if (d.getTime() <= after) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
+/** A time-of-day on the same day as `ref`. */
+export function timeOn(ref, hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(ref);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
 }
 
 /* ---------- Session review: rate focus and quality, saved onto the session's log ---------- */

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useRecord } from '../store.js';
-import { FOCUS, QUALITY, closeReview, saveReview, useDeepLogs, usePendingReview } from '../lib/deep.js';
+import { put, useRecord } from '../store.js';
+import { FOCUS, QUALITY, closeReview, deleteDeepLog, retimeDeepLog, saveReview, timeAfter, timeOn, toTimeInput, useDeepLogs, usePendingReview } from '../lib/deep.js';
 import { fmt, fmtDur, iso, todayISO } from '../lib/dates.js';
 import { haptic } from '../lib/haptics.js';
 import { toast } from '../lib/toast.js';
@@ -125,7 +125,7 @@ export function DeepLogSheet({ onClose }) {
         <ul className="rows rv-log">
           {g.all.slice(0, 40).map((l) => (
             <li key={l.id} className="row">
-              <span className="row-title">
+              <span className="row-title" role="button" tabIndex={0} onClick={() => setRating(l)} aria-label="Edit session">
                 <b>{l.title || 'Open session'}</b>
                 <small>
                   {dayLabel(l.startedAt)} · {timeOf(l.startedAt)} · {fmtDur(l.minutes)}
@@ -151,24 +151,56 @@ export function DeepLogSheet({ onClose }) {
   );
 }
 
-/** Rating an older session from the log. */
+/** Edit an older session from the log: its times, its rating, or delete it. */
 function LogReview({ log, onClose }) {
   const live = useRecord(log.id) || log;
   const [focus, setFocus] = useState(live.focus || 0);
   const [quality, setQuality] = useState(live.quality || 0);
   const [note, setNote] = useState(live.note || '');
+  const [start, setStart] = useState(toTimeInput(live.startedAt));
+  const [end, setEnd] = useState(toTimeInput(live.endedAt || live.startedAt + (live.minutes || 0) * 60000));
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  const startedAt = start ? timeOn(live.startedAt, start) : null;
+  const endedAt = startedAt && end ? timeAfter(startedAt, end) : null;
+  const bad = !startedAt || !endedAt || endedAt > Date.now();
+  const mins = bad ? 0 : Math.round((endedAt - startedAt) / 60000);
+
   const save = () => {
-    saveReview(live, { focus, quality, note });
+    if (bad) return;
+    let rec = live;
+    if (startedAt !== live.startedAt || endedAt !== live.endedAt) rec = retimeDeepLog(live, startedAt, endedAt);
+    if (focus && quality) saveReview(rec, { focus, quality, note });
+    else if ((note || '').trim() !== (live.note || '')) put('deep_log', { ...rec, note: note.trim() });
     haptic('success');
-    toast('Review saved');
+    toast('Session saved');
     onClose();
   };
+  const del = () => {
+    if (!confirmDel) return setConfirmDel(true);
+    deleteDeepLog(live);
+    haptic('tick');
+    toast('Session deleted');
+    onClose();
+  };
+
   return (
-    <Sheet title="Session review" onClose={onClose}>
+    <Sheet title="Session" onClose={onClose}>
       <p className="rv-sum">
-        <b>{fmtDur(live.minutes)}</b>{live.title ? <> on <b>{live.title}</b></> : ''}
-        <span className="muted-n"> · {dayLabel(live.startedAt)}, {timeOf(live.startedAt)}</span>
+        <b>{fmtDur(mins)}</b>{live.title ? <> on <b>{live.title}</b></> : ''}
+        <span className="muted-n"> · {dayLabel(live.startedAt)}</span>
       </p>
+      <div className="rv-times" style={{ display: 'flex', gap: 10 }}>
+        <label className="f full" style={{ flex: 1 }}>
+          Start
+          <input className="input" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+        </label>
+        <label className="f full" style={{ flex: 1 }}>
+          End
+          <input className="input" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+        </label>
+      </div>
+      {bad && <p className="hint-quiet">The end has to be after the start and not in the future.</p>}
       <Rating label="How focused were you?" words={FOCUS} value={focus} onPick={setFocus} />
       <Rating label="How good was the work?" words={QUALITY} value={quality} onPick={setQuality} />
       <label className="f full rv-note" htmlFor="rv-note-old">
@@ -176,8 +208,10 @@ function LogReview({ log, onClose }) {
         <textarea id="rv-note-old" className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional: what went well, what pulled you away" />
       </label>
       <div className="btn-row">
-        <button className="btn" onClick={save} disabled={!focus || !quality}>Save review</button>
-        <button className="btn ghost" onClick={onClose}>Cancel</button>
+        <button className="btn" onClick={save} disabled={bad}>Save</button>
+        <button className={`btn ${confirmDel ? 'danger' : 'ghost'}`} onClick={del}>
+          {confirmDel ? 'Tap again to delete' : 'Delete'}
+        </button>
       </div>
     </Sheet>
   );
