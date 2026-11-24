@@ -7,7 +7,8 @@
 //   - checking a step off in shoot+ finishes its task here (and brings up the next one)
 //   - unchecking a step in shoot+ reopens it here; a later step that was waiting is put back underneath
 //   - shoot+'s due date (when the gallery is due) is the due date for every step up to delivery
-// The "Shoot" step itself isn't stack work: it counts as done once the shoot date has passed.
+// A shoot shows up as soon as it's booked: its first step is "Shoot", due on the shoot date, and it
+// checks itself off once that date has passed.
 // Each step makes its task once (a stable id), so deleting a step's task keeps that shoot out of your
 // stack until you check the step off in shoot+.
 //
@@ -21,7 +22,8 @@ import { addDays, todayISO } from './dates.js';
 import { addCategory } from './model.js';
 
 const TABLE = 'shoot_records';
-const EVERY = 10 * 60 * 1000;
+const EVERY = 2 * 60 * 1000; // re-read shoot+ this often while the app is open
+const GAP = 15 * 1000; // and on coming back to the app, at most this often
 // shoot+ treats shoots before this as delivered unless they have their own due date (keep in step with shoot+).
 const QUEUE_START = '2026-10-01';
 
@@ -34,6 +36,11 @@ const WAITING = 'waiting'; // a step that's no longer next (an earlier step was 
 const REPLACED = 'replaced'; // an old gallery task, now covered by step tasks
 
 let state = { shoots: [], loaded: false, error: '', at: 0 };
+// Writes to shoot+ still on their way. A read that overlaps one could bring back the old step and
+// flip your check back, so such a read is thrown away and done again.
+let writing = 0;
+let writeSeq = 0;
+const inFlight = new Set(); // `${shootId}:${stepId}` being saved to shoot+ right now
 const listeners = new Set();
 const set = (c) => {
   state = { ...state, ...c };
@@ -104,8 +111,8 @@ function settle(b, steps) {
   return { ...b, steps: next, delivered, finished: allDone ? b.finished || today : '', updatedAt: Date.now() };
 }
 
-/** The steps that are stack work: everything but "Shoot" (which counts as done once the date has passed). */
-const workSteps = (steps) => steps.filter((x) => x.tag !== 'shoot');
+/** The steps that are stack work: all of them ("Shoot" checks itself once the date has passed). */
+const workSteps = (steps) => steps;
 
 /** Where a step task stands in its shoot, for the layered look: { n, total, rest: [upcoming labels] }. */
 export function stepPlace(shoot, stepId) {
@@ -121,10 +128,11 @@ export function stepPlace(shoot, stepId) {
 /** Reads shoot+ and works out each recent shoot's steps. */
 export async function loadShoots(force = false) {
   if (!supabase) return;
-  if (!force && Date.now() - state.at < EVERY) return;
+  if (Date.now() - state.at < (force ? GAP : EVERY)) return;
   const { data: s } = await supabase.auth.getSession();
   if (!s.session) return;
   state.at = Date.now();
+  const seq = writeSeq;
   const { data, error } = await supabase
     .from(TABLE)
     .select('id, kind, data, deleted')
@@ -135,6 +143,12 @@ export async function loadShoots(force = false) {
     set({ loaded: true, error: error.message });
     return;
   }
+  if (writing || seq !== writeSeq) {
+    // A step was checked here while this read was out: read again once it's saved.
+    state.at = 0;
+    setTimeout(() => loadShoots(true), 1500);
+    return;
+  }
   const rows = data || [];
   const by = (k) => rows.filter((r) => r.kind === k).map((r) => r.data);
   const services = Object.fromEntries(by('service').map((x) => [x.id, x]));
@@ -142,17 +156,19 @@ export async function loadShoots(force = false) {
   const settings = by('settings')[0] || {};
   const today = todayISO();
   const shoots = by('booking')
-    .filter((b) => !b.sample && !b.cancelled && b.date && b.date <= today && (b.date >= QUEUE_START || b.due))
+    .filter((b) => !b.sample && !b.cancelled && b.date && (b.date >= QUEUE_START || b.due))
     .map((b) => {
       const sv = services[b.serviceId];
       const days = num(sv && sv.turnaround) || num(settings.turnaround) || 7;
       const client = clients[b.clientId];
       const what = b.title || [sv && sv.name, b.pkg].filter(Boolean).join(' — ') || 'Shoot';
-      const steps = bookingSteps(b, sv).map((x) => (x.tag === 'shoot' && !x.done ? { ...x, done: true } : x));
+      const past = b.date <= today;
+      const steps = bookingSteps(b, sv).map((x) => (x.tag === 'shoot' && past && !x.done ? { ...x, done: true } : x));
       return {
         id: b.id,
         who: client ? client.name : what,
         what,
+        date: b.date,
         due: b.due || addDays(b.date, days),
         hours: num(b.hours),
         gallery: b.gallery || '',
@@ -163,12 +179,28 @@ export async function loadShoots(force = false) {
   set({ shoots, loaded: true, error: '' });
 }
 
-/** Checks steps on or off in shoot+. marks: { stepId: true/false }. */
-async function markSteps(shoot, marks) {
+/** Checks steps on or off in shoot+. marks: { stepId: true/false }. onSaved runs once shoot+ has it. */
+async function markSteps(shoot, marks, onSaved) {
   if (!supabase) return;
+  writing++;
+  writeSeq++;
+  try {
+    if (await saveMarks(shoot, marks)) {
+      if (onSaved) onSaved();
+      set({ shoots: [...state.shoots], error: '' });
+    }
+  } catch (e) {
+    set({ error: (e && e.message) || 'Couldn’t reach shoot+' });
+  } finally {
+    writing--;
+  }
+}
+
+async function saveMarks(shoot, marks) {
   // Start from the booking as it is now in shoot+, so an edit made there since the last check isn't lost.
-  const { data: fresh } = await supabase.from(TABLE).select('data').eq('id', shoot.id).maybeSingle();
-  if (!fresh || !fresh.data) return;
+  const { data: fresh, error: readErr } = await supabase.from(TABLE).select('data').eq('id', shoot.id).maybeSingle();
+  if (readErr) throw readErr;
+  if (!fresh || !fresh.data) return false;
   const b = fresh.data;
   const today = todayISO();
   const steps = bookingSteps(b, shoot.sv).map((x) => {
@@ -180,11 +212,12 @@ async function markSteps(shoot, marks) {
   const { error } = await supabase
     .from(TABLE)
     .upsert({ id: shoot.id, kind: 'booking', data, updated_at: new Date().toISOString(), deleted: false });
-  if (error) return;
+  if (error) throw error;
   // Keep our copy in line so the stack doesn't flip back before the next read.
   const done = Object.fromEntries(data.steps.map((x) => [x.id, x.done]));
-  shoot.steps = shoot.steps.map((x) => (x.id in done ? { ...x, done: x.tag === 'shoot' ? true : done[x.id] } : x));
-  set({ shoots: [...state.shoots] });
+  const past = !!b.date && b.date <= today;
+  shoot.steps = shoot.steps.map((x) => (x.id in done ? { ...x, done: done[x.id] || (x.tag === 'shoot' && past) } : x));
+  return true;
 }
 
 /* ---------- Keeping the stack in step ---------- */
@@ -200,6 +233,7 @@ const editEstimate = (s) => Math.max(60, Math.round(((s.hours || 1) * 120) / 15)
 
 /** Steps up to and including delivery are due when the gallery is due; after that, no due date. */
 function dueFor(s, step) {
+  if (step.tag === 'shoot') return s.date;
   const work = workSteps(s.steps);
   const d = work.findIndex((x) => x.tag === 'deliver');
   return d < 0 || work.indexOf(step) <= d ? s.due : null;
@@ -224,6 +258,7 @@ export function syncShootTasks(shoots) {
 
     // 1. Bring each step's task in line with shoot+.
     const marks = {};
+    const saved = {}; // task id → step done, recorded once shoot+ has the change
     for (const t of mine) {
       const step = s.steps.find((x) => x.id === t.shootStepId);
       if (!step) {
@@ -238,17 +273,19 @@ export function syncShootTasks(shoots) {
         if (step.done && !taskDone) Object.assign(ch, { status: 'done', doneAt: now });
         if (!step.done && taskDone) Object.assign(ch, { status: 'backlog', order: top--, doneAt: null });
         patch(t.id, ch);
-      } else if (taskDone !== step.done) {
-        // You finished (or reopened) the step here: check it off in shoot+ to match.
+      } else if (taskDone !== step.done && !inFlight.has(`${s.id}:${step.id}`)) {
+        // You finished (or reopened) the step here: check it off in shoot+ to match. The task only
+        // counts as matched once shoot+ has it, so if saving fails the next pass tries again.
         marks[step.id] = taskDone;
-        step.done = taskDone;
-        patch(t.id, { shootStepDone: taskDone });
+        saved[t.id] = taskDone;
       }
     }
     if (Object.keys(marks).length) {
-      // "Everything finished" finishes every step, here as in shoot+.
-      if (work.some((x) => x.tag === 'final' && x.done)) s.steps.forEach((x) => (x.done = true));
-      markSteps(s, marks);
+      const keys = Object.keys(marks).map((id) => `${s.id}:${id}`);
+      keys.forEach((k) => inFlight.add(k));
+      markSteps(s, marks, () => {
+        for (const [id, done] of Object.entries(saved)) if (get(id)) patch(id, { shootStepDone: done });
+      }).finally(() => keys.forEach((k) => inFlight.delete(k)));
     }
 
     // 2. Only the next unchecked step is out in your stack; any other open step goes back underneath.
@@ -285,7 +322,7 @@ export function syncShootTasks(shoots) {
           shootTitle: title,
           ...(wasActive ? { status: 'active', pulledAt: old.pulledAt || now, nowOrder: old.nowOrder ?? null } : { status: 'backlog', order: top-- }),
           ...(due ? { due } : {}),
-          ...(/edit/i.test(next.label) ? { estimate: editEstimate(s) } : {}),
+          ...(/edit/i.test(next.label) ? { estimate: editEstimate(s) } : next.tag === 'shoot' && s.hours ? { estimate: Math.round(s.hours * 60) } : {}),
           category: cat,
           shootId: s.id,
           shootStepId: next.id,
@@ -315,7 +352,7 @@ export function useShootTasks() {
   useEffect(() => {
     if (!on) return;
     loadShoots();
-    const onVis = () => document.visibilityState === 'visible' && loadShoots();
+    const onVis = () => document.visibilityState === 'visible' && loadShoots(true);
     document.addEventListener('visibilitychange', onVis);
     const t = setInterval(() => loadShoots(), EVERY);
     return () => {
